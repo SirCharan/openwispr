@@ -27,7 +27,18 @@ final class Transcriber {
     func transcribe(_ samples: [Float]) async throws -> String {
         guard let pipe else { throw TranscriberError.notLoaded }
         let results = try await pipe.transcribe(audioArray: samples)
-        return results.map { $0.text }
+        return Self.join(results)
+    }
+
+    /// Transcribe an audio file (WhisperKit resamples internally). Used by the M3 gate.
+    func transcribeFile(_ path: String) async throws -> String {
+        guard let pipe else { throw TranscriberError.notLoaded }
+        let results = try await pipe.transcribe(audioPath: path)
+        return Self.join(results)
+    }
+
+    private static func join(_ results: [TranscriptionResult]) -> String {
+        results.map { $0.text }
             .joined(separator: " ")
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }

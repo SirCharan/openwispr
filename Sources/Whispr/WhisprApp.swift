@@ -16,6 +16,10 @@ enum Whispr {
             runRecordTest(seconds: seconds, path: path)
             exit(0)
         }
+        if let i = args.firstIndex(of: "--transcribe-file"), i + 1 < args.count {
+            runTranscribeFile(path: args[i + 1])
+            exit(0)
+        }
 
         // --- normal menu-bar app ---
         let app = NSApplication.shared
@@ -41,6 +45,26 @@ enum Whispr {
         let wav = WavEncoder.encode(samples)
         try? wav.write(to: URL(fileURLWithPath: path))
         print("record-test: samples=\(samples.count) (~\(String(format: "%.1f", Double(samples.count) / 16000))s) rms=\(String(format: "%.4f", rms)) wrote=\(path)")
+    }
+
+    /// Load the selected model (cached) and transcribe an audio file. Proves the full ASR path.
+    /// Drives the main queue via `dispatchMain()` so the @MainActor work runs (never block main with a semaphore).
+    private static func runTranscribeFile(path: String) {
+        Task { @MainActor in
+            let mm = ModelManager()
+            let model = mm.selectedModel
+            let transcriber = Transcriber()
+            do {
+                let folder = try await mm.ensureDownloaded(model) { _ in }
+                try await transcriber.load(model: model, folder: folder)
+                let text = try await transcriber.transcribeFile(path)
+                print("transcribe-file: \"\(text)\"")
+            } catch {
+                print("transcribe-file FAIL: \(error)")
+            }
+            exit(0)
+        }
+        dispatchMain()
     }
 }
 
