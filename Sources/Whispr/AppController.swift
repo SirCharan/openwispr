@@ -37,6 +37,28 @@ final class AppController {
         vm.onStartModel = { [weak self, weak vm] in
             Task { await self?.loadModelForOnboarding(vm) }
         }
+        vm.onPracticeStart = { [weak self, weak vm] in
+            guard let self, let vm else { return }
+            do {
+                try self.recorder.start()
+                vm.practice = .recording
+            } catch {
+                vm.practice = .result("(microphone error — check permission)")
+            }
+        }
+        vm.onPracticeStop = { [weak self, weak vm] in
+            guard let self, let vm else { return }
+            let samples = self.recorder.stop()
+            vm.practice = .transcribing
+            Task {
+                do {
+                    let raw = try await self.transcriber.transcribe(samples, language: Settings.languageCode)
+                    vm.practice = .result(TextProcessor.process(raw, options: Settings.textOptions))
+                } catch {
+                    vm.practice = .result("(transcription failed — you can still continue)")
+                }
+            }
+        }
         vm.onFinish = { [weak self] in
             Settings.onboarded = true
             self?.attachHotkeys()
