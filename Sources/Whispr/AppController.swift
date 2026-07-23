@@ -91,9 +91,23 @@ final class AppController {
 
     private func attachHotkeys() {
         hotkeys = HotkeyManager(
-            onStart: { [weak self] in self?.startDictation() },
-            onStop: { [weak self] in self?.stopDictation() }
+            onKeyDown: { [weak self] in self?.handleKeyDown() },
+            onKeyUp: { [weak self] in self?.handleKeyUp() }
         )
+    }
+
+    /// Hold-to-talk: key-down starts. Hands-free: key-down toggles start/stop.
+    private func handleKeyDown() {
+        if Settings.handsFree {
+            if recorder.isRecording { stopDictation() } else { startDictation() }
+        } else {
+            startDictation()
+        }
+    }
+
+    /// Hold-to-talk: key-up stops. Hands-free ignores key-up.
+    private func handleKeyUp() {
+        if !Settings.handsFree { stopDictation() }
     }
 
     // MARK: - Dictation flow (hold hotkey → record → release → transcribe → paste)

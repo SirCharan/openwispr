@@ -7,6 +7,7 @@ struct SettingsView: View {
     @AppStorage("autoPaste") private var autoPaste = true
     @AppStorage("removeFillers") private var removeFillers = true
     @AppStorage("cleanUp") private var cleanUp = true
+    @AppStorage("handsFree") private var handsFree = false
     @State private var selectedModel: String
     @State private var launchAtLogin: Bool
     @State private var accessibilityOK: Bool
@@ -33,8 +34,12 @@ struct SettingsView: View {
 
     private var general: some View {
         Form {
-            Section("Dictation hotkey (hold to talk)") {
+            Section("Dictation hotkey") {
                 KeyboardShortcuts.Recorder("Shortcut:", name: .dictate)
+                Toggle("Hands-free (tap to start, tap to stop)", isOn: $handsFree)
+                Text(handsFree ? "Tap the hotkey to start, tap again to stop."
+                               : "Hold the hotkey to talk, release to transcribe.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
             Section("Model") {
                 Picker("Whisper model", selection: $selectedModel) {

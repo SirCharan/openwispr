@@ -5,11 +5,12 @@ extension KeyboardShortcuts.Name {
     static let dictate = Self("dictate", default: .init(.d, modifiers: [.command, .shift]))
 }
 
-/// Registers the global push-to-talk hotkey: hold to record, release to transcribe.
+/// Forwards the global hotkey's raw key-down / key-up events. The recording policy
+/// (hold-to-talk vs hands-free toggle) is decided by AppController based on Settings.
 @MainActor
 final class HotkeyManager {
-    init(onStart: @escaping () -> Void, onStop: @escaping () -> Void) {
-        KeyboardShortcuts.onKeyDown(for: .dictate, action: onStart)
-        KeyboardShortcuts.onKeyUp(for: .dictate, action: onStop)
+    init(onKeyDown: @escaping () -> Void, onKeyUp: @escaping () -> Void) {
+        KeyboardShortcuts.onKeyDown(for: .dictate, action: onKeyDown)
+        KeyboardShortcuts.onKeyUp(for: .dictate, action: onKeyUp)
     }
 }
