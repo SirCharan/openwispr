@@ -131,7 +131,7 @@ final class AppController {
         setStatus("transcribing…")
         Task {
             do {
-                let raw = try await transcriber.transcribe(samples)
+                let raw = try await transcriber.transcribe(samples, language: Settings.languageCode)
                 let corrected = DictionaryStore.apply(raw, DictionaryStore.load())
                 let cleaned = TextProcessor.process(corrected, options: Settings.textOptions)
                 let text = SnippetStore.apply(cleaned, SnippetStore.load())

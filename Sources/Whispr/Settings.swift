@@ -14,6 +14,13 @@ enum Settings {
         set { UserDefaults.standard.set(newValue, forKey: "onboarded") }
     }
 
+    /// Dictation language: "auto" (detect) or a WhisperKit code ("en", "es", …).
+    static var language: String {
+        get { UserDefaults.standard.string(forKey: "language") ?? "auto" }
+        set { UserDefaults.standard.set(newValue, forKey: "language") }
+    }
+    static var languageCode: String? { language == "auto" ? nil : language }
+
     /// Hands-free: tap the hotkey to start, tap again to stop (instead of hold-to-talk).
     static var handsFree: Bool {
         get { UserDefaults.standard.bool(forKey: "handsFree") }

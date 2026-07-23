@@ -8,6 +8,7 @@ struct SettingsView: View {
     @AppStorage("removeFillers") private var removeFillers = true
     @AppStorage("cleanUp") private var cleanUp = true
     @AppStorage("handsFree") private var handsFree = false
+    @AppStorage("language") private var language = "auto"
     @State private var selectedModel: String
     @State private var launchAtLogin: Bool
     @State private var accessibilityOK: Bool
@@ -49,6 +50,11 @@ struct SettingsView: View {
                 .onChange(of: selectedModel) { _, new in onReloadModel(new) }
                 Text("Switching downloads the model if needed, then reloads.")
                     .font(.caption).foregroundStyle(.secondary)
+                Picker("Language", selection: $language) {
+                    ForEach(Languages.list, id: \.code) { lang in
+                        Text(lang.name).tag(lang.code ?? "auto")
+                    }
+                }
             }
             Section("Behavior") {
                 Toggle("Auto-paste at cursor (off = copy to clipboard only)", isOn: $autoPaste)
