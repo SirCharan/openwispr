@@ -12,6 +12,8 @@ final class AppController {
     private let meetingWindow = MeetingWindowController()
     private let importWindow = FileImportWindowController()
     private let corrections = CorrectionsWatcher()
+    private var previewTimer: Timer?
+    private var previewBusy = false
     private let modelManager = ModelManager()
     private let transcriber = Transcriber()
     private let recorder = AudioRecorder()
@@ -166,15 +168,45 @@ final class AppController {
                 onStop: { [weak self] in self?.stopDictation() }
             )
             setStatus("listening…")
+            startPreviewLoop()
         } catch {
             setStatus("mic error")
             NSLog("[Whispr] mic start failed: \(error)")
         }
     }
 
+    /// Eager preview: every 2s re-transcribe the last ~10s of buffer (greedy) and show
+    /// the tail in the pill. ponytail: re-transcribe loop, not a realtime model — skip
+    /// ticks while the previous one runs; upgrade path = dedicated streaming backend.
+    private func startPreviewLoop() {
+        previewTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.previewTick() }
+        }
+    }
+
+    private func stopPreviewLoop() {
+        previewTimer?.invalidate(); previewTimer = nil
+        previewBusy = false
+    }
+
+    private func previewTick() {
+        guard recorder.isRecording, !previewBusy else { return }
+        let samples = recorder.snapshot(last: 10)
+        guard samples.count > 16000 else { return } // need >1s
+        previewBusy = true
+        Task {
+            defer { previewBusy = false }
+            guard let raw = try? await transcriber.transcribe(samples, language: Settings.languageCode),
+                  recorder.isRecording else { return }
+            let words = raw.split(separator: " ").suffix(8).joined(separator: " ")
+            indicator.model.preview = words
+        }
+    }
+
     /// Discard the current recording without transcribing.
     private func cancelDictation() {
         guard recorder.isRecording else { return }
+        stopPreviewLoop()
         _ = recorder.stop()
         menuBar.setRecording(false)
         indicator.hide()
@@ -183,6 +215,7 @@ final class AppController {
 
     private func stopDictation() {
         guard recorder.isRecording else { return }
+        stopPreviewLoop()
         let samples = recorder.stop()
         menuBar.setRecording(false)
         indicator.hide()

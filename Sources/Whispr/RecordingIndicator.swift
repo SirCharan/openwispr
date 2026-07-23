@@ -1,17 +1,25 @@
 import AppKit
 import SwiftUI
 
+/// Live-preview text shown inside the pill while speaking.
+@MainActor
+final class PillModel: ObservableObject {
+    @Published var preview = ""
+}
+
 /// Floating pill shown while recording: animated waveform + cancel (✕) and stop (■).
 /// A non-activating panel so it never steals focus from the app you're dictating into.
 @MainActor
 final class RecordingIndicator {
     private var panel: NSPanel?
+    let model = PillModel()
 
     func show(onCancel: @escaping () -> Void, onStop: @escaping () -> Void) {
         guard Date() >= Theme.pillHiddenUntil else { return } // user chose "Hide 1 hour"
+        model.preview = ""
         if panel == nil {
-            let host = NSHostingView(rootView: RecordingPill(onCancel: onCancel, onStop: onStop))
-            host.frame = NSRect(x: 0, y: 0, width: 176, height: 56)
+            let host = NSHostingView(rootView: RecordingPill(model: model, onCancel: onCancel, onStop: onStop))
+            host.frame = NSRect(x: 0, y: 0, width: 380, height: 76)
             let p = NSPanel(contentRect: host.frame,
                             styleMask: [.borderless, .nonactivatingPanel],
                             backing: .buffered, defer: false)
@@ -38,25 +46,37 @@ final class RecordingIndicator {
 }
 
 private struct RecordingPill: View {
+    @ObservedObject var model: PillModel
     let onCancel: () -> Void
     let onStop: () -> Void
 
     var body: some View {
-        HStack(spacing: 14) {
-            Button(action: onCancel) { Image(systemName: "xmark") }
-                .buttonStyle(.plain)
-            WaveBars()
-            Button(action: onStop) { Image(systemName: "stop.fill") }
-                .buttonStyle(.plain)
+        VStack(spacing: 6) {
+            HStack(spacing: 14) {
+                Button(action: onCancel) { Image(systemName: "xmark") }
+                    .buttonStyle(.plain)
+                WaveBars()
+                Button(action: onStop) { Image(systemName: "stop.fill") }
+                    .buttonStyle(.plain)
+            }
+            if !model.preview.isEmpty {
+                Text(model.preview)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.white.opacity(0.55))
+                    .lineLimit(1)
+                    .truncationMode(.head)
+                    .frame(maxWidth: 320)
+            }
         }
         .font(.system(size: 13, weight: .semibold))
         .foregroundStyle(.white.opacity(0.8))
         .padding(.horizontal, 20)
-        .padding(.vertical, 14)
+        .padding(.vertical, 12)
         .background(
             Capsule().fill(Color(red: 0.08, green: 0.08, blue: 0.094))
                 .overlay(Capsule().stroke(.white.opacity(0.12), lineWidth: 1))
         )
+        .fixedSize()
         .contextMenu {
             Button("Paste last transcript") {
                 if let last = HistoryStore.load().first {

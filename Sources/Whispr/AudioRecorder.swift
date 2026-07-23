@@ -45,6 +45,14 @@ final class AudioRecorder {
         return out
     }
 
+    /// Non-destructive copy of the buffer tail (for live preview). `last` nil = everything.
+    func snapshot(last seconds: Double? = nil) -> [Float] {
+        lock.lock(); defer { lock.unlock() }
+        guard let seconds else { return samples }
+        let n = min(samples.count, Int(seconds * 16000))
+        return Array(samples.suffix(n))
+    }
+
     /// Seconds of audio currently buffered (since last drain).
     var bufferedSeconds: Double {
         lock.lock(); defer { lock.unlock() }
