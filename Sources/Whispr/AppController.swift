@@ -119,7 +119,8 @@ final class AppController {
             do {
                 let raw = try await transcriber.transcribe(samples)
                 let corrected = DictionaryStore.apply(raw, DictionaryStore.load())
-                let text = TextProcessor.process(corrected, options: Settings.textOptions)
+                let cleaned = TextProcessor.process(corrected, options: Settings.textOptions)
+                let text = SnippetStore.apply(cleaned, SnippetStore.load())
                 if text.isEmpty {
                     setStatus("ready (no speech)")
                 } else {
