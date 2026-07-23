@@ -31,6 +31,7 @@ struct SettingsView: View {
             SnippetsView().tabItem { Label("Snippets", systemImage: "text.badge.plus") }
             HistoryView().tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
             PerAppView().tabItem { Label("Apps", systemImage: "app.badge") }
+            AISettingsView().tabItem { Label("AI", systemImage: "sparkles") }
         }
         .frame(width: 500, height: 480)
     }
