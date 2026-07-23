@@ -39,6 +39,12 @@ final class AudioRecorder {
         isRecording = true
     }
 
+    /// Drain samples captured so far without stopping (for live chunked transcription).
+    func drain() -> [Float] {
+        lock.lock(); let out = samples; samples.removeAll(keepingCapacity: true); lock.unlock()
+        return out
+    }
+
     /// Stop capture and return the full 16 kHz mono sample buffer.
     @discardableResult
     func stop() -> [Float] {

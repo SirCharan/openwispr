@@ -4,7 +4,11 @@ import AppKit
 /// Recording + hotkey + paste flow is attached in later milestones.
 @MainActor
 final class AppController {
-    private lazy var menuBar = MenuBarController(onSettings: { [weak self] in self?.showSettings() })
+    private lazy var menuBar = MenuBarController(
+        onSettings: { [weak self] in self?.showSettings() },
+        onMeeting: { [weak self] in self?.showMeeting() }
+    )
+    private let meetingWindow = MeetingWindowController()
     private let modelManager = ModelManager()
     private let transcriber = Transcriber()
     private let recorder = AudioRecorder()
@@ -98,6 +102,11 @@ final class AppController {
             setStatus("model error")
             NSLog("[Whispr] model load failed: \(error)")
         }
+    }
+
+    private func showMeeting() {
+        guard transcriber.isReady else { setStatus("model still loading…"); return }
+        meetingWindow.show(transcriber: transcriber)
     }
 
     private func showSettings() {

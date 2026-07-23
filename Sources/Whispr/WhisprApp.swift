@@ -23,6 +23,10 @@ enum Whispr {
             runTranscribeFile(path: args[i + 1])
             exit(0)
         }
+        if let i = args.firstIndex(of: "--sysaudio-test"), i + 1 < args.count {
+            runSysAudioTest(seconds: Double(args[i + 1]) ?? 5)
+            exit(0)
+        }
 
         // --- normal menu-bar app ---
         let app = NSApplication.shared
@@ -48,6 +52,26 @@ enum Whispr {
         let wav = WavEncoder.encode(samples)
         try? wav.write(to: URL(fileURLWithPath: path))
         print("record-test: samples=\(samples.count) (~\(String(format: "%.1f", Double(samples.count) / 16000))s) rms=\(String(format: "%.4f", rms)) wrote=\(path)")
+    }
+
+    /// Capture system audio for N seconds and report sample count + RMS.
+    /// Proves the ScreenCaptureKit tap without the GUI. Requires Screen Recording permission.
+    private static func runSysAudioTest(seconds: Double) {
+        Task { @MainActor in
+            let rec = SystemAudioRecorder()
+            do {
+                try await rec.start()
+            } catch {
+                print("sysaudio-test FAIL: \(error)")
+                exit(1)
+            }
+            try? await Task.sleep(for: .seconds(seconds))
+            let samples = await rec.stop()
+            let rms = samples.isEmpty ? 0 : sqrt(samples.reduce(0) { $0 + $1 * $1 } / Float(samples.count))
+            print("sysaudio-test: samples=\(samples.count) (~\(String(format: "%.1f", Double(samples.count) / 16000))s) rms=\(String(format: "%.4f", rms))")
+            exit(0)
+        }
+        dispatchMain()
     }
 
     /// Load the selected model (cached) and transcribe an audio file. Proves the full ASR path.

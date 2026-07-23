@@ -7,9 +7,11 @@ final class MenuBarController: NSObject {
     private let statusItem: NSStatusItem
     private let statusMenuItem: NSMenuItem
     private let onSettings: () -> Void
+    private let onMeeting: () -> Void
 
-    init(onSettings: @escaping () -> Void) {
+    init(onSettings: @escaping () -> Void, onMeeting: @escaping () -> Void) {
         self.onSettings = onSettings
+        self.onMeeting = onMeeting
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusMenuItem = NSMenuItem(title: "Whispr — starting…", action: nil, keyEquivalent: "")
         statusMenuItem.isEnabled = false
@@ -23,6 +25,9 @@ final class MenuBarController: NSObject {
         let menu = NSMenu()
         menu.addItem(statusMenuItem)
         menu.addItem(.separator())
+        let meeting = NSMenuItem(title: "Record Meeting…", action: #selector(openMeeting), keyEquivalent: "m")
+        meeting.target = self
+        menu.addItem(meeting)
         let settings = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
         settings.target = self
         menu.addItem(settings)
@@ -32,6 +37,7 @@ final class MenuBarController: NSObject {
     }
 
     @objc private func openSettings() { onSettings() }
+    @objc private func openMeeting() { onMeeting() }
 
     func setStatus(_ text: String) {
         statusMenuItem.title = "Whispr — \(text)"
