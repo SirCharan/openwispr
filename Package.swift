@@ -6,9 +6,15 @@ import PackageDescription
 let package = Package(
     name: "Whispr",
     platforms: [.macOS(.v14)],
+    dependencies: [
+        .package(url: "https://github.com/argmaxinc/argmax-oss-swift.git", from: "0.9.0"),
+    ],
     targets: [
         .executableTarget(
             name: "Whispr",
+            dependencies: [
+                .product(name: "WhisperKit", package: "argmax-oss-swift"),
+            ],
             path: "Sources/Whispr",
             swiftSettings: [.swiftLanguageMode(.v5)]
         )
