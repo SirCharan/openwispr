@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Whispr — local voice dictation for macOS</title>
+<meta name="description" content="Hold a hotkey, speak, and your words paste at the cursor. On-device Whisper transcription for macOS. No cloud, no account." />
+<meta property="og:title" content="Whispr — local voice dictation for macOS" />
+<meta property="og:description" content="Hold. Speak. Done. On-device Whisper dictation for your Mac." />
+<meta property="og:type" content="website" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0a0a0b;
+    --surface: #141416;
+    --line: #26262a;
+    --text: #f2f2f0;
+    --muted: #8b8b91;
+    --accent: #ff5d54;      /* "recording" coral, used sparingly */
+    --accent-soft: rgba(255,93,84,.12);
+    --radius: 14px;
+    --sys: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: var(--sys); line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 24px; }
+  a { color: inherit; }
+
+  /* nav */
+  nav { display: flex; align-items: center; justify-content: space-between; padding: 22px 0; }
+  .brand { font-family: "Young Serif", Georgia, serif; font-size: 24px; letter-spacing: .2px; }
+  .brand span { color: var(--accent); }
+  .nav-link { color: var(--muted); text-decoration: none; font-size: 14px; transition: color .2s; }
+  .nav-link:hover { color: var(--text); }
+
+  /* hero */
+  .hero { padding: 72px 0 48px; text-align: center; }
+  .eyebrow {
+    display: inline-block; font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--muted); border: 1px solid var(--line); border-radius: 100px; padding: 6px 14px; margin-bottom: 28px;
+  }
+  h1 {
+    font-family: "Young Serif", Georgia, serif;
+    font-weight: 400; font-size: clamp(46px, 8.4vw, 86px); line-height: 1.02; letter-spacing: -1px;
+  }
+  h1 em { font-style: normal; color: var(--accent); }
+  .lede { color: var(--muted); font-size: clamp(16px, 2.4vw, 20px); max-width: 540px; margin: 22px auto 0; }
+
+  /* waveform signature */
+  .wave { display: flex; align-items: center; justify-content: center; gap: 5px; height: 60px; margin: 40px 0 8px; }
+  .wave i {
+    width: 5px; border-radius: 4px; background: var(--accent);
+    animation: pulse 1.3s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { height: 10px; opacity:.5 } 50% { height: 46px; opacity:1 } }
+  @media (prefers-reduced-motion: reduce) { .wave i { animation: none; height: 24px; } }
+
+  /* CTA */
+  .cta { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 20px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: var(--accent); color: #fff; text-decoration: none; font-weight: 600; font-size: 16px;
+    padding: 15px 28px; border-radius: 12px; transition: transform .15s ease, filter .2s ease;
+  }
+  .btn:hover { transform: translateY(-2px); filter: brightness(1.06); }
+  .btn svg { width: 18px; height: 18px; }
+  .req { color: var(--muted); font-size: 13px; }
+
+  /* sections */
+  section { padding: 56px 0; border-top: 1px solid var(--line); }
+  .kicker { color: var(--accent); font-size: 13px; letter-spacing: .1em; text-transform: uppercase; margin-bottom: 10px; }
+  h2 { font-family: "Young Serif", Georgia, serif; font-weight: 400; font-size: clamp(28px, 4.6vw, 40px); letter-spacing: -.4px; margin-bottom: 28px; }
+
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; }
+  .card h3 { font-size: 17px; margin-bottom: 8px; }
+  .card p { color: var(--muted); font-size: 14.5px; }
+  .card .dot { width: 34px; height: 34px; border-radius: 9px; background: var(--accent-soft); color: var(--accent);
+    display: grid; place-items: center; margin-bottom: 14px; font-size: 18px; }
+
+  /* steps */
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; counter-reset: s; }
+  .step { position: relative; padding: 22px; border: 1px solid var(--line); border-radius: var(--radius); }
+  .step::before { counter-increment: s; content: counter(s); font-family: "Young Serif", serif;
+    font-size: 30px; color: var(--accent); display: block; margin-bottom: 8px; }
+  .step h3 { font-size: 16px; margin-bottom: 6px; }
+  .step p { color: var(--muted); font-size: 14px; }
+  kbd { background:#000; border:1px solid var(--line); border-bottom-width:2px; border-radius:6px; padding:1px 7px; font-size:13px; font-family: var(--sys); }
+
+  .note { background: var(--accent-soft); border: 1px solid rgba(255,93,84,.25); border-radius: var(--radius);
+    padding: 18px 20px; color: #ffd9d6; font-size: 14.5px; margin-top: 22px; }
+  .note b { color: #fff; }
+
+  footer { border-top: 1px solid var(--line); padding: 40px 0; color: var(--muted); font-size: 13.5px;
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  footer a { color: var(--muted); text-decoration: none; }
+  footer a:hover { color: var(--text); }
+
+  @media (max-width: 640px) {
+    .grid, .steps { grid-template-columns: 1fr; }
+    .hero { padding: 48px 0 32px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <div class="brand">Whis<span>p</span>r</div>
+    <div style="display:flex; gap:22px; align-items:center">
+      <a class="nav-link" href="#how">How it works</a>
+      <a class="nav-link" href="https://github.com/SirCharan/whispr" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <span class="eyebrow">Local Whisper · macOS</span>
+    <h1>Hold. Speak.<br /><em>Done.</em></h1>
+    <p class="lede">Voice dictation that runs entirely on your Mac. Hold a hotkey, talk, and your words paste at the cursor. No cloud, no account, nothing leaves your machine.</p>
+
+    <div class="wave" aria-hidden="true">
+      <i style="animation-delay:0s"></i><i style="animation-delay:.1s"></i><i style="animation-delay:.2s"></i>
+      <i style="animation-delay:.3s"></i><i style="animation-delay:.15s"></i><i style="animation-delay:.25s"></i>
+      <i style="animation-delay:.05s"></i><i style="animation-delay:.35s"></i><i style="animation-delay:.2s"></i>
+      <i style="animation-delay:.1s"></i><i style="animation-delay:.3s"></i>
+    </div>
+
+    <div class="cta">
+      <a class="btn" href="https://github.com/SirCharan/whispr/releases/latest/download/Whispr.zip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
+        Download for macOS
+      </a>
+      <span class="req">Free · macOS 14+ · Apple Silicon · ~1.5 GB model on first launch</span>
+    </div>
+  </header>
+
+  <section>
+    <div class="kicker">Why Whispr</div>
+    <h2>Fast, private, out of your way.</h2>
+    <div class="grid">
+      <div class="card"><div class="dot">🎙</div><h3>100% on-device</h3><p>Whisper runs on the Apple Neural Engine. Your voice never touches a server.</p></div>
+      <div class="card"><div class="dot">⌨︎</div><h3>Push-to-talk paste</h3><p>Hold ⌘⇧D, speak, release. The transcript lands wherever your cursor is.</p></div>
+      <div class="card"><div class="dot">◎</div><h3>Accurate model</h3><p>Ships with Whisper large-v3-turbo. Switch to a smaller model anytime.</p></div>
+      <div class="card"><div class="dot">⚡</div><h3>Lives in the menu bar</h3><p>No dock icon, no window in the way. Just a mic that's always one key away.</p></div>
+    </div>
+  </section>
+
+  <section id="how">
+    <div class="kicker">How it works</div>
+    <h2>Three steps to your first dictation.</h2>
+    <div class="steps">
+      <div class="step"><h3>Download & open</h3><p>Grab the app, drag it to Applications, right-click → Open the first time.</p></div>
+      <div class="step"><h3>Grant access</h3><p>Allow Microphone and Accessibility when the setup wizard asks.</p></div>
+      <div class="step"><h3>Dictate</h3><p>Hold <kbd>⌘⇧D</kbd>, speak, release — your text pastes at the cursor.</p></div>
+    </div>
+    <div class="note"><b>First open:</b> because this build isn't notarized yet, macOS Gatekeeper blocks a double-click. Right-click <b>Whispr.app → Open → Open</b> once, and it runs normally after that.</div>
+  </section>
+
+  <footer>
+    <span>Whispr · MIT licensed · built with WhisperKit</span>
+    <span><a href="https://github.com/SirCharan/whispr" target="_blank" rel="noopener">Source on GitHub ↗</a></span>
+  </footer>
+</div>
+</body>
+</html>
