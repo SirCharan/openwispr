@@ -9,17 +9,28 @@ final class OnboardingModel: ObservableObject {
     @Published var step = 0
     @Published var micGranted = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
     @Published var axGranted = Permissions.hasAccessibility
+    @Published var screenRecGranted = CGPreflightScreenCaptureAccess()
     @Published var downloadProgress = 0.0
     @Published var modelReady = false
     @Published var practice: PracticeState = .idle
 
+    /// Running from outside /Applications (Downloads, a mounted DMG…) → offer to move.
+    var needsMove: Bool { !Bundle.main.bundlePath.hasPrefix("/Applications") }
+
     /// Set by AppController: start the model download/load, routing progress back here.
     var onStartModel: () -> Void = {}
+    /// Set by AppController: copy the app to /Applications and relaunch from there.
+    var onMoveToApplications: () -> Void = {}
     /// Set by AppController: start/stop a practice recording (result lands in `practice`).
     var onPracticeStart: () -> Void = {}
     var onPracticeStop: () -> Void = {}
     /// Set by AppController: persist onboarded, attach hotkeys, close the window.
     var onFinish: () -> Void = {}
+
+    func requestScreenRecording() {
+        CGRequestScreenCaptureAccess() // prompts + adds Whispr to the pane; grant needs relaunch to take effect
+        screenRecGranted = CGPreflightScreenCaptureAccess()
+    }
 
     func requestMic() {
         AVCaptureDevice.requestAccess(for: .audio) { granted in

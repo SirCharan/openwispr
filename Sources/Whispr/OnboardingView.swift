@@ -1,23 +1,28 @@
 import SwiftUI
 import KeyboardShortcuts
 
-/// First-run wizard. Six steps: welcome → mic → accessibility → model download → try-it → done.
+/// First-run wizard, nine steps: welcome → move-to-Applications → mic → accessibility →
+/// screen recording (optional) → model download → try-it → setup (hotkey + login) → done.
 struct OnboardingView: View {
     @ObservedObject var model: OnboardingModel
+    @State private var launchAtLogin = false
 
     var body: some View {
         VStack(spacing: 24) {
             switch model.step {
             case 0: welcome
-            case 1: mic
-            case 2: accessibility
-            case 3: download
-            case 4: practice
+            case 1: move
+            case 2: mic
+            case 3: accessibility
+            case 4: screenRecording
+            case 5: download
+            case 6: practice
+            case 7: setup
             default: done
             }
         }
         .padding(40)
-        .frame(width: 460, height: 380)
+        .frame(width: 460, height: 420)
         .onAppear { model.refreshAccessibility() }
     }
 
@@ -27,7 +32,18 @@ struct OnboardingView: View {
             title: "Welcome to Whispr",
             body: "Hold a hotkey, speak, and your words paste at the cursor — transcribed on-device with Whisper. No cloud, no account.",
             button: "Get started",
-            action: { model.step = 1 }
+            action: { model.step = model.needsMove ? 1 : 2 }
+        )
+    }
+
+    private var move: some View {
+        step(
+            icon: "arrow.down.app.fill",
+            title: "Move to Applications",
+            body: "Whispr is running from \(Bundle.main.bundlePath.hasPrefix("/Volumes") ? "the disk image" : "outside Applications"). Moving it to the Applications folder keeps macOS permissions stable. Whispr will relaunch after the move.",
+            button: "Move to Applications",
+            action: { model.onMoveToApplications() },
+            secondary: ("Skip", { model.step = 2 })
         )
     }
 
@@ -38,7 +54,7 @@ struct OnboardingView: View {
             body: model.micGranted ? "Microphone access granted." : "Whispr needs the microphone to hear you. Audio is processed locally and never leaves your Mac.",
             button: model.micGranted ? "Continue" : "Allow microphone",
             action: {
-                if model.micGranted { model.step = 2 } else { model.requestMic() }
+                if model.micGranted { model.step = 3 } else { model.requestMic() }
             }
         )
     }
@@ -50,10 +66,26 @@ struct OnboardingView: View {
             body: model.axGranted ? "Accessibility granted — auto-paste is enabled." : "To paste transcripts at your cursor, grant Accessibility. Without it, text is copied to the clipboard and you paste manually.",
             button: model.axGranted ? "Continue" : "Open Accessibility settings",
             action: {
-                if model.axGranted { model.step = 3; model.onStartModel() }
+                if model.axGranted { model.step = 4 }
                 else { model.requestAccessibility() }
             },
-            secondary: model.axGranted ? nil : ("Skip for now", { model.step = 3; model.onStartModel() })
+            secondary: model.axGranted ? nil : ("Skip for now", { model.step = 4 })
+        )
+    }
+
+    private var screenRecording: some View {
+        step(
+            icon: model.screenRecGranted ? "checkmark.circle.fill" : "rectangle.inset.filled.badge.record",
+            title: "Meeting capture (optional)",
+            body: model.screenRecGranted
+                ? "Screen & System Audio Recording granted — meetings are ready."
+                : "Whispr can transcribe calls: your mic plus the other side's audio. macOS exposes system audio through Screen Recording permission. Only audio is used. Skip if you only dictate.",
+            button: model.screenRecGranted ? "Continue" : "Enable meeting capture",
+            action: {
+                if model.screenRecGranted { model.step = 5; model.onStartModel() }
+                else { model.requestScreenRecording() }
+            },
+            secondary: ("Skip — dictation only", { model.step = 5; model.onStartModel() })
         )
     }
 
@@ -67,7 +99,7 @@ struct OnboardingView: View {
                 .frame(maxWidth: 320)
             Text(model.modelReady ? "Ready" : "\(Int(model.downloadProgress * 100))%")
                 .font(.caption).foregroundStyle(.secondary)
-            Button("Continue") { model.step = 4 }
+            Button("Continue") { model.step = 6 }
                 .keyboardShortcut(.defaultAction)
                 .disabled(!model.modelReady)
         }
@@ -98,15 +130,33 @@ struct OnboardingView: View {
                 }
                 HStack {
                     Button("Try again") { model.practice = .idle }
-                    Button("Continue") { model.step = 5 }.keyboardShortcut(.defaultAction)
+                    Button("Continue") { model.step = 7 }.keyboardShortcut(.defaultAction)
                 }
             }
 
             if case .result = model.practice {} else {
-                Button("Skip") { model.step = 5 }
+                Button("Skip") { model.step = 7 }
                     .buttonStyle(.plain).font(.caption).foregroundStyle(.secondary)
             }
         }
+    }
+
+    private var setup: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "slider.horizontal.3").font(.system(size: 52)).foregroundStyle(.tint)
+            Text("Make it yours").font(.title2).bold()
+            Form {
+                KeyboardShortcuts.Recorder("Dictation hotkey:", name: .dictate)
+                Toggle("Start Whispr at login", isOn: $launchAtLogin)
+                    .onChange(of: launchAtLogin) { _, on in LoginItem.set(on) }
+            }
+            .formStyle(.columns)
+            .frame(maxWidth: 300)
+            Text("Both can be changed later in Settings.")
+                .font(.caption).foregroundStyle(.secondary)
+            Button("Continue") { model.step = 8 }.keyboardShortcut(.defaultAction).controlSize(.large)
+        }
+        .onAppear { launchAtLogin = LoginItem.isEnabled }
     }
 
     private var done: some View {

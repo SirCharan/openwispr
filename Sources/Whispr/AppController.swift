@@ -46,6 +46,7 @@ final class AppController {
         vm.onStartModel = { [weak self, weak vm] in
             Task { await self?.loadModelForOnboarding(vm) }
         }
+        vm.onMoveToApplications = { Self.moveToApplicationsAndRelaunch() }
         vm.onPracticeStart = { [weak self, weak vm] in
             guard let self, let vm else { return }
             do {
@@ -245,6 +246,31 @@ final class AppController {
     private func setStatus(_ text: String) {
         menuBar.setStatus(text)
         NSLog("[Whispr] status: \(text)")
+    }
+
+    /// Copy the running bundle to /Applications and relaunch from there.
+    /// ditto preserves the bundle + signature; TCC grants stick to the /Applications copy.
+    static func moveToApplicationsAndRelaunch() {
+        let src = Bundle.main.bundlePath
+        let dst = "/Applications/Whispr.app"
+        guard src != dst else { return }
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
+        p.arguments = [src, dst]
+        do {
+            try p.run()
+            p.waitUntilExit()
+            guard p.terminationStatus == 0 else {
+                NSLog("[Whispr] move failed: ditto exit \(p.terminationStatus)"); return
+            }
+            let config = NSWorkspace.OpenConfiguration()
+            config.createsNewApplicationInstance = true
+            NSWorkspace.shared.openApplication(at: URL(fileURLWithPath: dst), configuration: config) { _, _ in
+                Task { @MainActor in NSApp.terminate(nil) }
+            }
+        } catch {
+            NSLog("[Whispr] move failed: \(error)")
+        }
     }
 
     /// Apply the configured AI rewrite style; on any failure return the original text (paste never blocks on AI errors).
