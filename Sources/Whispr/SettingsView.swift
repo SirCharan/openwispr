@@ -9,6 +9,7 @@ struct SettingsView: View {
     @AppStorage("cleanUp") private var cleanUp = true
     @AppStorage("handsFree") private var handsFree = false
     @AppStorage("language") private var language = "auto"
+    @AppStorage("rewriteStyle") private var rewriteStyle = "off"
     @State private var selectedModel: String
     @State private var launchAtLogin: Bool
     @State private var accessibilityOK: Bool
@@ -66,6 +67,12 @@ struct SettingsView: View {
             Section("Transcript cleanup") {
                 Toggle("Remove filler words (um, uh, er)", isOn: $removeFillers)
                 Toggle("Capitalize sentences & tidy spacing", isOn: $cleanUp)
+                Picker("AI rewrite (needs AI provider)", selection: $rewriteStyle) {
+                    Text("Off").tag("off")
+                    Text("Clean grammar").tag("clean")
+                    Text("Formal").tag("formal")
+                    Text("Concise").tag("concise")
+                }
             }
             Section("Permissions") {
                 HStack {

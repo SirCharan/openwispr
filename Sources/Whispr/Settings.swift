@@ -48,4 +48,10 @@ enum Settings {
     static var textOptions: TextProcessor.Options {
         TextProcessor.Options(removeFillers: removeFillers, cleanUp: cleanUp)
     }
+
+    /// AI rewrite applied after the text pipeline: "off", "clean", "formal", "concise".
+    static var rewriteStyle: String {
+        get { UserDefaults.standard.string(forKey: "rewriteStyle") ?? "off" }
+        set { UserDefaults.standard.set(newValue, forKey: "rewriteStyle") }
+    }
 }

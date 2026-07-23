@@ -6,9 +6,11 @@ import AppKit
 final class AppController {
     private lazy var menuBar = MenuBarController(
         onSettings: { [weak self] in self?.showSettings() },
-        onMeeting: { [weak self] in self?.showMeeting() }
+        onMeeting: { [weak self] in self?.showMeeting() },
+        onImport: { [weak self] in self?.showImport() }
     )
     private let meetingWindow = MeetingWindowController()
+    private let importWindow = FileImportWindowController()
     private let modelManager = ModelManager()
     private let transcriber = Transcriber()
     private let recorder = AudioRecorder()
@@ -109,6 +111,11 @@ final class AppController {
         meetingWindow.show(transcriber: transcriber)
     }
 
+    private func showImport() {
+        guard transcriber.isReady else { setStatus("model still loading…"); return }
+        importWindow.show(transcriber: transcriber)
+    }
+
     private func showSettings() {
         settingsWindow.show(
             currentModel: modelManager.selectedModel,
@@ -184,7 +191,8 @@ final class AppController {
                 let raw = try await transcriber.transcribe(samples, language: Settings.languageCode)
                 let corrected = DictionaryStore.apply(raw, DictionaryStore.load())
                 let cleaned = TextProcessor.process(corrected, options: Settings.textOptions)
-                let text = SnippetStore.apply(cleaned, SnippetStore.load())
+                var text = SnippetStore.apply(cleaned, SnippetStore.load())
+                text = await Self.rewriteIfEnabled(text) { [weak self] in self?.setStatus($0) }
                 if text.isEmpty {
                     setStatus("ready (no speech)")
                 } else {
@@ -202,5 +210,26 @@ final class AppController {
     private func setStatus(_ text: String) {
         menuBar.setStatus(text)
         NSLog("[Whispr] status: \(text)")
+    }
+
+    /// Apply the configured AI rewrite style; on any failure return the original text (paste never blocks on AI errors).
+    static func rewriteIfEnabled(_ text: String, status: @escaping (String) -> Void) async -> String {
+        let style = Settings.rewriteStyle
+        guard style != "off", !text.isEmpty else { return text }
+        guard await LLMClient.available() else { return text }
+        status("rewriting (\(style))…")
+        let prompts = [
+            "clean": "Fix grammar and punctuation. Keep the meaning, wording, and tone. Reply with only the corrected text.",
+            "formal": "Rewrite in a professional, formal tone. Keep the meaning. Reply with only the rewritten text.",
+            "concise": "Rewrite as concisely as possible without losing meaning. Reply with only the rewritten text.",
+        ]
+        guard let system = prompts[style] else { return text }
+        do {
+            let out = try await LLMClient.complete(system: system, user: text)
+            return out.isEmpty ? text : out
+        } catch {
+            NSLog("[Whispr] rewrite failed, pasting original: \(error)")
+            return text
+        }
     }
 }

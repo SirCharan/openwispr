@@ -8,10 +8,12 @@ final class MenuBarController: NSObject {
     private let statusMenuItem: NSMenuItem
     private let onSettings: () -> Void
     private let onMeeting: () -> Void
+    private let onImport: () -> Void
 
-    init(onSettings: @escaping () -> Void, onMeeting: @escaping () -> Void) {
+    init(onSettings: @escaping () -> Void, onMeeting: @escaping () -> Void, onImport: @escaping () -> Void) {
         self.onSettings = onSettings
         self.onMeeting = onMeeting
+        self.onImport = onImport
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusMenuItem = NSMenuItem(title: "Whispr — starting…", action: nil, keyEquivalent: "")
         statusMenuItem.isEnabled = false
@@ -28,6 +30,9 @@ final class MenuBarController: NSObject {
         let meeting = NSMenuItem(title: "Record Meeting…", action: #selector(openMeeting), keyEquivalent: "m")
         meeting.target = self
         menu.addItem(meeting)
+        let importItem = NSMenuItem(title: "Transcribe File…", action: #selector(openImport), keyEquivalent: "t")
+        importItem.target = self
+        menu.addItem(importItem)
         let settings = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
         settings.target = self
         menu.addItem(settings)
@@ -38,6 +43,7 @@ final class MenuBarController: NSObject {
 
     @objc private func openSettings() { onSettings() }
     @objc private func openMeeting() { onMeeting() }
+    @objc private func openImport() { onImport() }
 
     func setStatus(_ text: String) {
         statusMenuItem.title = "Whispr — \(text)"
