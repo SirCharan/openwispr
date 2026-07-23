@@ -8,21 +8,26 @@ struct MeetingLine: Identifiable, Codable {
 }
 
 /// Records a meeting from two streams — mic ("You") and system audio ("Others") —
-/// rotating chunks on a timer and transcribing each in the background for a live transcript.
-/// ponytail: fixed 20s chunk rotation, no VAD model — good boundaries for meeting notes;
-/// upgrade to Silero VAD (FluidAudio) if mid-word cuts prove annoying.
+/// rotating each stream's chunk at natural speech pauses and transcribing in the background.
+/// ponytail: energy-based pause detection (tail RMS), not a VAD model — Silero VAD via
+/// FluidAudio is the upgrade path if mid-word cuts prove annoying.
 @MainActor
 final class MeetingController: ObservableObject {
     @Published private(set) var lines: [MeetingLine] = []
     @Published private(set) var isRunning = false
     @Published private(set) var status = "idle"
+    @Published var summary: String?
+    @Published private(set) var summarizing = false
 
     private let mic = AudioRecorder()
     private let system = SystemAudioRecorder()
     private let transcriber: Transcriber
     private var timer: Timer?
-    private let chunkSeconds: TimeInterval = 20
-    private let minSamples = 8000 // ignore chunks under 0.5 s
+    private let minSamples = 8000        // ignore chunks under 0.5 s
+    private let minChunkSeconds = 6.0    // don't rotate more often than this
+    private let maxChunkSeconds = 30.0   // force rotation at this length
+    private let pauseWindow = 0.7        // trailing seconds that must be quiet
+    private let pauseRMS: Float = 0.004  // "quiet" threshold
 
     init(transcriber: Transcriber) {
         self.transcriber = transcriber
@@ -40,8 +45,9 @@ final class MeetingController: ObservableObject {
         }
         isRunning = true
         status = "recording"
-        timer = Timer.scheduledTimer(withTimeInterval: chunkSeconds, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.rotateChunks() }
+        summary = nil
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.checkRotation() }
         }
     }
 
@@ -57,13 +63,43 @@ final class MeetingController: ObservableObject {
         status = "done"
     }
 
-    private func rotateChunks() {
+    /// Rotate a stream when its speaker pauses (quiet tail) after enough audio,
+    /// or unconditionally at maxChunkSeconds.
+    private func checkRotation() {
         guard isRunning else { return }
-        let micChunk = mic.drain()
-        let sysChunk = system.drain()
-        Task {
-            await transcribeChunk(micChunk, speaker: "You")
-            await transcribeChunk(sysChunk, speaker: "Others")
+        rotateIfDue(buffered: mic.bufferedSeconds, tail: mic.tailRMS(pauseWindow)) {
+            let chunk = self.mic.drain()
+            Task { await self.transcribeChunk(chunk, speaker: "You") }
+        }
+        rotateIfDue(buffered: system.bufferedSeconds, tail: system.tailRMS(pauseWindow)) {
+            let chunk = self.system.drain()
+            Task { await self.transcribeChunk(chunk, speaker: "Others") }
+        }
+    }
+
+    private func rotateIfDue(buffered: Double, tail: Float, rotate: () -> Void) {
+        guard buffered >= minChunkSeconds else { return }
+        if tail < pauseRMS || buffered >= maxChunkSeconds { rotate() }
+    }
+
+    // MARK: - AI summary (BYOK, optional)
+
+    func summarize() async {
+        guard !lines.isEmpty, !summarizing else { return }
+        summarizing = true
+        defer { summarizing = false }
+        let transcript = lines.map { "\($0.speaker): \($0.text)" }.joined(separator: "\n")
+        do {
+            summary = try await LLMClient.complete(
+                system: """
+                You summarize meeting transcripts. "You" is the local user; "Others" are remote participants.
+                Reply in Markdown with exactly these sections: ## Summary (2-4 sentences),
+                ## Decisions (bullets, or "None"), ## Action items (bullets with owner if known, or "None").
+                """,
+                user: transcript
+            )
+        } catch {
+            summary = "_\(error.localizedDescription)_"
         }
     }
 
@@ -88,6 +124,9 @@ final class MeetingController: ObservableObject {
         let df = DateFormatter()
         df.dateStyle = .medium; df.timeStyle = .short
         var md = "# Meeting transcript — \(df.string(from: lines.first?.date ?? Date()))\n\n"
+        if let summary, !summary.isEmpty {
+            md += summary + "\n\n---\n\n"
+        }
         for line in lines {
             let t = DateFormatter.localizedString(from: line.date, dateStyle: .none, timeStyle: .short)
             md += "**\(line.speaker)** (\(t)): \(line.text)\n\n"

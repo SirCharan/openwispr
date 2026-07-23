@@ -45,6 +45,21 @@ final class AudioRecorder {
         return out
     }
 
+    /// Seconds of audio currently buffered (since last drain).
+    var bufferedSeconds: Double {
+        lock.lock(); defer { lock.unlock() }
+        return Double(samples.count) / 16000
+    }
+
+    /// RMS of the trailing `seconds` of the buffer — low value = the speaker paused.
+    func tailRMS(_ seconds: Double) -> Float {
+        lock.lock(); defer { lock.unlock() }
+        let n = min(samples.count, Int(seconds * 16000))
+        guard n > 0 else { return 0 }
+        let tail = samples.suffix(n)
+        return sqrt(tail.reduce(0) { $0 + $1 * $1 } / Float(n))
+    }
+
     /// Stop capture and return the full 16 kHz mono sample buffer.
     @discardableResult
     func stop() -> [Float] {

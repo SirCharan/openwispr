@@ -20,11 +20,27 @@ struct MeetingView: View {
                     Button("Start recording") { Task { await controller.start() } }
                         .keyboardShortcut(.defaultAction)
                 }
+                Button(controller.summarizing ? "Summarizing…" : "Summarize") {
+                    Task { await controller.summarize() }
+                }
+                .disabled(controller.lines.isEmpty || controller.isRunning || controller.summarizing)
                 Button("Export…") { export() }
                     .disabled(controller.lines.isEmpty)
             }
             .padding(12)
             Divider()
+
+            if let summary = controller.summary {
+                ScrollView {
+                    Text(LocalizedStringKey(summary))
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(12)
+                }
+                .frame(maxHeight: 160)
+                .background(Color.accentColor.opacity(0.06))
+                Divider()
+            }
 
             if controller.lines.isEmpty {
                 Spacer()
