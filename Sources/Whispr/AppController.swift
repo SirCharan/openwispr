@@ -117,7 +117,8 @@ final class AppController {
         setStatus("transcribing…")
         Task {
             do {
-                let text = try await transcriber.transcribe(samples)
+                let raw = try await transcriber.transcribe(samples)
+                let text = TextProcessor.process(raw, options: Settings.textOptions)
                 if text.isEmpty {
                     setStatus("ready (no speech)")
                 } else {

@@ -13,4 +13,20 @@ enum Settings {
         get { UserDefaults.standard.bool(forKey: "onboarded") }
         set { UserDefaults.standard.set(newValue, forKey: "onboarded") }
     }
+
+    /// Remove filler words (um/uh/er) from transcripts.
+    static var removeFillers: Bool {
+        get { UserDefaults.standard.object(forKey: "removeFillers") as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: "removeFillers") }
+    }
+
+    /// Capitalize sentences + normalize spacing.
+    static var cleanUp: Bool {
+        get { UserDefaults.standard.object(forKey: "cleanUp") as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: "cleanUp") }
+    }
+
+    static var textOptions: TextProcessor.Options {
+        TextProcessor.Options(removeFillers: removeFillers, cleanUp: cleanUp)
+    }
 }

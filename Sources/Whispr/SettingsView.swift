@@ -5,6 +5,8 @@ import KeyboardShortcuts
 /// launch-at-login, and Accessibility status.
 struct SettingsView: View {
     @AppStorage("autoPaste") private var autoPaste = true
+    @AppStorage("removeFillers") private var removeFillers = true
+    @AppStorage("cleanUp") private var cleanUp = true
     @State private var selectedModel: String
     @State private var launchAtLogin: Bool
     @State private var accessibilityOK: Bool
@@ -37,6 +39,10 @@ struct SettingsView: View {
                 Toggle("Auto-paste at cursor (off = copy to clipboard only)", isOn: $autoPaste)
                 Toggle("Launch at login", isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { _, on in LoginItem.set(on) }
+            }
+            Section("Transcript cleanup") {
+                Toggle("Remove filler words (um, uh, er)", isOn: $removeFillers)
+                Toggle("Capitalize sentences & tidy spacing", isOn: $cleanUp)
             }
             Section("Permissions") {
                 HStack {

@@ -8,6 +8,7 @@ enum Whispr {
         // --- headless gates (loop engineering) ---
         if args.contains("--selftest") {
             WavEncoder.selfTest()
+            TextProcessor.selfTest()
             exit(0)
         }
         if let i = args.firstIndex(of: "--record-test"), i + 2 < args.count {
