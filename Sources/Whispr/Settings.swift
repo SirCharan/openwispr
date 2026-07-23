@@ -7,4 +7,10 @@ enum Settings {
         get { UserDefaults.standard.object(forKey: "autoPaste") as? Bool ?? true }
         set { UserDefaults.standard.set(newValue, forKey: "autoPaste") }
     }
+
+    /// First-run onboarding completed. When false, the wizard shows on launch.
+    static var onboarded: Bool {
+        get { UserDefaults.standard.bool(forKey: "onboarded") }
+        set { UserDefaults.standard.set(newValue, forKey: "onboarded") }
+    }
 }

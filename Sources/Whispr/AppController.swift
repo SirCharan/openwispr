@@ -10,9 +10,14 @@ final class AppController {
     private let recorder = AudioRecorder()
     private var hotkeys: HotkeyManager?
     private let settingsWindow = SettingsWindowController()
+    private var onboarding: OnboardingWindowController?
 
     func start() {
-        Task { await bootModel() }
+        if Settings.onboarded {
+            Task { await bootModel() }
+        } else {
+            showOnboarding()
+        }
     }
 
     private func bootModel() async {
@@ -20,6 +25,37 @@ final class AppController {
         attachHotkeys()
         if Settings.autoPaste && !Permissions.hasAccessibility {
             Permissions.requestAccessibility() // one-time prompt so auto-paste works
+        }
+    }
+
+    // MARK: - First-run onboarding
+
+    private func showOnboarding() {
+        setStatus("setup…")
+        let vm = OnboardingModel()
+        vm.onStartModel = { [weak self, weak vm] in
+            Task { await self?.loadModelForOnboarding(vm) }
+        }
+        vm.onFinish = { [weak self] in
+            Settings.onboarded = true
+            self?.attachHotkeys()
+            self?.setStatus("ready — hold ⌘⇧D to dictate")
+            self?.onboarding?.close()
+            self?.onboarding = nil
+        }
+        onboarding = OnboardingWindowController(model: vm)
+        onboarding?.show()
+    }
+
+    private func loadModelForOnboarding(_ vm: OnboardingModel?) async {
+        guard let vm else { return }
+        let model = modelManager.selectedModel
+        do {
+            let folder = try await modelManager.ensureDownloaded(model) { frac in vm.downloadProgress = frac }
+            try await transcriber.load(model: model, folder: folder)
+            vm.modelReady = true
+        } catch {
+            NSLog("[Whispr] onboarding model load failed: \(error)")
         }
     }
 
