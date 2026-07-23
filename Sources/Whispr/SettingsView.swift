@@ -10,6 +10,8 @@ struct SettingsView: View {
     @AppStorage("handsFree") private var handsFree = false
     @AppStorage("language") private var language = "auto"
     @AppStorage("rewriteStyle") private var rewriteStyle = "off"
+    @AppStorage("accentHex") private var accentHex = "FF5D54"
+    @AppStorage("appearance") private var appearance = "system"
     @State private var selectedModel: String
     @State private var launchAtLogin: Bool
     @State private var accessibilityOK: Bool
@@ -73,6 +75,15 @@ struct SettingsView: View {
                     Text("Formal").tag("formal")
                     Text("Concise").tag("concise")
                 }
+            }
+            Section("Appearance") {
+                Picker("Accent", selection: $accentHex) {
+                    ForEach(Theme.accents, id: \.hex) { a in Text(a.name).tag(a.hex) }
+                }
+                Picker("Theme", selection: $appearance) {
+                    Text("System").tag("system"); Text("Light").tag("light"); Text("Dark").tag("dark")
+                }
+                .onChange(of: appearance) { _, _ in Theme.apply() }
             }
             Section("Permissions") {
                 HStack {

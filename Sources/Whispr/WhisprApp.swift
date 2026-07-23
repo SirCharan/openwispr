@@ -31,6 +31,7 @@ enum Whispr {
         // --- normal menu-bar app ---
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory) // menu-bar-only; pairs with LSUIElement
+        Theme.apply()
         let delegate = AppDelegate()
         app.delegate = delegate
         app.run()
