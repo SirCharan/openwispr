@@ -4,3 +4,4 @@ build/
 *.xcodeproj
 .swiftpm/
 Package.resolved
+.vercel

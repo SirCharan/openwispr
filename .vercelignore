@@ -1,0 +1,9 @@
+.build
+build
+Sources
+Package.swift
+Package.resolved
+Resources
+build_app.sh
+*.md
+LICENSE
