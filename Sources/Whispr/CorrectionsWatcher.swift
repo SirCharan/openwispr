@@ -1,0 +1,90 @@
+import AppKit
+
+/// Learn-from-corrections (Wispr/Muesli pattern, opt-in prompt, never silent):
+/// after a paste, watch the clipboard for ~60s. If the user copies an edited version
+/// of the transcript, diff word-by-word and offer near-miss corrections for the dictionary.
+@MainActor
+final class CorrectionsWatcher {
+    private var lastTranscript: String?
+    private var deadline = Date.distantPast
+    private var lastChangeCount = NSPasteboard.general.changeCount
+    private var timer: Timer?
+
+    func notePaste(_ transcript: String) {
+        lastTranscript = transcript
+        deadline = Date().addingTimeInterval(60)
+        lastChangeCount = NSPasteboard.general.changeCount
+        if timer == nil {
+            timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
+                Task { @MainActor in self?.poll() }
+            }
+        }
+    }
+
+    private func poll() {
+        guard Date() < deadline, let transcript = lastTranscript else {
+            timer?.invalidate(); timer = nil
+            return
+        }
+        let pb = NSPasteboard.general
+        guard pb.changeCount != lastChangeCount else { return }
+        lastChangeCount = pb.changeCount
+        guard let copied = pb.string(forType: .string) else { return }
+
+        let pairs = Self.corrections(original: transcript, edited: copied)
+        guard !pairs.isEmpty else { return }
+        offer(pairs)
+        lastTranscript = nil // one offer per dictation
+    }
+
+    private func offer(_ pairs: [(from: String, to: String)]) {
+        let alert = NSAlert()
+        alert.messageText = "Add correction to dictionary?"
+        let list = pairs.map { "“\($0.from)” → “\($0.to)”" }.joined(separator: "\n")
+        alert.informativeText = "You edited the last transcript. Teach Whispr:\n\(list)"
+        alert.addButton(withTitle: "Add")
+        alert.addButton(withTitle: "Ignore")
+        NSApp.activate(ignoringOtherApps: true)
+        if alert.runModal() == .alertFirstButtonReturn {
+            var d = DictionaryStore.load()
+            for p in pairs {
+                d.vocab.removeAll { $0.lowercased() == p.to.lowercased() }
+                d.vocab.append(p.to)
+            }
+            DictionaryStore.save(d)
+        }
+    }
+
+    /// Pure diff core: same-word-count texts, changed word pairs with JW 0.70–0.95
+    /// (close enough to be the same intended word, different enough to matter).
+    /// ponytail: equal-word-count alignment only; alignment for insert/delete edits not needed for word fixes.
+    static func corrections(original: String, edited: String) -> [(from: String, to: String)] {
+        let a = original.split(separator: " ").map(String.init)
+        let b = edited.split(separator: " ").map(String.init)
+        guard a.count == b.count, a.count > 1 else { return [] }
+        // whole-string sanity: must be mostly the same text
+        guard DictionaryStore.jaroWinkler(original.lowercased(), edited.lowercased()) > 0.85 else { return [] }
+        var out: [(String, String)] = []
+        let trim = CharacterSet(charactersIn: ".,!?;:\"'()")
+        for (wa, wb) in zip(a, b) {
+            let ca = wa.trimmingCharacters(in: trim), cb = wb.trimmingCharacters(in: trim)
+            guard ca.lowercased() != cb.lowercased(), ca.count >= 3, cb.count >= 3 else { continue }
+            let jw = DictionaryStore.jaroWinkler(ca.lowercased(), cb.lowercased())
+            if jw >= 0.70 && jw <= 0.95 { out.append((ca, cb)) }
+        }
+        return Array(out.prefix(3)) // don't spam
+    }
+
+    static func selfTest() {
+        let pairs = corrections(
+            original: "deploy the kubernetis cluster today",
+            edited: "deploy the Kubernetes cluster today"
+        )
+        assert(pairs.count == 1 && pairs[0].to == "Kubernetes", "correction diff failed: \(pairs)")
+        let none = corrections(original: "hello world foo", edited: "completely different text")
+        assert(none.isEmpty, "should reject dissimilar texts")
+        let same = corrections(original: "same text here", edited: "same text here")
+        assert(same.isEmpty, "identical texts should yield nothing")
+        print("CorrectionsWatcher.selfTest PASS")
+    }
+}

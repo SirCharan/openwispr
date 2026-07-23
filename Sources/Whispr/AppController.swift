@@ -11,6 +11,7 @@ final class AppController {
     )
     private let meetingWindow = MeetingWindowController()
     private let importWindow = FileImportWindowController()
+    private let corrections = CorrectionsWatcher()
     private let modelManager = ModelManager()
     private let transcriber = Transcriber()
     private let recorder = AudioRecorder()
@@ -198,6 +199,7 @@ final class AppController {
                 } else {
                     Paster.deliver(text, autoPaste: Settings.autoPaste)
                     HistoryStore.add(text)
+                    corrections.notePaste(text)
                     setStatus("ready")
                 }
             } catch {

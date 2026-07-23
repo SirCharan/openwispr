@@ -11,7 +11,11 @@ enum Whispr {
             TextProcessor.selfTest()
             DictionaryStore.selfTest()
             SnippetStore.selfTest()
-            exit(0)
+            Task { @MainActor in
+                CorrectionsWatcher.selfTest()
+                exit(0)
+            }
+            dispatchMain()
         }
         if let i = args.firstIndex(of: "--record-test"), i + 2 < args.count {
             let seconds = Double(args[i + 1]) ?? 3
