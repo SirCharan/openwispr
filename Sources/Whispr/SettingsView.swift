@@ -23,6 +23,14 @@ struct SettingsView: View {
     }
 
     var body: some View {
+        TabView {
+            general.tabItem { Label("General", systemImage: "gearshape") }
+            DictionaryView().tabItem { Label("Dictionary", systemImage: "character.book.closed") }
+        }
+        .frame(width: 500, height: 480)
+    }
+
+    private var general: some View {
         Form {
             Section("Dictation hotkey (hold to talk)") {
                 KeyboardShortcuts.Recorder("Shortcut:", name: .dictate)
@@ -60,6 +68,5 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 440, height: 420)
     }
 }
