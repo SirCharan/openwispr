@@ -9,6 +9,7 @@ final class AppController {
     private let transcriber = Transcriber()
     private let recorder = AudioRecorder()
     private var hotkeys: HotkeyManager?
+    private let indicator = RecordingIndicator()
     private let settingsWindow = SettingsWindowController()
     private var onboarding: OnboardingWindowController?
 
@@ -121,6 +122,10 @@ final class AppController {
         do {
             try recorder.start()
             menuBar.setRecording(true)
+            indicator.show(
+                onCancel: { [weak self] in self?.cancelDictation() },
+                onStop: { [weak self] in self?.stopDictation() }
+            )
             setStatus("listening…")
         } catch {
             setStatus("mic error")
@@ -128,10 +133,20 @@ final class AppController {
         }
     }
 
+    /// Discard the current recording without transcribing.
+    private func cancelDictation() {
+        guard recorder.isRecording else { return }
+        _ = recorder.stop()
+        menuBar.setRecording(false)
+        indicator.hide()
+        setStatus("ready — hold ⌘⇧D to dictate")
+    }
+
     private func stopDictation() {
         guard recorder.isRecording else { return }
         let samples = recorder.stop()
         menuBar.setRecording(false)
+        indicator.hide()
         setStatus("transcribing…")
         Task {
             do {

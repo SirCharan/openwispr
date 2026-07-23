@@ -19,6 +19,7 @@ rm -rf "$APP_BUNDLE"
 mkdir -p "$APP_BUNDLE/Contents/MacOS" "$APP_BUNDLE/Contents/Resources"
 cp "$BIN" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 cp Resources/Info.plist "$APP_BUNDLE/Contents/Info.plist"
+[ -f Resources/AppIcon.icns ] && cp Resources/AppIcon.icns "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
 printf 'APPL????' > "$APP_BUNDLE/Contents/PkgInfo"
 
 # Ad-hoc signature so the bundle runs locally and TCC (mic/accessibility) grants persist.
