@@ -4,18 +4,28 @@ import AppKit
 /// Recording + hotkey + paste flow is attached in later milestones.
 @MainActor
 final class AppController {
-    private let menuBar = MenuBarController()
+    private lazy var menuBar = MenuBarController(onSettings: { [weak self] in self?.showSettings() })
     private let modelManager = ModelManager()
     private let transcriber = Transcriber()
     private let recorder = AudioRecorder()
     private var hotkeys: HotkeyManager?
+    private let settingsWindow = SettingsWindowController()
 
     func start() {
         Task { await bootModel() }
     }
 
-    /// Download (if needed) and load the selected model, surfacing state in the menu bar.
     private func bootModel() async {
+        await loadSelectedModel()
+        attachHotkeys()
+        if Settings.autoPaste && !Permissions.hasAccessibility {
+            Permissions.requestAccessibility() // one-time prompt so auto-paste works
+        }
+    }
+
+    /// Download (if needed) and load the currently-selected model. Reused for live model switches.
+    // ponytail: no guard against overlapping reloads — worst case two loads race; last write wins. Add a flag if it matters.
+    private func loadSelectedModel() async {
         let model = modelManager.selectedModel
         do {
             setStatus("downloading \(model)…")
@@ -25,14 +35,22 @@ final class AppController {
             setStatus("loading model…")
             try await transcriber.load(model: model, folder: folder)
             setStatus("ready — hold ⌘⇧D to dictate")
-            attachHotkeys()
-            if Settings.autoPaste && !Permissions.hasAccessibility {
-                Permissions.requestAccessibility() // one-time prompt so auto-paste works
-            }
         } catch {
             setStatus("model error")
-            NSLog("[Whispr] model boot failed: \(error)")
+            NSLog("[Whispr] model load failed: \(error)")
         }
+    }
+
+    private func showSettings() {
+        settingsWindow.show(
+            currentModel: modelManager.selectedModel,
+            models: ModelManager.available,
+            onReloadModel: { [weak self] name in
+                guard let self, name != self.modelManager.selectedModel else { return }
+                self.modelManager.selectedModel = name
+                Task { await self.loadSelectedModel() }
+            }
+        )
     }
 
     private func attachHotkeys() {

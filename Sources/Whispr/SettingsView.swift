@@ -1,0 +1,59 @@
+import SwiftUI
+import KeyboardShortcuts
+
+/// Settings surface: rebind hotkey, switch model (live reload), copy-only toggle,
+/// launch-at-login, and Accessibility status.
+struct SettingsView: View {
+    @AppStorage("autoPaste") private var autoPaste = true
+    @State private var selectedModel: String
+    @State private var launchAtLogin: Bool
+    @State private var accessibilityOK: Bool
+
+    private let models: [String]
+    private let onReloadModel: (String) -> Void
+
+    init(currentModel: String, models: [String], onReloadModel: @escaping (String) -> Void) {
+        _selectedModel = State(initialValue: currentModel)
+        _launchAtLogin = State(initialValue: LoginItem.isEnabled)
+        _accessibilityOK = State(initialValue: Permissions.hasAccessibility)
+        self.models = models
+        self.onReloadModel = onReloadModel
+    }
+
+    var body: some View {
+        Form {
+            Section("Dictation hotkey (hold to talk)") {
+                KeyboardShortcuts.Recorder("Shortcut:", name: .dictate)
+            }
+            Section("Model") {
+                Picker("Whisper model", selection: $selectedModel) {
+                    ForEach(models, id: \.self) { Text($0).tag($0) }
+                }
+                .onChange(of: selectedModel) { _, new in onReloadModel(new) }
+                Text("Switching downloads the model if needed, then reloads.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section("Behavior") {
+                Toggle("Auto-paste at cursor (off = copy to clipboard only)", isOn: $autoPaste)
+                Toggle("Launch at login", isOn: $launchAtLogin)
+                    .onChange(of: launchAtLogin) { _, on in LoginItem.set(on) }
+            }
+            Section("Permissions") {
+                HStack {
+                    Text(accessibilityOK
+                         ? "Accessibility: granted ✓"
+                         : "Accessibility needed for auto-paste")
+                    Spacer()
+                    if !accessibilityOK {
+                        Button("Grant…") {
+                            Permissions.requestAccessibility()
+                            accessibilityOK = Permissions.hasAccessibility
+                        }
+                    }
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .frame(width: 440, height: 420)
+    }
+}
