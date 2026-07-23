@@ -30,6 +30,7 @@ struct SettingsView: View {
             DictionaryView().tabItem { Label("Dictionary", systemImage: "character.book.closed") }
             SnippetsView().tabItem { Label("Snippets", systemImage: "text.badge.plus") }
             HistoryView().tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
+            PerAppView().tabItem { Label("Apps", systemImage: "app.badge") }
         }
         .frame(width: 500, height: 480)
     }

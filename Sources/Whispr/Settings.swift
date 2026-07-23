@@ -14,6 +14,12 @@ enum Settings {
         set { UserDefaults.standard.set(newValue, forKey: "onboarded") }
     }
 
+    /// Bundle IDs of apps where Whispr dictation is disabled.
+    static var disabledApps: [String] {
+        get { UserDefaults.standard.stringArray(forKey: "disabledApps") ?? [] }
+        set { UserDefaults.standard.set(newValue, forKey: "disabledApps") }
+    }
+
     /// Dictation language: "auto" (detect) or a WhisperKit code ("en", "es", …).
     static var language: String {
         get { UserDefaults.standard.string(forKey: "language") ?? "auto" }

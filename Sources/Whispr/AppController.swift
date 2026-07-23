@@ -114,6 +114,10 @@ final class AppController {
 
     private func startDictation() {
         guard transcriber.isReady, !recorder.isRecording else { return }
+        if let front = AppMonitor.frontmostBundleID(), Settings.disabledApps.contains(front) {
+            setStatus("disabled for \(AppMonitor.name(for: front))")
+            return
+        }
         do {
             try recorder.start()
             menuBar.setRecording(true)
