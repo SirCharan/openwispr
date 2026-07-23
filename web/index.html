@@ -191,8 +191,8 @@
       <div class="istep">
         <div class="inum">2</div>
         <svg viewBox="0 0 24 24"><path d="M12 22s8-3.5 8-10V5l-8-3-8 3v7c0 6.5 8 10 8 10z"/><path d="M9.5 12l2 2 3.5-3.5"/></svg>
-        <h3>Right-click → Open, once</h3>
-        <p>This build isn't notarized yet, so the first launch needs right-click → <b>Open</b> → <b>Open</b>. Every launch after that is a normal double-click.</p>
+        <h3>Approve it, once</h3>
+        <p>This build isn't notarized yet, so macOS shows <b>"Whispr" Not Opened</b> on first launch. Click <b>Done</b>, then open <b>System Settings → Privacy & Security</b>, scroll down, and click <b>Open Anyway</b>. Every launch after that is a normal double-click.</p>
       </div>
       <div class="istep">
         <div class="inum">3</div>
@@ -276,7 +276,7 @@
     <div class="kicker">FAQ</div>
     <h2>Questions, answered.</h2>
     <details><summary>Why does macOS block the app on first open?</summary>
-      <p>The build isn't notarized yet. Right-click <b>Whispr.app → Open → Open</b> once; it opens normally after that.</p></details>
+      <p>The build isn't notarized yet, so Gatekeeper shows "Whispr" Not Opened. Click Done, then go to <b>System Settings → Privacy & Security</b>, scroll down to "Whispr was blocked", and click <b>Open Anyway</b>. It opens normally after that. Terminal alternative: <code>xattr -dr com.apple.quarantine /Applications/Whispr.app</code></p></details>
     <details><summary>How big is the download?</summary>
       <p>The app is under 2 MB. On first launch it downloads the Whisper model (~1.5 GB, one time). Smaller models are available in Settings.</p></details>
     <details><summary>Does any audio or text leave my Mac?</summary>

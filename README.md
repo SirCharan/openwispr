@@ -15,7 +15,7 @@ Inspired by [Muesli](https://github.com/Muesli-HQ/muesli) — this is the dictat
 
 1. Download `Whispr.app` (or unzip `Whispr.zip`).
 2. Move it to `/Applications`.
-3. First launch: **right-click the app → Open → Open** (Gatekeeper blocks a double-click because the build is unsigned).
+3. First launch: macOS shows **"Whispr" Not Opened** (the build is not notarized). Click **Done**, open **System Settings → Privacy & Security**, scroll down to "Whispr was blocked", and click **Open Anyway**. Terminal alternative: `xattr -dr com.apple.quarantine /Applications/Whispr.app`. Later launches open normally.
 4. Whispr lives in the menu bar (microphone icon) — it has no Dock icon or window.
 
 ## First launch
