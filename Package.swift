@@ -8,12 +8,14 @@ let package = Package(
     platforms: [.macOS(.v14)],
     dependencies: [
         .package(url: "https://github.com/argmaxinc/argmax-oss-swift.git", from: "0.9.0"),
+        .package(url: "https://github.com/sindresorhus/KeyboardShortcuts", from: "2.0.0"),
     ],
     targets: [
         .executableTarget(
             name: "Whispr",
             dependencies: [
                 .product(name: "WhisperKit", package: "argmax-oss-swift"),
+                "KeyboardShortcuts",
             ],
             path: "Sources/Whispr",
             swiftSettings: [.swiftLanguageMode(.v5)]

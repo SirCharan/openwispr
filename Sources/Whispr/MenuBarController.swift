@@ -34,4 +34,11 @@ final class MenuBarController {
     func setStatus(_ text: String) {
         statusMenuItem.title = "Whispr — \(text)"
     }
+
+    /// Swap the menu-bar icon to reflect recording state.
+    func setRecording(_ on: Bool) {
+        let symbol = on ? "mic.circle.fill" : "mic.circle"
+        statusItem.button?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: "Whispr")
+        statusItem.button?.image?.isTemplate = !on // filled icon shows in accent color
+    }
 }
