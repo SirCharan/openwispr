@@ -28,6 +28,7 @@ struct SettingsView: View {
             general.tabItem { Label("General", systemImage: "gearshape") }
             DictionaryView().tabItem { Label("Dictionary", systemImage: "character.book.closed") }
             SnippetsView().tabItem { Label("Snippets", systemImage: "text.badge.plus") }
+            HistoryView().tabItem { Label("History", systemImage: "clock.arrow.circlepath") }
         }
         .frame(width: 500, height: 480)
     }

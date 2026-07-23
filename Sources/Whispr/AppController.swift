@@ -139,6 +139,7 @@ final class AppController {
                     setStatus("ready (no speech)")
                 } else {
                     Paster.deliver(text, autoPaste: Settings.autoPaste)
+                    HistoryStore.add(text)
                     setStatus("ready")
                 }
             } catch {
