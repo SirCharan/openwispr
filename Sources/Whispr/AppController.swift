@@ -54,6 +54,11 @@ final class AppController {
     }
 
     func showMainWindow() {
+        // wizard closed mid-way? "Open Whispr" resumes it instead of dead-ending
+        guard Settings.onboarded else {
+            if let onboarding { onboarding.show() } else { showOnboarding() }
+            return
+        }
         mainWindow.show(state: state, meetingController: meetingCtrl, importModel: importModel)
     }
 
@@ -114,8 +119,10 @@ final class AppController {
         do {
             let folder = try await modelManager.ensureDownloaded(model) { frac in vm.downloadProgress = frac }
             try await transcriber.load(model: model, folder: folder)
+            modelReady = true
             vm.modelReady = true
         } catch {
+            vm.modelError = error.localizedDescription
             NSLog("[Whispr] onboarding model load failed: \(error)")
         }
     }
@@ -160,7 +167,7 @@ final class AppController {
         if recorder.isRecording { stopDictation() } // never swap monitors mid-recording (drops the key-up)
         hotkeys = nil
         fnMonitor = nil
-        if Settings.hotkeyMode == "fn" {
+        if Self.effectiveMode == "fn" {
             fnMonitor = FnKeyMonitor(
                 onKeyDown: { [weak self] in self?.handleKeyDown() },
                 onKeyUp: { [weak self] in self?.handleKeyUp() }
@@ -250,10 +257,16 @@ final class AppController {
         setStatus("ready — hold \(Self.hotkeyHint) to dictate")
     }
 
+    /// "custom" with nothing recorded falls back to fn — a trigger must always exist.
+    static var effectiveMode: String {
+        Settings.hotkeyMode == "custom" && KeyboardShortcuts.getShortcut(for: .dictate) == nil
+            ? "fn" : Settings.hotkeyMode
+    }
+
     static var hotkeyHint: String {
-        Settings.hotkeyMode == "fn"
+        effectiveMode == "fn"
             ? "fn"
-            : (KeyboardShortcuts.getShortcut(for: .dictate).map(String.init(describing:)) ?? "⌘⇧D")
+            : (KeyboardShortcuts.getShortcut(for: .dictate).map(String.init(describing:)) ?? "fn")
     }
 
     private func stopDictation() {

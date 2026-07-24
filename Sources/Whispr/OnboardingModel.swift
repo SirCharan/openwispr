@@ -1,5 +1,6 @@
 import SwiftUI
 import AVFoundation
+import AppKit
 
 /// Drives the first-run wizard: permission grants + model-download progress.
 @MainActor
@@ -12,7 +13,11 @@ final class OnboardingModel: ObservableObject {
     @Published var screenRecGranted = CGPreflightScreenCaptureAccess()
     @Published var downloadProgress = 0.0
     @Published var modelReady = false
+    @Published var modelError: String?
+    @Published var screenRecPrompted = false
     @Published var practice: PracticeState = .idle
+
+    var micDenied: Bool { AVCaptureDevice.authorizationStatus(for: .audio) == .denied }
 
     /// Running from outside /Applications (Downloads, a mounted DMG…) → offer to move.
     var needsMove: Bool { !Bundle.main.bundlePath.hasPrefix("/Applications") }
@@ -30,6 +35,11 @@ final class OnboardingModel: ObservableObject {
     func requestScreenRecording() {
         CGRequestScreenCaptureAccess() // prompts + adds Whispr to the pane; grant needs relaunch to take effect
         screenRecGranted = CGPreflightScreenCaptureAccess()
+        screenRecPrompted = true // preflight stays false until relaunch — treat the prompt as progress
+    }
+
+    func openMicSettings() {
+        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")!)
     }
 
     func requestMic() {

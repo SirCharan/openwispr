@@ -1,5 +1,6 @@
 import SwiftUI
 import KeyboardShortcuts
+import AVFoundation
 
 /// First-run wizard, nine steps: welcome → move-to-Applications → mic → accessibility →
 /// screen recording (optional) → model download → try-it → setup (hotkey + login) → done.
@@ -52,11 +53,16 @@ struct OnboardingView: View {
         step(
             icon: model.micGranted ? "checkmark.circle.fill" : "waveform",
             title: "Microphone access",
-            body: model.micGranted ? "Microphone access granted." : "Whispr needs the microphone to hear you. Audio is processed locally and never leaves your Mac.",
-            button: model.micGranted ? "Continue" : "Allow microphone",
+            body: model.micGranted ? "Microphone access granted."
+                : model.micDenied ? "Microphone access was denied. Open System Settings → Privacy & Security → Microphone and turn Whispr on, then come back."
+                : "Whispr needs the microphone to hear you. Audio is processed locally and never leaves your Mac.",
+            button: model.micGranted ? "Continue" : model.micDenied ? "Open System Settings" : "Allow microphone",
             action: {
-                if model.micGranted { model.step = 3 } else { model.requestMic() }
-            }
+                if model.micGranted { model.step = 3 }
+                else if model.micDenied { model.openMicSettings() }
+                else { model.requestMic() }
+            },
+            secondary: model.micDenied ? ("I've enabled it — re-check", { model.micGranted = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized }) : nil
         )
     }
 
@@ -64,26 +70,30 @@ struct OnboardingView: View {
         step(
             icon: model.axGranted ? "checkmark.circle.fill" : "hand.raised.fill",
             title: "Accessibility access",
-            body: model.axGranted ? "Accessibility granted — auto-paste is enabled." : "To paste transcripts at your cursor, grant Accessibility. Without it, text is copied to the clipboard and you paste manually.",
+            body: model.axGranted ? "Accessibility granted — the fn trigger and auto-paste are enabled."
+                : "Whispr needs Accessibility for the fn dictation key AND to paste at your cursor. Without it the app can't hear the trigger.",
             button: model.axGranted ? "Continue" : "Open Accessibility settings",
             action: {
                 if model.axGranted { model.step = 4 }
                 else { model.requestAccessibility() }
             },
-            secondary: model.axGranted ? nil : ("Skip for now", { model.step = 4 })
+            // fn trigger dies without AX — only allow skipping when a custom shortcut is the trigger
+            secondary: (model.axGranted || hotkeyMode == "fn") ? nil : ("Skip for now", { model.step = 4 })
         )
     }
 
     private var screenRecording: some View {
         step(
-            icon: model.screenRecGranted ? "checkmark.circle.fill" : "rectangle.inset.filled.badge.record",
+            icon: (model.screenRecGranted || model.screenRecPrompted) ? "checkmark.circle.fill" : "rectangle.inset.filled.badge.record",
             title: "Meeting capture (optional)",
             body: model.screenRecGranted
                 ? "Screen & System Audio Recording granted — meetings are ready."
+                : model.screenRecPrompted
+                ? "Requested. After you enable Whispr in System Settings, macOS applies it on the next launch — continue setup now."
                 : "Whispr can transcribe calls: your mic plus the other side's audio. macOS exposes system audio through Screen Recording permission. Only audio is used. Skip if you only dictate.",
-            button: model.screenRecGranted ? "Continue" : "Enable meeting capture",
+            button: (model.screenRecGranted || model.screenRecPrompted) ? "Continue" : "Enable meeting capture",
             action: {
-                if model.screenRecGranted { model.step = 5; model.onStartModel() }
+                if model.screenRecGranted || model.screenRecPrompted { model.step = 5; model.onStartModel() }
                 else { model.requestScreenRecording() }
             },
             secondary: ("Skip — dictation only", { model.step = 5; model.onStartModel() })
@@ -92,17 +102,25 @@ struct OnboardingView: View {
 
     private var download: some View {
         VStack(spacing: 20) {
-            Image(systemName: "arrow.down.circle.fill").font(.system(size: 52)).foregroundStyle(.tint)
+            Image(systemName: model.modelError == nil ? "arrow.down.circle.fill" : "exclamationmark.triangle.fill")
+                .font(.system(size: 52)).foregroundStyle(model.modelError == nil ? AnyShapeStyle(.tint) : AnyShapeStyle(.orange))
             Text("Downloading the speech model").font(.title2).bold()
-            Text("One-time download (~1.5 GB). This can take a few minutes on first launch.")
-                .multilineTextAlignment(.center).foregroundStyle(.secondary)
-            ProgressView(value: model.modelReady ? 1 : model.downloadProgress)
-                .frame(maxWidth: 320)
-            Text(model.modelReady ? "Ready" : "\(Int(model.downloadProgress * 100))%")
-                .font(.caption).foregroundStyle(.secondary)
-            Button("Continue") { model.step = 6 }
-                .keyboardShortcut(.defaultAction)
-                .disabled(!model.modelReady)
+            if let err = model.modelError {
+                Text("Download failed: \(err)\nCheck your connection and retry.")
+                    .multilineTextAlignment(.center).foregroundStyle(.secondary)
+                Button("Retry") { model.modelError = nil; model.onStartModel() }
+                    .keyboardShortcut(.defaultAction).controlSize(.large)
+            } else {
+                Text("One-time download (~1.5 GB). This can take a few minutes on first launch.")
+                    .multilineTextAlignment(.center).foregroundStyle(.secondary)
+                ProgressView(value: model.modelReady ? 1 : model.downloadProgress)
+                    .frame(maxWidth: 320)
+                Text(model.modelReady ? "Ready" : "\(Int(model.downloadProgress * 100))%")
+                    .font(.caption).foregroundStyle(.secondary)
+                Button("Continue") { model.step = 6 }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(!model.modelReady)
+            }
         }
     }
 
