@@ -1,4 +1,5 @@
 import AppKit
+import KeyboardShortcuts
 
 /// Central wiring object: owns the menu bar, model, and transcriber, and runs the boot sequence.
 /// Recording + hotkey + paste flow is attached in later milestones.
@@ -7,8 +8,12 @@ final class AppController {
     private lazy var menuBar = MenuBarController(
         onSettings: { [weak self] in self?.showSettings() },
         onMeeting: { [weak self] in self?.showMeeting() },
-        onImport: { [weak self] in self?.showImport() }
+        onImport: { [weak self] in self?.showImport() },
+        onOpen: { [weak self] in self?.showMainWindow() }
     )
+    let state = AppState()
+    private let mainWindow = MainWindowController()
+    private var fnMonitor: FnKeyMonitor?
     private let meetingWindow = MeetingWindowController()
     private let importWindow = FileImportWindowController()
     private let corrections = CorrectionsWatcher()
@@ -23,11 +28,28 @@ final class AppController {
     private var onboarding: OnboardingWindowController?
 
     func start() {
+        NotificationCenter.default.addObserver(forName: .whisprHotkeyModeChanged, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor in
+                guard let self, self.transcriber.isReady else { return }
+                self.attachHotkeys()
+                self.setStatus("ready — hold \(Self.hotkeyHint) to dictate")
+            }
+        }
         if Settings.onboarded {
+            showMainWindow()
             Task { await bootModel() }
         } else {
             showOnboarding()
         }
+    }
+
+    func showMainWindow() {
+        mainWindow.show(
+            state: state,
+            onSettings: { [weak self] in self?.showSettings() },
+            onMeeting: { [weak self] in self?.showMeeting() },
+            onImport: { [weak self] in self?.showImport() }
+        )
     }
 
     private func bootModel() async {
@@ -72,9 +94,10 @@ final class AppController {
         vm.onFinish = { [weak self] in
             Settings.onboarded = true
             self?.attachHotkeys()
-            self?.setStatus("ready — hold ⌘⇧D to dictate")
+            self?.setStatus("ready — hold \(Self.hotkeyHint) to dictate")
             self?.onboarding?.close()
             self?.onboarding = nil
+            self?.showMainWindow()
         }
         onboarding = OnboardingWindowController(model: vm)
         onboarding?.show()
@@ -103,7 +126,7 @@ final class AppController {
             }
             setStatus("loading model…")
             try await transcriber.load(model: model, folder: folder)
-            setStatus("ready — hold ⌘⇧D to dictate")
+            setStatus("ready — hold \(Self.hotkeyHint) to dictate")
         } catch {
             setStatus("model error")
             NSLog("[Whispr] model load failed: \(error)")
@@ -132,11 +155,21 @@ final class AppController {
         )
     }
 
-    private func attachHotkeys() {
-        hotkeys = HotkeyManager(
-            onKeyDown: { [weak self] in self?.handleKeyDown() },
-            onKeyUp: { [weak self] in self?.handleKeyUp() }
-        )
+    /// Attach the active trigger: fn monitor (default) or the custom shortcut. Re-call on mode change.
+    func attachHotkeys() {
+        hotkeys = nil
+        fnMonitor = nil
+        if Settings.hotkeyMode == "fn" {
+            fnMonitor = FnKeyMonitor(
+                onKeyDown: { [weak self] in self?.handleKeyDown() },
+                onKeyUp: { [weak self] in self?.handleKeyUp() }
+            )
+        } else {
+            hotkeys = HotkeyManager(
+                onKeyDown: { [weak self] in self?.handleKeyDown() },
+                onKeyUp: { [weak self] in self?.handleKeyUp() }
+            )
+        }
     }
 
     /// Hold-to-talk: key-down starts. Hands-free: key-down toggles start/stop.
@@ -211,7 +244,13 @@ final class AppController {
         _ = recorder.stop()
         menuBar.setRecording(false)
         indicator.hide()
-        setStatus("ready — hold ⌘⇧D to dictate")
+        setStatus("ready — hold \(Self.hotkeyHint) to dictate")
+    }
+
+    static var hotkeyHint: String {
+        Settings.hotkeyMode == "fn"
+            ? "fn"
+            : (KeyboardShortcuts.getShortcut(for: .dictate).map(String.init(describing:)) ?? "⌘⇧D")
     }
 
     private func stopDictation() {
@@ -245,6 +284,8 @@ final class AppController {
 
     private func setStatus(_ text: String) {
         menuBar.setStatus(text)
+        state.status = text
+        state.isRecording = recorder.isRecording
         NSLog("[Whispr] status: \(text)")
     }
 

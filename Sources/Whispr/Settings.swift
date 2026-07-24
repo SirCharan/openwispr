@@ -27,6 +27,12 @@ enum Settings {
     }
     static var languageCode: String? { language == "auto" ? nil : language }
 
+    /// Dictation trigger: "fn" (default, hold the fn/🌐 key) or "custom" (KeyboardShortcuts recorder).
+    static var hotkeyMode: String {
+        get { UserDefaults.standard.string(forKey: "hotkeyMode") ?? "fn" }
+        set { UserDefaults.standard.set(newValue, forKey: "hotkeyMode") }
+    }
+
     /// Hands-free: tap the hotkey to start, tap again to stop (instead of hold-to-talk).
     static var handsFree: Bool {
         get { UserDefaults.standard.bool(forKey: "handsFree") }

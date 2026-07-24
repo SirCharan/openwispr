@@ -9,11 +9,14 @@ final class MenuBarController: NSObject {
     private let onSettings: () -> Void
     private let onMeeting: () -> Void
     private let onImport: () -> Void
+    private let onOpen: () -> Void
 
-    init(onSettings: @escaping () -> Void, onMeeting: @escaping () -> Void, onImport: @escaping () -> Void) {
+    init(onSettings: @escaping () -> Void, onMeeting: @escaping () -> Void,
+         onImport: @escaping () -> Void, onOpen: @escaping () -> Void) {
         self.onSettings = onSettings
         self.onMeeting = onMeeting
         self.onImport = onImport
+        self.onOpen = onOpen
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusMenuItem = NSMenuItem(title: "Whispr — starting…", action: nil, keyEquivalent: "")
         statusMenuItem.isEnabled = false
@@ -27,6 +30,9 @@ final class MenuBarController: NSObject {
         let menu = NSMenu()
         menu.addItem(statusMenuItem)
         menu.addItem(.separator())
+        let openItem = NSMenuItem(title: "Open Whispr", action: #selector(openMain), keyEquivalent: "o")
+        openItem.target = self
+        menu.addItem(openItem)
         let meeting = NSMenuItem(title: "Record Meeting…", action: #selector(openMeeting), keyEquivalent: "m")
         meeting.target = self
         menu.addItem(meeting)
@@ -44,6 +50,7 @@ final class MenuBarController: NSObject {
     @objc private func openSettings() { onSettings() }
     @objc private func openMeeting() { onMeeting() }
     @objc private func openImport() { onImport() }
+    @objc private func openMain() { onOpen() }
 
     func setStatus(_ text: String) {
         statusMenuItem.title = "Whispr — \(text)"

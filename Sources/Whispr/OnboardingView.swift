@@ -6,6 +6,7 @@ import KeyboardShortcuts
 struct OnboardingView: View {
     @ObservedObject var model: OnboardingModel
     @State private var launchAtLogin = false
+    @AppStorage("hotkeyMode") private var hotkeyMode = "fn"
 
     var body: some View {
         VStack(spacing: 24) {
@@ -146,13 +147,22 @@ struct OnboardingView: View {
             Image(systemName: "slider.horizontal.3").font(.system(size: 52)).foregroundStyle(.tint)
             Text("Make it yours").font(.title2).bold()
             Form {
-                KeyboardShortcuts.Recorder("Dictation hotkey:", name: .dictate)
+                Picker("Dictation trigger:", selection: $hotkeyMode) {
+                    Text("fn key (recommended)").tag("fn")
+                    Text("Custom shortcut").tag("custom")
+                }
+                .onChange(of: hotkeyMode) { _, _ in NotificationCenter.default.post(name: .whisprHotkeyModeChanged, object: nil) }
+                if hotkeyMode == "custom" {
+                    KeyboardShortcuts.Recorder("Shortcut:", name: .dictate)
+                }
                 Toggle("Start Whispr at login", isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { _, on in LoginItem.set(on) }
             }
             .formStyle(.columns)
-            .frame(maxWidth: 300)
-            Text("Both can be changed later in Settings.")
+            .frame(maxWidth: 320)
+            Text(hotkeyMode == "fn"
+                 ? "Tip: set System Settings → Keyboard → “Press 🌐 key to” = Do Nothing."
+                 : "Everything can be changed later in Settings.")
                 .font(.caption).foregroundStyle(.secondary)
             Button("Continue") { model.step = 8 }.keyboardShortcut(.defaultAction).controlSize(.large)
         }
@@ -170,7 +180,9 @@ struct OnboardingView: View {
     }
 
     private static var hotkeyLabel: String {
-        KeyboardShortcuts.getShortcut(for: .dictate).map(String.init(describing:)) ?? "⌘⇧D"
+        Settings.hotkeyMode == "fn"
+            ? "the fn key"
+            : (KeyboardShortcuts.getShortcut(for: .dictate).map(String.init(describing:)) ?? "⌘⇧D")
     }
 
     // Shared step layout.

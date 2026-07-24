@@ -1,6 +1,10 @@
 import SwiftUI
 import KeyboardShortcuts
 
+extension Notification.Name {
+    static let whisprHotkeyModeChanged = Notification.Name("whispr.hotkeyModeChanged")
+}
+
 /// Settings surface: rebind hotkey, switch model (live reload), copy-only toggle,
 /// launch-at-login, and Accessibility status.
 struct SettingsView: View {
@@ -8,6 +12,7 @@ struct SettingsView: View {
     @AppStorage("removeFillers") private var removeFillers = true
     @AppStorage("cleanUp") private var cleanUp = true
     @AppStorage("handsFree") private var handsFree = false
+    @AppStorage("hotkeyMode") private var hotkeyMode = "fn"
     @AppStorage("language") private var language = "auto"
     @AppStorage("rewriteStyle") private var rewriteStyle = "off"
     @AppStorage("accentHex") private var accentHex = "FF5D54"
@@ -41,11 +46,21 @@ struct SettingsView: View {
 
     private var general: some View {
         Form {
-            Section("Dictation hotkey") {
-                KeyboardShortcuts.Recorder("Shortcut:", name: .dictate)
+            Section("Dictation trigger") {
+                Picker("Trigger", selection: $hotkeyMode) {
+                    Text("fn key (hold to talk)").tag("fn")
+                    Text("Custom shortcut").tag("custom")
+                }
+                .onChange(of: hotkeyMode) { _, _ in NotificationCenter.default.post(name: .whisprHotkeyModeChanged, object: nil) }
+                if hotkeyMode == "custom" {
+                    KeyboardShortcuts.Recorder("Shortcut:", name: .dictate)
+                } else {
+                    Text("Tip: set System Settings → Keyboard → “Press 🌐 key to” = Do Nothing, so the emoji picker stays out of the way.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 Toggle("Hands-free (tap to start, tap to stop)", isOn: $handsFree)
-                Text(handsFree ? "Tap the hotkey to start, tap again to stop."
-                               : "Hold the hotkey to talk, release to transcribe.")
+                Text(handsFree ? "Tap the trigger to start, tap again to stop."
+                               : "Hold the trigger to talk, release to transcribe.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Model") {

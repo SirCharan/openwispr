@@ -36,6 +36,9 @@ ditto "$TMP/unpacked/Whispr.app" "$DEST"
 echo "==> removing quarantine flag…"
 xattr -dr com.apple.quarantine "$DEST" 2>/dev/null || true
 
+# fresh install = fresh onboarding
+defaults delete com.ck.whispr onboarded 2>/dev/null || true
+
 echo "==> launching…"
 open "$DEST"
 
