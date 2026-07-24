@@ -63,6 +63,16 @@
   h2 { font-family: var(--serif); font-weight: 400; font-size: clamp(28px, 4.6vw, 40px); letter-spacing: -.4px; margin-bottom: 28px; }
   h3 { font-size: 17px; }
 
+  /* terminal install command */
+  .cmd { margin-top: 10px; display: flex; flex-direction: column; align-items: center; gap: 8px; max-width: 100%; }
+  .cmd-label { color: var(--muted); font-size: 13px; }
+  .cmd-row { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px 12px; max-width: 100%; }
+  .cmd-row code { font-size: 12.5px; color: var(--text); overflow-x: auto; white-space: nowrap; }
+  .copy { background: none; border: 1px solid var(--line); border-radius: 7px; color: var(--muted);
+    font-size: 12px; padding: 5px 10px; cursor: pointer; flex-shrink: 0; }
+  .copy:hover { color: var(--text); border-color: var(--accent); }
+
   /* install steps */
   .install-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
   .istep { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px 22px; }
@@ -175,12 +185,20 @@
         Download for macOS
       </a>
       <span class="req">Free & open source · macOS 14+ · Apple Silicon · <a href="https://github.com/SirCharan/whispr/releases/latest/download/Whispr.zip" style="color:var(--muted)">.zip</a> · <a href="https://github.com/SirCharan/whispr/releases" style="color:var(--muted)">changelog</a></span>
+      <div class="cmd" role="group" aria-label="Terminal install command">
+        <span class="cmd-label">or install from Terminal — skips the security prompt:</span>
+        <div class="cmd-row">
+          <code id="install-cmd">curl -fsSL https://whispr-black-chi.vercel.app/install.sh | sh</code>
+          <button class="copy" onclick="navigator.clipboard.writeText(document.getElementById('install-cmd').textContent).then(()=>{this.textContent='Copied';setTimeout(()=>this.textContent='Copy',1500)})">Copy</button>
+        </div>
+      </div>
     </div>
   </header>
 
   <section id="install">
     <div class="kicker">Setup</div>
     <h2>Install in three steps.</h2>
+    <p class="foot-note" style="margin: -14px 0 22px">Fastest path: the Terminal one-liner above installs and opens Whispr with no security prompt. Prefer clicking? Use the DMG:</p>
     <div class="install-steps">
       <div class="istep">
         <div class="inum">1</div>
