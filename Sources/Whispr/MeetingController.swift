@@ -18,6 +18,8 @@ final class MeetingController: ObservableObject {
     @Published private(set) var status = "idle"
     @Published var summary: String?
     @Published private(set) var summarizing = false
+    @Published private(set) var needsScreenRec = false
+    @Published private(set) var savedTo: String?
 
     private let mic = AudioRecorder()
     private let system = SystemAudioRecorder()
@@ -43,13 +45,18 @@ final class MeetingController: ObservableObject {
             try mic.start()
             try await system.start()
         } catch {
-            status = "start failed: \(error.localizedDescription)"
+            // SCStream TCC denial → point at the fix instead of a raw error
+            needsScreenRec = (error as NSError).domain.contains("ScreenCaptureKit")
+            status = needsScreenRec ? "needs Screen Recording permission" : "start failed: \(error.localizedDescription)"
             _ = mic.stop()
             return
         }
         isRunning = true
+        needsScreenRec = false
         status = "recording"
         summary = nil
+        savedTo = nil
+        lines.removeAll() // fresh meeting — don't interleave with the previous one
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.checkRotation() }
         }
@@ -65,7 +72,27 @@ final class MeetingController: ObservableObject {
         await transcribeChunk(micTail, speaker: "You")
         await transcribeChunk(sysTail, speaker: "Others")
         status = "done"
-        if !lines.isEmpty { Stats.recordMeeting() }
+        if !lines.isEmpty {
+            Stats.recordMeeting()
+            autosave()
+        }
+    }
+
+    /// Quit/crash safety: every finished meeting lands in ~/Documents/Whispr automatically.
+    private func autosave() {
+        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Whispr", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let stamp = Date().formatted(.iso8601.year().month().day().time(includingFractionalSeconds: false))
+            .replacingOccurrences(of: ":", with: "-")
+        let url = dir.appendingPathComponent("meeting-\(stamp).md")
+        do {
+            try exportMarkdown().write(to: url, atomically: true, encoding: .utf8)
+            savedTo = url.path
+            status = "done — saved to Documents/Whispr"
+        } catch {
+            NSLog("[Whispr] meeting autosave failed: \(error)")
+        }
     }
 
     /// Rotate a stream when its speaker pauses (quiet tail) after enough audio,

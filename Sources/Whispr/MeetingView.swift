@@ -45,11 +45,20 @@ struct MeetingView: View {
             if controller.lines.isEmpty {
                 Spacer()
                 VStack(spacing: 8) {
-                    Image(systemName: "person.2.wave.2").font(.system(size: 36)).foregroundStyle(.secondary)
-                    Text("Start recording to capture your mic (You) and system audio (Others).")
-                        .foregroundStyle(.secondary).multilineTextAlignment(.center)
-                    Text("System audio needs Screen Recording permission.")
-                        .font(.caption).foregroundStyle(.tertiary)
+                    Image(systemName: controller.needsScreenRec ? "exclamationmark.shield" : "person.2.wave.2")
+                        .font(.system(size: 36)).foregroundStyle(controller.needsScreenRec ? .orange : .secondary)
+                    if controller.needsScreenRec {
+                        Text("macOS blocked system-audio capture. Enable Whispr under Screen & System Audio Recording, then relaunch the app.")
+                            .foregroundStyle(.secondary).multilineTextAlignment(.center)
+                        Button("Open Screen Recording settings") {
+                            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!)
+                        }
+                    } else {
+                        Text("Start recording to capture your mic (You) and system audio (Others).")
+                            .foregroundStyle(.secondary).multilineTextAlignment(.center)
+                        Text("System audio needs Screen Recording permission. Transcripts autosave to Documents/Whispr.")
+                            .font(.caption).foregroundStyle(.tertiary)
+                    }
                 }
                 .padding()
                 Spacer()

@@ -10,13 +10,16 @@ final class MenuBarController: NSObject {
     private let onMeeting: () -> Void
     private let onImport: () -> Void
     private let onOpen: () -> Void
+    private let onRetry: () -> Void
 
     init(onSettings: @escaping () -> Void, onMeeting: @escaping () -> Void,
-         onImport: @escaping () -> Void, onOpen: @escaping () -> Void) {
+         onImport: @escaping () -> Void, onOpen: @escaping () -> Void,
+         onRetry: @escaping () -> Void) {
         self.onSettings = onSettings
         self.onMeeting = onMeeting
         self.onImport = onImport
         self.onOpen = onOpen
+        self.onRetry = onRetry
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         statusMenuItem = NSMenuItem(title: "Whispr — starting…", action: nil, keyEquivalent: "")
         statusMenuItem.isEnabled = false
@@ -39,6 +42,9 @@ final class MenuBarController: NSObject {
         let importItem = NSMenuItem(title: "Transcribe File…", action: #selector(openImport), keyEquivalent: "t")
         importItem.target = self
         menu.addItem(importItem)
+        let retryItem = NSMenuItem(title: "Retry Last Transcription", action: #selector(retry), keyEquivalent: "")
+        retryItem.target = self
+        menu.addItem(retryItem)
         let settings = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
         settings.target = self
         menu.addItem(settings)
@@ -51,6 +57,7 @@ final class MenuBarController: NSObject {
     @objc private func openMeeting() { onMeeting() }
     @objc private func openImport() { onImport() }
     @objc private func openMain() { onOpen() }
+    @objc private func retry() { onRetry() }
 
     func setStatus(_ text: String) {
         statusMenuItem.title = "Whispr — \(text)"

@@ -9,7 +9,8 @@ final class AppController {
         onSettings: { [weak self] in self?.showSettings() },
         onMeeting: { [weak self] in self?.showMeeting() },
         onImport: { [weak self] in self?.showImport() },
-        onOpen: { [weak self] in self?.showMainWindow() }
+        onOpen: { [weak self] in self?.showMainWindow() },
+        onRetry: { [weak self] in self?.retryLastTranscription() }
     )
     let state = AppState()
     private let mainWindow = MainWindowController()
@@ -22,6 +23,8 @@ final class AppController {
     private var previewTask: Task<Void, Never>?
     /// Mirrors the actor's readiness for synchronous UI guards.
     private var modelReady = false
+    /// Samples of the last dictation whose transcription failed — recoverable via "Retry".
+    private var failedSamples: [Float]?
     private let modelManager = ModelManager()
     private let transcriber = Transcriber()
     private let recorder = AudioRecorder()
@@ -276,6 +279,18 @@ final class AppController {
         menuBar.setRecording(false)
         indicator.hide()
         setStatus("transcribing…")
+        transcribeAndDeliver(samples)
+    }
+
+    /// Retry the last failed transcription (menu item).
+    func retryLastTranscription() {
+        guard let samples = failedSamples else { setStatus("nothing to retry"); return }
+        failedSamples = nil
+        setStatus("retrying…")
+        transcribeAndDeliver(samples)
+    }
+
+    private func transcribeAndDeliver(_ samples: [Float]) {
         Task {
             do {
                 let raw = try await transcriber.transcribe(samples, language: Settings.languageCode)
@@ -298,7 +313,8 @@ final class AppController {
                     }
                 }
             } catch {
-                setStatus("transcribe error")
+                failedSamples = samples // recoverable via Retry Last Transcription
+                setStatus("transcribe error — Retry from the menu")
                 NSLog("[Whispr] transcribe failed: \(error)")
             }
         }
