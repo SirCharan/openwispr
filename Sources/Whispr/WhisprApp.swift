@@ -12,6 +12,7 @@ enum Whispr {
             DictionaryStore.selfTest()
             SnippetStore.selfTest()
             Stats.selfTest()
+            Transliterate.selfTest()
             Task { @MainActor in
                 CorrectionsWatcher.selfTest()
                 exit(0)
@@ -116,7 +117,8 @@ enum Whispr {
             do {
                 let folder = try await mm.ensureDownloaded(model) { _ in }
                 try await transcriber.load(model: model, folder: folder)
-                let text = try await transcriber.transcribeFile(path)
+                var text = try await transcriber.transcribeFile(path, language: Settings.languageCode)
+                if Settings.outputMode == "roman" { text = Transliterate.toLatin(text) }
                 print("transcribe-file: \"\(text)\"")
             } catch {
                 print("transcribe-file FAIL: \(error)")

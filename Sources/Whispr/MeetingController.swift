@@ -141,7 +141,8 @@ final class MeetingController: ObservableObject {
         let rms = sqrt(samples.reduce(0) { $0 + $1 * $1 } / Float(samples.count))
         guard rms > 0.002 else { return }
         do {
-            let raw = try await transcriber.transcribe(samples, language: Settings.languageCode)
+            var raw = try await transcriber.transcribe(samples, language: Settings.languageCode)
+            if Settings.outputMode == "roman" { raw = Transliterate.toLatin(raw) }
             let text = TextProcessor.process(raw, options: Settings.textOptions)
             guard !text.isEmpty else { return }
             lines.append(MeetingLine(speaker: speaker, text: text))

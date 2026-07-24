@@ -264,6 +264,7 @@ private struct DictationsPane: View {
 private struct ModelsPane: View {
     @State private var model = ModelManager().selectedModel
     @AppStorage("language") private var language = "auto"
+    @AppStorage("outputMode") private var outputMode = "original"
 
     var body: some View {
         Form {
@@ -281,6 +282,13 @@ private struct ModelsPane: View {
                 Picker("Spoken language", selection: $language) {
                     ForEach(Languages.list, id: \.code) { lang in Text(lang.name).tag(lang.code ?? "auto") }
                 }
+                Picker("Type as", selection: $outputMode) {
+                    Text("Original script").tag("original")
+                    Text("Roman letters (kaise ho)").tag("roman")
+                    Text("English translation").tag("translate")
+                }
+                Text("Speak Hindi (or any language) and type it in Roman letters, or let Whisper translate to English. Applies to dictation and meetings. Note: English translation needs a non-turbo model (small/base/large-v3) — the turbo model transcribes only.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)

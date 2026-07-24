@@ -26,6 +26,12 @@ enum Settings {
         set { UserDefaults.standard.set(newValue, forKey: "disabledApps") }
     }
 
+    /// Output for non-English speech: "original" script · "roman" letters (Hinglish) · "translate" to English.
+    static var outputMode: String {
+        get { UserDefaults.standard.string(forKey: "outputMode") ?? "original" }
+        set { UserDefaults.standard.set(newValue, forKey: "outputMode") }
+    }
+
     /// Dictation language: "auto" (detect) or a WhisperKit code ("en", "es", …).
     static var language: String {
         get { UserDefaults.standard.string(forKey: "language") ?? "auto" }

@@ -296,7 +296,8 @@ final class AppController {
     private func transcribeAndDeliver(_ samples: [Float]) {
         Task {
             do {
-                let raw = try await transcriber.transcribe(samples, language: Settings.languageCode)
+                var raw = try await transcriber.transcribe(samples, language: Settings.languageCode)
+                if Settings.outputMode == "roman" { raw = Transliterate.toLatin(raw) }
                 let corrected = DictionaryStore.apply(raw, DictionaryStore.load())
                 let cleaned = TextProcessor.process(corrected, options: Settings.textOptions)
                 var text = SnippetStore.apply(cleaned, SnippetStore.load())

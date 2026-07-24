@@ -42,6 +42,8 @@ actor Transcriber {
     private static func options(_ language: String?) -> DecodingOptions {
         var opts = DecodingOptions()
         opts.language = language
+        // Whisper's built-in any-language → English translation
+        if Settings.outputMode == "translate" { opts.task = .translate }
         return opts
     }
 
