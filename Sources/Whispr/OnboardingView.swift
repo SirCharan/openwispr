@@ -166,7 +166,7 @@ struct OnboardingView: View {
             Text("Make it yours").font(.title2).bold()
             Form {
                 Picker("Dictation trigger:", selection: $hotkeyMode) {
-                    Text("fn key (recommended)").tag("fn")
+                    ForEach(Triggers.list, id: \.id) { t in Text(t.label).tag(t.id) }
                     Text("Custom shortcut").tag("custom")
                 }
                 .onChange(of: hotkeyMode) { _, _ in NotificationCenter.default.post(name: .whisprHotkeyModeChanged, object: nil) }

@@ -14,7 +14,7 @@ final class AppController {
     )
     let state = AppState()
     private let mainWindow = MainWindowController()
-    private var fnMonitor: FnKeyMonitor?
+    private var fnMonitor: ModifierKeyMonitor?
     private lazy var meetingCtrl = MeetingController(transcriber: transcriber)
     private lazy var importModel = FileImportModel(transcriber: transcriber)
     private let corrections = CorrectionsWatcher()
@@ -170,13 +170,14 @@ final class AppController {
         if recorder.isRecording { stopDictation() } // never swap monitors mid-recording (drops the key-up)
         hotkeys = nil
         fnMonitor = nil
-        if Self.effectiveMode == "fn" {
-            fnMonitor = FnKeyMonitor(
+        if Self.effectiveMode == "custom" {
+            hotkeys = HotkeyManager(
                 onKeyDown: { [weak self] in self?.handleKeyDown() },
                 onKeyUp: { [weak self] in self?.handleKeyUp() }
             )
         } else {
-            hotkeys = HotkeyManager(
+            fnMonitor = ModifierKeyMonitor(
+                trigger: Triggers.trigger(for: Self.effectiveMode),
                 onKeyDown: { [weak self] in self?.handleKeyDown() },
                 onKeyUp: { [weak self] in self?.handleKeyUp() }
             )
@@ -267,9 +268,9 @@ final class AppController {
     }
 
     static var hotkeyHint: String {
-        effectiveMode == "fn"
-            ? "fn"
-            : (KeyboardShortcuts.getShortcut(for: .dictate).map(String.init(describing:)) ?? "fn")
+        effectiveMode == "custom"
+            ? (KeyboardShortcuts.getShortcut(for: .dictate).map(String.init(describing:)) ?? "fn")
+            : Triggers.trigger(for: effectiveMode).label
     }
 
     private func stopDictation() {

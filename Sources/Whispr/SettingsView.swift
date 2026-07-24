@@ -48,7 +48,7 @@ struct SettingsView: View {
         Form {
             Section("Dictation trigger") {
                 Picker("Trigger", selection: $hotkeyMode) {
-                    Text("fn key (hold to talk)").tag("fn")
+                    ForEach(Triggers.list, id: \.id) { t in Text(t.label).tag(t.id) }
                     Text("Custom shortcut").tag("custom")
                 }
                 .onChange(of: hotkeyMode) { _, _ in NotificationCenter.default.post(name: .whisprHotkeyModeChanged, object: nil) }

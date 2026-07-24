@@ -22,8 +22,14 @@ cp Resources/Info.plist "$APP_BUNDLE/Contents/Info.plist"
 [ -f Resources/AppIcon.icns ] && cp Resources/AppIcon.icns "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
 printf 'APPL????' > "$APP_BUNDLE/Contents/PkgInfo"
 
-# Ad-hoc signature so the bundle runs locally and TCC (mic/accessibility) grants persist.
-echo "==> ad-hoc codesign"
-codesign --force --deep --sign - "$APP_BUNDLE"
+# Prefer the stable "Whispr Dev" identity: TCC grants (mic/accessibility/screen) survive
+# rebuilds only when the designated requirement is stable — ad-hoc changes every build.
+if security find-identity -p codesigning 2>/dev/null | grep -q "Whispr Dev"; then
+    echo "==> codesign (Whispr Dev)"
+    codesign --force --deep --sign "Whispr Dev" "$APP_BUNDLE"
+else
+    echo "==> ad-hoc codesign (grants will NOT survive rebuilds)"
+    codesign --force --deep --sign - "$APP_BUNDLE"
+fi
 
 echo "==> done: $APP_BUNDLE"
