@@ -2,7 +2,7 @@ import AppKit
 import KeyboardShortcuts
 
 /// Central wiring object: owns the menu bar, model, and transcriber, and runs the boot sequence.
-/// Recording + hotkey + paste flow is attached in later milestones.
+/// Owns the dictation flow, onboarding, windows, and trigger monitors.
 @MainActor
 final class AppController {
     private lazy var menuBar = MenuBarController(

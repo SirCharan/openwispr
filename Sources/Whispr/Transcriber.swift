@@ -32,7 +32,7 @@ actor Transcriber {
         return Self.join(results)
     }
 
-    /// Transcribe an audio file (WhisperKit resamples internally). Used by the M3 gate.
+    /// Transcribe an audio file (WhisperKit resamples internally). Used by the headless gates and file import.
     func transcribeFile(_ path: String, language: String? = nil) async throws -> String {
         guard let pipe else { throw TranscriberError.notLoaded }
         let results = try await pipe.transcribe(audioPath: path, decodeOptions: Self.options(language))

@@ -1,19 +1,14 @@
 import ScreenCaptureKit
 import AVFoundation
 
-enum SystemAudioError: Error { case noDisplay, converterInitFailed }
+enum SystemAudioError: Error { case noDisplay }
 
 /// Captures system-output audio (the "Others" side of a meeting) via ScreenCaptureKit
-/// and resamples to 16 kHz mono Float32 — the same shape AudioRecorder produces for the mic.
-/// Requires the Screen Recording TCC permission (audio ride-along; video frames are discarded).
+/// into a shared ResamplingBuffer. Requires the Screen Recording TCC permission
+/// (audio ride-along; video frames are discarded).
 final class SystemAudioRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
     private var stream: SCStream?
-    private let targetFormat = AVAudioFormat(
-        commonFormat: .pcmFormatFloat32, sampleRate: 16000, channels: 1, interleaved: false
-    )!
-    private var converter: AVAudioConverter?
-    private var samples: [Float] = []
-    private let lock = NSLock()
+    private let buffer = ResamplingBuffer()
     private(set) var isRecording = false
 
     func start() async throws {
@@ -33,7 +28,7 @@ final class SystemAudioRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
         try stream.addStreamOutput(self, type: .audio, sampleHandlerQueue: DispatchQueue(label: "whispr.sysaudio"))
         try await stream.startCapture()
         self.stream = stream
-        lock.lock(); samples.removeAll(keepingCapacity: true); lock.unlock()
+        buffer.reset()
         isRecording = true
     }
 
@@ -43,36 +38,20 @@ final class SystemAudioRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
         isRecording = false
         try? await stream?.stopCapture()
         stream = nil
-        lock.lock(); let out = samples; lock.unlock()
-        return out
+        return buffer.snapshot()
     }
 
-    /// Drain samples captured so far (for live chunked transcription).
-    func drain() -> [Float] {
-        lock.lock(); let out = samples; samples.removeAll(keepingCapacity: true); lock.unlock()
-        return out
-    }
+    /// Take buffered samples and clear (live chunked transcription).
+    func drain() -> [Float] { buffer.drain() }
 
-    /// Seconds of audio currently buffered (since last drain).
-    var bufferedSeconds: Double {
-        lock.lock(); defer { lock.unlock() }
-        return Double(samples.count) / 16000
-    }
-
-    /// RMS of the trailing `seconds` of the buffer — low value = remote side paused.
-    func tailRMS(_ seconds: Double) -> Float {
-        lock.lock(); defer { lock.unlock() }
-        let n = min(samples.count, Int(seconds * 16000))
-        guard n > 0 else { return 0 }
-        let tail = samples.suffix(n)
-        return sqrt(tail.reduce(0) { $0 + $1 * $1 } / Float(n))
-    }
+    var bufferedSeconds: Double { buffer.bufferedSeconds }
+    func tailRMS(_ seconds: Double) -> Float { buffer.tailRMS(seconds) }
 
     // MARK: - SCStreamOutput
 
     func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of type: SCStreamOutputType) {
         guard type == .audio, let pcm = Self.pcmBuffer(from: sampleBuffer) else { return }
-        append(pcm)
+        buffer.append(pcm)
     }
 
     func stream(_ stream: SCStream, didStopWithError error: Error) {
@@ -91,29 +70,5 @@ final class SystemAudioRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
             sampleBuffer, at: 0, frameCount: Int32(frames), into: buf.mutableAudioBufferList
         )
         return status == noErr ? buf : nil
-    }
-
-    private func append(_ pcm: AVAudioPCMBuffer) {
-        if converter == nil || converter?.inputFormat != pcm.format {
-            converter = AVAudioConverter(from: pcm.format, to: targetFormat)
-        }
-        guard let converter else { return }
-        let ratio = targetFormat.sampleRate / pcm.format.sampleRate
-        let capacity = AVAudioFrameCount(Double(pcm.frameLength) * ratio) + 16
-        guard let out = AVAudioPCMBuffer(pcmFormat: targetFormat, frameCapacity: capacity) else { return }
-
-        var fed = false
-        var error: NSError?
-        converter.convert(to: out, error: &error) { _, status in
-            if fed { status.pointee = .noDataNow; return nil }
-            fed = true
-            status.pointee = .haveData
-            return pcm
-        }
-        guard error == nil, let ch = out.floatChannelData else { return }
-        let n = Int(out.frameLength)
-        lock.lock()
-        samples.append(contentsOf: UnsafeBufferPointer(start: ch[0], count: n))
-        lock.unlock()
     }
 }

@@ -160,6 +160,11 @@ private struct DictationsPane: View {
                 Text("Hold").foregroundStyle(Brand.muted)
                 Text(AppController.hotkeyHint).bold().foregroundStyle(Brand.coral)
                 Text("anywhere · speak · release — your words paste at the cursor.").foregroundStyle(Brand.muted)
+                Spacer()
+                if !entries.isEmpty {
+                    Button("Clear history") { HistoryStore.clear(); refresh() }
+                        .buttonStyle(.plain).font(.caption).foregroundStyle(Brand.muted)
+                }
             }
             .font(.system(size: 13))
             feed
@@ -289,8 +294,7 @@ private struct ModelsPane: View {
 
 private struct SettingsPane: View {
     var body: some View {
-        SettingsView(currentModel: ModelManager().selectedModel, models: ModelManager.available,
-                     onReloadModel: { NotificationCenter.default.post(name: .whisprModelChanged, object: $0) })
+        SettingsView()
             .scrollContentBackground(.hidden)
             .background(Brand.bg)
     }

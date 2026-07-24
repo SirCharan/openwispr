@@ -7,7 +7,7 @@ import WhisperKit
 final class ModelManager {
     static let defaultModel = "large-v3-v20240930_turbo"
 
-    /// Offered in the Settings picker (M5). Smaller = faster download / lower RAM / lower accuracy.
+    /// Offered in the Models pane. Smaller = faster download / lower RAM / lower accuracy.
     static let available = [
         "large-v3-v20240930_turbo", // ~1.5 GB, best accuracy/speed on Apple Silicon
         "large-v3-v20240930_626MB", // compressed large

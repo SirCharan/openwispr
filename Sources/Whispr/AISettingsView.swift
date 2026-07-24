@@ -43,7 +43,7 @@ struct AISettingsView: View {
                 Section("API key (stored in Keychain)") {
                     SecureField("sk-…", text: $apiKey)
                         .onSubmit { LLMClient.setAPIKey(apiKey, for: provider) }
-                    TextField("Model (blank = gpt-4o-mini)", text: $model)
+                    TextField("Model (blank = gpt-4o-mini · OpenRouter: openai/gpt-4o-mini)", text: $model)
                         .onSubmit { LLMClient.model = model }
                     Button("Save") {
                         LLMClient.setAPIKey(apiKey, for: provider)

@@ -24,7 +24,7 @@ curl -fsSL https://whispr-black-chi.vercel.app/install.sh | sh
 1. Download `Whispr.dmg` (or unzip `Whispr.zip`).
 2. Move it to `/Applications`.
 3. First launch: macOS shows **"Whispr" Not Opened** (the build is not notarized). Click **Done**, open **System Settings → Privacy & Security**, scroll down to "Whispr was blocked", and click **Open Anyway**. Terminal alternative: `xattr -dr com.apple.quarantine /Applications/Whispr.app`. Later launches open normally.
-4. Whispr lives in the menu bar (microphone icon) — it has no Dock icon or window.
+4. Whispr opens its home window (stats, transcripts, settings) and lives in the menu bar (microphone icon). The setup wizard runs on first launch.
 
 ## First launch
 
@@ -36,7 +36,7 @@ curl -fsSL https://whispr-black-chi.vercel.app/install.sh | sh
 
 ## Use
 
-- **Hold `⌘⇧D`**, speak, then **release**. The menu-bar icon fills while recording.
+- **Hold the `fn` key** (or your chosen trigger — Right ⌘, Left ⌃, or a custom shortcut), speak, then **release**. A floating pill shows a live preview while recording.
 - On release Whispr transcribes and pastes the text where your cursor is.
 
 ## Settings (menu bar → Settings…)

@@ -1,6 +1,6 @@
 import Foundation
 
-/// Thin UserDefaults-backed preferences. Exposed in the Settings UI at M5.
+/// Thin UserDefaults-backed preferences. Single source for keys used by @AppStorage bindings.
 enum Settings {
     /// Auto-paste transcript at the cursor (Cmd+V). If false, text is left on the clipboard only.
     static var autoPaste: Bool {

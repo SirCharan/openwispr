@@ -1,7 +1,7 @@
 import Foundation
 
 /// Encode 16 kHz mono Float32 samples to a 16-bit PCM WAV file.
-/// Used for debug dumps and the M2 capture gate.
+/// Used for debug dumps and the --record-test gate.
 enum WavEncoder {
     static func encode(_ samples: [Float], sampleRate: Int = 16000) -> Data {
         let numChannels = 1

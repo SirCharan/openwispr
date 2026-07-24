@@ -197,11 +197,7 @@ struct OnboardingView: View {
         )
     }
 
-    private static var hotkeyLabel: String {
-        Settings.hotkeyMode == "fn"
-            ? "the fn key"
-            : (KeyboardShortcuts.getShortcut(for: .dictate).map(String.init(describing:)) ?? "⌘⇧D")
-    }
+    private static var hotkeyLabel: String { AppController.hotkeyHint }
 
     // Shared step layout.
     private func step(icon: String, title: String, body: String, button: String,

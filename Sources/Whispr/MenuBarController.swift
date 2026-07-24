@@ -1,6 +1,6 @@
 import AppKit
 
-/// Owns the menu-bar status item and its menu: status line, Settings…, Quit,
+/// Owns the menu-bar status item and its menu: status line, Open/Meeting/Import/Retry/Settings/Quit,
 /// plus a recording-state icon swap.
 @MainActor
 final class MenuBarController: NSObject {

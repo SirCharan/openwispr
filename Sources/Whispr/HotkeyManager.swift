@@ -1,7 +1,7 @@
 import KeyboardShortcuts
 
 extension KeyboardShortcuts.Name {
-    /// Push-to-talk dictation shortcut. Default: ⌘⇧D. Rebindable in Settings (M5).
+    /// Push-to-talk dictation shortcut. Used only in "custom shortcut" trigger mode.
     static let dictate = Self("dictate", default: .init(.d, modifiers: [.command, .shift]))
 }
 
