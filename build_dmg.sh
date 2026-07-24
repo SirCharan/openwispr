@@ -4,9 +4,9 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-APP="build/Whispr.app"
-DMG="build/Whispr.dmg"
-VOL="Whispr"
+APP="build/OpenWispr.app"
+DMG="build/OpenWispr.dmg"
+VOL="OpenWispr"
 
 [ -d "$APP" ] || { echo "ERROR: $APP missing — run ./build_app.sh first"; exit 1; }
 rm -f "$DMG"
@@ -17,9 +17,9 @@ if command -v create-dmg >/dev/null 2>&1; then
         --volname "$VOL" \
         --window-size 540 340 \
         --icon-size 110 \
-        --icon "Whispr.app" 140 150 \
+        --icon "OpenWispr.app" 140 150 \
         --app-drop-link 400 150 \
-        --hide-extension "Whispr.app" \
+        --hide-extension "OpenWispr.app" \
         "$DMG" "$APP"
 else
     echo "==> hdiutil (create-dmg not installed; plain layout)"

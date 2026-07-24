@@ -12,7 +12,7 @@ final class OnboardingWindowController {
     func show() {
         let hosting = NSHostingController(rootView: OnboardingView(model: model))
         let win = NSWindow(contentViewController: hosting)
-        win.title = "Welcome to Whispr"
+        win.title = "Welcome to OpenWispr"
         win.styleMask = [.titled, .closable]
         win.isReleasedWhenClosed = false
         window = win

@@ -18,7 +18,7 @@ enum DictionaryStore {
 
     static let url: URL = {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Whispr", isDirectory: true)
+            .appendingPathComponent("OpenWispr", isDirectory: true)
         try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
         return base.appendingPathComponent("dictionary.json")
     }()

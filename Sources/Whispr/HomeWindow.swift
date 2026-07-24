@@ -14,18 +14,19 @@ extension Notification.Name {
     static let whisprModelChanged = Notification.Name("whispr.modelChanged")
 }
 
-// Landing-page design tokens (web/index.html) translated to SwiftUI.
+// "Paper Studio" design tokens — identical hex values to web/index.html. One source, every surface.
 enum Brand {
-    static let bg = Color(red: 0.039, green: 0.039, blue: 0.043)        // #0a0a0b
-    static let surface = Color(red: 0.078, green: 0.078, blue: 0.086)   // #141416
-    static let line = Color(red: 0.149, green: 0.149, blue: 0.165)      // #26262a
-    static let text = Color(red: 0.949, green: 0.949, blue: 0.941)      // #f2f2f0
-    static let muted = Color(red: 0.545, green: 0.545, blue: 0.569)     // #8b8b91
-    /// Follows the user's accent choice (Theme); coral #ff5d54 is the default.
+    static let bg = Color(red: 0.957, green: 0.937, blue: 0.902)        // #F4EFE6 cream
+    static let surface = Color(red: 0.925, green: 0.894, blue: 0.839)   // #ECE4D6
+    static let line = Color(red: 0.863, green: 0.824, blue: 0.753)      // #DCD2C0
+    static let text = Color(red: 0.141, green: 0.122, blue: 0.102)      // #241F1A espresso
+    static let muted = Color(red: 0.541, green: 0.490, blue: 0.420)     // #8A7D6B
+    /// Follows the user's accent choice (Theme); tape red-coral #E2543E is the default.
     static var coral: Color { Color(nsColor: Theme.nsAccent) }
     static var coralSoft: Color { coral.opacity(0.12) }
 
     static func serif(_ size: CGFloat) -> Font { .system(size: size, design: .serif) }
+    static func mono(_ size: CGFloat) -> Font { .system(size: size, design: .monospaced) }
 }
 
 enum HomePane: String, CaseIterable, Identifiable {
@@ -72,7 +73,7 @@ struct HomeView: View {
             detail
         }
         .background(Brand.bg)
-        .preferredColorScheme(.dark) // the home window IS the brand surface
+        .preferredColorScheme(.light) // Paper Studio is a light, warm surface
         .frame(minWidth: 900, minHeight: 620)
     }
 
@@ -81,7 +82,7 @@ struct HomeView: View {
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 0) {
-                Text("Whis").font(Brand.serif(24)) + Text("p").font(Brand.serif(24)).foregroundStyle(Brand.coral) + Text("r").font(Brand.serif(24))
+                Text("O").font(Brand.serif(24)).foregroundStyle(Brand.coral) + Text("penWispr").font(Brand.serif(24)).foregroundStyle(Brand.text)
             }
             .padding(.bottom, 2)
             Text("Hi, \(NSFullUserName().components(separatedBy: " ").first ?? NSFullUserName())")
@@ -313,7 +314,7 @@ private struct AboutPane: View {
     var body: some View {
         VStack(spacing: 14) {
             Image(systemName: "mic.circle.fill").font(.system(size: 56)).foregroundStyle(Brand.coral)
-            Text("Whispr").font(Brand.serif(34)).foregroundStyle(Brand.text)
+            Text("OpenWispr").font(Brand.serif(34)).foregroundStyle(Brand.text)
             Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev") — local voice dictation & meeting transcription")
                 .foregroundStyle(Brand.muted)
             Text("100% on-device via WhisperKit · MIT licensed").font(.caption).foregroundStyle(Brand.muted)
@@ -337,7 +338,7 @@ final class MainWindowController {
         if window == nil {
             let view = HomeView(state: state, meetingController: meetingController, importModel: importModel)
             let win = NSWindow(contentViewController: NSHostingController(rootView: view))
-            win.title = "Whispr"
+            win.title = "OpenWispr"
             win.styleMask = [.titled, .closable, .miniaturizable, .resizable]
             win.isReleasedWhenClosed = false
             win.setContentSize(NSSize(width: 960, height: 640))

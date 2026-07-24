@@ -48,7 +48,7 @@ struct MeetingView: View {
                     Image(systemName: controller.needsScreenRec ? "exclamationmark.shield" : "person.2.wave.2")
                         .font(.system(size: 36)).foregroundStyle(controller.needsScreenRec ? .orange : .secondary)
                     if controller.needsScreenRec {
-                        Text("macOS blocked system-audio capture. Enable Whispr under Screen & System Audio Recording, then relaunch the app.")
+                        Text("macOS blocked system-audio capture. Enable OpenWispr under Screen & System Audio Recording, then relaunch the app.")
                             .foregroundStyle(.secondary).multilineTextAlignment(.center)
                         Button("Open Screen Recording settings") {
                             NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!)
@@ -56,7 +56,7 @@ struct MeetingView: View {
                     } else {
                         Text("Start recording to capture your mic (You) and system audio (Others).")
                             .foregroundStyle(.secondary).multilineTextAlignment(.center)
-                        Text("System audio needs Screen Recording permission. Transcripts autosave to Documents/Whispr.")
+                        Text("System audio needs Screen Recording permission. Transcripts autosave to Documents/OpenWispr.")
                             .font(.caption).foregroundStyle(.tertiary)
                     }
                 }

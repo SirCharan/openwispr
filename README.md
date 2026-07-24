@@ -1,4 +1,4 @@
-# Whispr
+# OpenWispr
 
 Local-first voice dictation for macOS. Hold a hotkey, speak, and your words paste at the cursor.
 100% on-device via [WhisperKit](https://github.com/argmaxinc/WhisperKit) (Whisper on the Apple Neural Engine).
@@ -21,14 +21,14 @@ curl -fsSL https://whispr-black-chi.vercel.app/install.sh | sh
 
 **Or manually:**
 
-1. Download `Whispr.dmg` (or unzip `Whispr.zip`).
+1. Download `OpenWispr.dmg` (or unzip `OpenWispr.zip`).
 2. Move it to `/Applications`.
-3. First launch: macOS shows **"Whispr" Not Opened** (the build is not notarized). Click **Done**, open **System Settings → Privacy & Security**, scroll down to "Whispr was blocked", and click **Open Anyway**. Terminal alternative: `xattr -dr com.apple.quarantine /Applications/Whispr.app`. Later launches open normally.
-4. Whispr opens its home window (stats, transcripts, settings) and lives in the menu bar (microphone icon). The setup wizard runs on first launch.
+3. First launch: macOS shows **"OpenWispr" Not Opened** (the build is not notarized). Click **Done**, open **System Settings → Privacy & Security**, scroll down to "OpenWispr was blocked", and click **Open Anyway**. Terminal alternative: `xattr -dr com.apple.quarantine /Applications/OpenWispr.app`. Later launches open normally.
+4. OpenWispr opens its home window (stats, transcripts, settings) and lives in the menu bar (microphone icon). The setup wizard runs on first launch.
 
 ## First launch
 
-- The menu shows `Whispr — downloading …%` while it fetches the default model
+- The menu shows `OpenWispr — downloading …%` while it fetches the default model
   (`large-v3-v20240930_turbo`, ~1.5 GB), then `loading model…`, then `ready`.
 - Grant **Microphone** access when prompted (needed to record).
 - Grant **Accessibility** access when prompted (needed to auto-paste with Cmd+V).
@@ -37,7 +37,7 @@ curl -fsSL https://whispr-black-chi.vercel.app/install.sh | sh
 ## Use
 
 - **Hold the `fn` key** (or your chosen trigger — Right ⌘, Left ⌃, or a custom shortcut), speak, then **release**. A floating pill shows a live preview while recording.
-- On release Whispr transcribes and pastes the text where your cursor is.
+- On release OpenWispr transcribes and pastes the text where your cursor is.
 
 ## Settings (menu bar → Settings…)
 
@@ -49,18 +49,18 @@ curl -fsSL https://whispr-black-chi.vercel.app/install.sh | sh
 ## Build from source
 
 ```bash
-git clone https://github.com/SirCharan/whispr.git
-cd whispr
-./build_app.sh          # compiles + assembles build/Whispr.app (ad-hoc signed)
-open build/Whispr.app
+git clone https://github.com/SirCharan/openwispr.git
+cd openwispr
+./build_app.sh          # compiles + assembles build/OpenWispr.app (ad-hoc signed)
+open build/OpenWispr.app
 ```
 
 Headless self-checks:
 
 ```bash
-./build/Whispr.app/Contents/MacOS/Whispr --selftest                 # WAV encoder
-./build/Whispr.app/Contents/MacOS/Whispr --record-test 3 out.wav    # mic capture pipeline
-./build/Whispr.app/Contents/MacOS/Whispr --transcribe-file out.wav  # full ASR path
+./build/OpenWispr.app/Contents/MacOS/OpenWispr --selftest                 # WAV encoder
+./build/OpenWispr.app/Contents/MacOS/OpenWispr --record-test 3 out.wav    # mic capture pipeline
+./build/OpenWispr.app/Contents/MacOS/OpenWispr --transcribe-file out.wav  # full ASR path
 ```
 
 ## Notes

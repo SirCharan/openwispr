@@ -62,19 +62,20 @@ private struct RecordingPill: View {
             if !model.preview.isEmpty {
                 Text(model.preview)
                     .font(.system(size: 11))
-                    .foregroundStyle(.white.opacity(0.55))
+                    .foregroundStyle(Brand.muted)
                     .lineLimit(1)
                     .truncationMode(.head)
                     .frame(maxWidth: 320)
             }
         }
         .font(.system(size: 13, weight: .semibold))
-        .foregroundStyle(.white.opacity(0.8))
+        .foregroundStyle(Brand.text.opacity(0.85))
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
         .background(
-            Capsule().fill(Color(red: 0.08, green: 0.08, blue: 0.094))
-                .overlay(Capsule().stroke(.white.opacity(0.12), lineWidth: 1))
+            Capsule().fill(Brand.bg)
+                .overlay(Capsule().stroke(Brand.line, lineWidth: 1))
+                .shadow(color: Brand.text.opacity(0.18), radius: 10, y: 3)
         )
         .fixedSize()
         .contextMenu {

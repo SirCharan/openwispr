@@ -25,13 +25,16 @@ struct OnboardingView: View {
         }
         .padding(40)
         .frame(width: 460, height: 420)
+        .background(Brand.bg)
+        .tint(Brand.coral)
+        .preferredColorScheme(.light) // Paper Studio chrome, consistent with the home window
         .onAppear { model.refreshAccessibility() }
     }
 
     private var welcome: some View {
         step(
             icon: "mic.circle.fill",
-            title: "Welcome to Whispr",
+            title: "Welcome to OpenWispr",
             body: "Hold a hotkey, speak, and your words paste at the cursor — transcribed on-device with Whisper. No cloud, no account.",
             button: "Get started",
             action: { model.step = model.needsMove ? 1 : 2 }
@@ -42,7 +45,7 @@ struct OnboardingView: View {
         step(
             icon: "arrow.down.app.fill",
             title: "Move to Applications",
-            body: "Whispr is running from \(Bundle.main.bundlePath.hasPrefix("/Volumes") ? "the disk image" : "outside Applications"). Moving it to the Applications folder keeps macOS permissions stable. Whispr will relaunch after the move.",
+            body: "OpenWispr is running from \(Bundle.main.bundlePath.hasPrefix("/Volumes") ? "the disk image" : "outside Applications"). Moving it to the Applications folder keeps macOS permissions stable. OpenWispr will relaunch after the move.",
             button: "Move to Applications",
             action: { model.onMoveToApplications() },
             secondary: ("Skip", { model.step = 2 })
@@ -54,8 +57,8 @@ struct OnboardingView: View {
             icon: model.micGranted ? "checkmark.circle.fill" : "waveform",
             title: "Microphone access",
             body: model.micGranted ? "Microphone access granted."
-                : model.micDenied ? "Microphone access was denied. Open System Settings → Privacy & Security → Microphone and turn Whispr on, then come back."
-                : "Whispr needs the microphone to hear you. Audio is processed locally and never leaves your Mac.",
+                : model.micDenied ? "Microphone access was denied. Open System Settings → Privacy & Security → Microphone and turn OpenWispr on, then come back."
+                : "OpenWispr needs the microphone to hear you. Audio is processed locally and never leaves your Mac.",
             button: model.micGranted ? "Continue" : model.micDenied ? "Open System Settings" : "Allow microphone",
             action: {
                 if model.micGranted { model.step = 3 }
@@ -71,7 +74,7 @@ struct OnboardingView: View {
             icon: model.axGranted ? "checkmark.circle.fill" : "hand.raised.fill",
             title: "Accessibility access",
             body: model.axGranted ? "Accessibility granted — the fn trigger and auto-paste are enabled."
-                : "Whispr needs Accessibility for the fn dictation key AND to paste at your cursor. Without it the app can't hear the trigger.",
+                : "OpenWispr needs Accessibility for the fn dictation key AND to paste at your cursor. Without it the app can't hear the trigger.",
             button: model.axGranted ? "Continue" : "Open Accessibility settings",
             action: {
                 if model.axGranted { model.step = 4 }
@@ -89,8 +92,8 @@ struct OnboardingView: View {
             body: model.screenRecGranted
                 ? "Screen & System Audio Recording granted — meetings are ready."
                 : model.screenRecPrompted
-                ? "Requested. After you enable Whispr in System Settings, macOS applies it on the next launch — continue setup now."
-                : "Whispr can transcribe calls: your mic plus the other side's audio. macOS exposes system audio through Screen Recording permission. Only audio is used. Skip if you only dictate.",
+                ? "Requested. After you enable OpenWispr in System Settings, macOS applies it on the next launch — continue setup now."
+                : "OpenWispr can transcribe calls: your mic plus the other side's audio. macOS exposes system audio through Screen Recording permission. Only audio is used. Skip if you only dictate.",
             button: (model.screenRecGranted || model.screenRecPrompted) ? "Continue" : "Enable meeting capture",
             action: {
                 if model.screenRecGranted || model.screenRecPrompted { model.step = 5; model.onStartModel() }
@@ -128,7 +131,7 @@ struct OnboardingView: View {
         VStack(spacing: 20) {
             Image(systemName: "waveform.and.mic").font(.system(size: 52)).foregroundStyle(.tint)
             Text("Try it").font(.title2).bold()
-            Text("Press the button, say something like “Whispr types what I say”, then stop.")
+            Text("Press the button, say something like “OpenWispr types what I say”, then stop.")
                 .multilineTextAlignment(.center).foregroundStyle(.secondary)
 
             switch model.practice {
@@ -173,7 +176,7 @@ struct OnboardingView: View {
                 if hotkeyMode == "custom" {
                     KeyboardShortcuts.Recorder("Shortcut:", name: .dictate)
                 }
-                Toggle("Start Whispr at login", isOn: $launchAtLogin)
+                Toggle("Start OpenWispr at login", isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { _, on in LoginItem.set(on) }
             }
             .formStyle(.columns)
@@ -192,7 +195,7 @@ struct OnboardingView: View {
             icon: "checkmark.seal.fill",
             title: "You're all set",
             body: "Hold \(Self.hotkeyLabel), speak, then release — your words paste where the cursor is. Change the hotkey or model anytime from the menu-bar icon → Settings.",
-            button: "Start using Whispr",
+            button: "Start using OpenWispr",
             action: { model.onFinish() }
         )
     }

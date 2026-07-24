@@ -81,7 +81,7 @@ final class MeetingController: ObservableObject {
     /// Quit/crash safety: every finished meeting lands in ~/Documents/Whispr automatically.
     private func autosave() {
         let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Whispr", isDirectory: true)
+            .appendingPathComponent("OpenWispr", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let stamp = Date().formatted(.iso8601.year().month().day().time(includingFractionalSeconds: false))
             .replacingOccurrences(of: ":", with: "-")
@@ -89,7 +89,7 @@ final class MeetingController: ObservableObject {
         do {
             try exportMarkdown().write(to: url, atomically: true, encoding: .utf8)
             savedTo = url.path
-            status = "done — saved to Documents/Whispr"
+            status = "done — saved to Documents/OpenWispr"
         } catch {
             NSLog("[Whispr] meeting autosave failed: \(error)")
         }

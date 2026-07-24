@@ -4,14 +4,15 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-APP_NAME="Whispr"
+APP_NAME="OpenWispr"
+BIN_NAME="Whispr"
 BUILD_DIR="build"
 APP_BUNDLE="$BUILD_DIR/$APP_NAME.app"
 
 echo "==> swift build -c release"
 swift build -c release
 
-BIN=".build/release/$APP_NAME"
+BIN=".build/release/$BIN_NAME"
 [ -f "$BIN" ] || { echo "ERROR: binary not found at $BIN"; exit 1; }
 
 echo "==> assembling $APP_BUNDLE"

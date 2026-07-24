@@ -33,6 +33,7 @@ final class AppController {
     private var onboarding: OnboardingWindowController?
 
     func start() {
+        Self.migrateFromWhisprIfNeeded()
         NotificationCenter.default.addObserver(forName: .whisprHotkeyModeChanged, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in
                 guard let self, self.modelReady else { return }
@@ -57,7 +58,7 @@ final class AppController {
     }
 
     func showMainWindow() {
-        // wizard closed mid-way? "Open Whispr" resumes it instead of dead-ending
+        // wizard closed mid-way? "Open OpenWispr" resumes it instead of dead-ending
         guard Settings.onboarded else {
             if let onboarding { onboarding.show() } else { showOnboarding() }
             return
@@ -331,11 +332,38 @@ final class AppController {
         NSLog("[Whispr] status: \(text)")
     }
 
+    /// One-shot migration from the Whispr era (bundle id com.ck.whispr, App Support "Whispr"):
+    /// copies old UserDefaults keys we don't already have and old JSON stores into the new locations.
+    static func migrateFromWhisprIfNeeded() {
+        let flag = "migratedFromWhispr"
+        guard !UserDefaults.standard.bool(forKey: flag) else { return }
+        if let old = UserDefaults.standard.persistentDomain(forName: "com.ck.whispr") {
+            for (k, v) in old where UserDefaults.standard.object(forKey: k) == nil {
+                UserDefaults.standard.set(v, forKey: k)
+            }
+        }
+        let fm = FileManager.default
+        let appSupport = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        let oldDir = appSupport.appendingPathComponent("Whispr", isDirectory: true)
+        let newDir = appSupport.appendingPathComponent("OpenWispr", isDirectory: true)
+        if fm.fileExists(atPath: oldDir.path) {
+            try? fm.createDirectory(at: newDir, withIntermediateDirectories: true)
+            for file in (try? fm.contentsOfDirectory(atPath: oldDir.path)) ?? [] {
+                let dst = newDir.appendingPathComponent(file)
+                if !fm.fileExists(atPath: dst.path) {
+                    try? fm.copyItem(at: oldDir.appendingPathComponent(file), to: dst)
+                }
+            }
+        }
+        UserDefaults.standard.set(true, forKey: flag)
+        NSLog("[Whispr] migrated Whispr-era data")
+    }
+
     /// Copy the running bundle to /Applications and relaunch from there.
     /// ditto preserves the bundle + signature; TCC grants stick to the /Applications copy.
     static func moveToApplicationsAndRelaunch() {
         let src = Bundle.main.bundlePath
-        let dst = "/Applications/Whispr.app"
+        let dst = "/Applications/OpenWispr.app"
         guard src != dst else { return }
         let p = Process()
         p.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")

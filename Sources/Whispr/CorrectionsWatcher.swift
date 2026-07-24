@@ -41,7 +41,7 @@ final class CorrectionsWatcher {
         let alert = NSAlert()
         alert.messageText = "Add correction to dictionary?"
         let list = pairs.map { "“\($0.from)” → “\($0.to)”" }.joined(separator: "\n")
-        alert.informativeText = "You edited the last transcript. Teach Whispr:\n\(list)"
+        alert.informativeText = "You edited the last transcript. Teach OpenWispr:\n\(list)"
         alert.addButton(withTitle: "Add")
         alert.addButton(withTitle: "Ignore")
         NSApp.activate(ignoringOtherApps: true)

@@ -21,19 +21,19 @@ final class MenuBarController: NSObject {
         self.onOpen = onOpen
         self.onRetry = onRetry
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        statusMenuItem = NSMenuItem(title: "Whispr — starting…", action: nil, keyEquivalent: "")
+        statusMenuItem = NSMenuItem(title: "OpenWispr — starting…", action: nil, keyEquivalent: "")
         statusMenuItem.isEnabled = false
         super.init()
 
         if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "mic.circle", accessibilityDescription: "Whispr")
+            button.image = NSImage(systemSymbolName: "mic.circle", accessibilityDescription: "OpenWispr")
             button.image?.isTemplate = true
         }
 
         let menu = NSMenu()
         menu.addItem(statusMenuItem)
         menu.addItem(.separator())
-        let openItem = NSMenuItem(title: "Open Whispr", action: #selector(openMain), keyEquivalent: "o")
+        let openItem = NSMenuItem(title: "Open OpenWispr", action: #selector(openMain), keyEquivalent: "o")
         openItem.target = self
         menu.addItem(openItem)
         let meeting = NSMenuItem(title: "Record Meeting…", action: #selector(openMeeting), keyEquivalent: "m")
@@ -52,7 +52,7 @@ final class MenuBarController: NSObject {
         settings.target = self
         menu.addItem(settings)
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "Quit Whispr", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        menu.addItem(NSMenuItem(title: "Quit OpenWispr", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         statusItem.menu = menu
     }
 
@@ -67,12 +67,12 @@ final class MenuBarController: NSObject {
     }
 
     func setStatus(_ text: String) {
-        statusMenuItem.title = "Whispr — \(text)"
+        statusMenuItem.title = "OpenWispr — \(text)"
     }
 
     func setRecording(_ on: Bool) {
         let symbol = on ? "mic.circle.fill" : "mic.circle"
-        statusItem.button?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: "Whispr")
+        statusItem.button?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: "OpenWispr")
         statusItem.button?.image?.isTemplate = !on
     }
 }

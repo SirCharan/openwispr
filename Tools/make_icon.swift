@@ -3,8 +3,8 @@ import AppKit
 // Renders the Whispr app icon (coral waveform on a dark squircle) and builds AppIcon.icns.
 // Run: swift Tools/make_icon.swift   (writes Resources/AppIcon.icns)
 
-let bg = NSColor(red: 0.039, green: 0.039, blue: 0.043, alpha: 1)   // #0a0a0b
-let coral = NSColor(red: 1.0, green: 0.365, blue: 0.329, alpha: 1)  // #ff5d54
+let bg = NSColor(red: 0.957, green: 0.937, blue: 0.902, alpha: 1)   // #F4EFE6 cream
+let coral = NSColor(red: 0.886, green: 0.329, blue: 0.243, alpha: 1)  // #E2543E tape red
 let heights: [CGFloat] = [0.26, 0.46, 0.68, 0.92, 0.68, 0.46, 0.26]
 
 func drawIcon(_ px: CGFloat) -> NSBitmapImageRep {

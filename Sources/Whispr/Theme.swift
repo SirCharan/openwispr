@@ -4,12 +4,12 @@ import SwiftUI
 /// Accent color + appearance handling (Muesli-style customization).
 enum Theme {
     static let accents: [(name: String, hex: String)] = [
-        ("Coral", "FF5D54"), ("Blue", "4C8DFF"), ("Green", "34C77B"),
-        ("Purple", "A06BFF"), ("Amber", "FFB340"),
+        ("Tape Red", "E2543E"), ("Coral", "FF5D54"), ("Blue", "4C8DFF"),
+        ("Green", "34C77B"), ("Purple", "A06BFF"), ("Amber", "FFB340"),
     ]
 
     static var accentHex: String {
-        get { UserDefaults.standard.string(forKey: "accentHex") ?? "FF5D54" }
+        get { UserDefaults.standard.string(forKey: "accentHex") ?? "E2543E" }
         set { UserDefaults.standard.set(newValue, forKey: "accentHex") }
     }
 
