@@ -213,6 +213,7 @@ final class AppController {
                 onCancel: { [weak self] in self?.cancelDictation() },
                 onStop: { [weak self] in self?.stopDictation() }
             )
+            if Settings.soundCues { NSSound(named: "Pop")?.play() }
             setStatus("listening…")
             startPreviewLoop()
         } catch {
@@ -279,6 +280,7 @@ final class AppController {
         let samples = recorder.stop()
         menuBar.setRecording(false)
         indicator.hide()
+        if Settings.soundCues { NSSound(named: "Tink")?.play() }
         setStatus("transcribing…")
         transcribeAndDeliver(samples)
     }

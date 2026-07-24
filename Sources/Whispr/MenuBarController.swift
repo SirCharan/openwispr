@@ -45,6 +45,9 @@ final class MenuBarController: NSObject {
         let retryItem = NSMenuItem(title: "Retry Last Transcription", action: #selector(retry), keyEquivalent: "")
         retryItem.target = self
         menu.addItem(retryItem)
+        let pasteLast = NSMenuItem(title: "Paste Last Transcript", action: #selector(pasteLastTranscript), keyEquivalent: "p")
+        pasteLast.target = self
+        menu.addItem(pasteLast)
         let settings = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
         settings.target = self
         menu.addItem(settings)
@@ -58,6 +61,10 @@ final class MenuBarController: NSObject {
     @objc private func openImport() { onImport() }
     @objc private func openMain() { onOpen() }
     @objc private func retry() { onRetry() }
+    @objc private func pasteLastTranscript() {
+        guard let last = HistoryStore.load().first else { return }
+        Paster.deliver(last.text, autoPaste: Settings.autoPaste)
+    }
 
     func setStatus(_ text: String) {
         statusMenuItem.title = "Whispr — \(text)"

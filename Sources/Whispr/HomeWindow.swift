@@ -21,8 +21,9 @@ enum Brand {
     static let line = Color(red: 0.149, green: 0.149, blue: 0.165)      // #26262a
     static let text = Color(red: 0.949, green: 0.949, blue: 0.941)      // #f2f2f0
     static let muted = Color(red: 0.545, green: 0.545, blue: 0.569)     // #8b8b91
-    static let coral = Color(red: 1.0, green: 0.365, blue: 0.329)       // #ff5d54
-    static let coralSoft = coral.opacity(0.12)
+    /// Follows the user's accent choice (Theme); coral #ff5d54 is the default.
+    static var coral: Color { Color(nsColor: Theme.nsAccent) }
+    static var coralSoft: Color { coral.opacity(0.12) }
 
     static func serif(_ size: CGFloat) -> Font { .system(size: size, design: .serif) }
 }
@@ -87,15 +88,6 @@ struct HomeView: View {
                 .font(.caption).foregroundStyle(Brand.muted)
                 .padding(.bottom, 14)
 
-            HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass").foregroundStyle(Brand.muted).font(.system(size: 12))
-                TextField("Search…", text: $search).textFieldStyle(.plain).font(.system(size: 13))
-            }
-            .padding(8)
-            .background(RoundedRectangle(cornerRadius: 8).fill(Brand.surface))
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Brand.line))
-            .padding(.bottom, 14)
-
             ForEach(HomePane.allCases) { p in
                 Button {
                     state.pane = p
@@ -156,6 +148,13 @@ private struct DictationsPane: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             statsRow
+            HStack(spacing: 6) {
+                Image(systemName: "magnifyingglass").foregroundStyle(Brand.muted).font(.system(size: 12))
+                TextField("Search transcripts…", text: $search).textFieldStyle(.plain).font(.system(size: 13))
+            }
+            .padding(8)
+            .background(RoundedRectangle(cornerRadius: 8).fill(Brand.surface))
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Brand.line))
             HStack(spacing: 8) {
                 Text("Hold").foregroundStyle(Brand.muted)
                 Text(AppController.hotkeyHint).bold().foregroundStyle(Brand.coral)

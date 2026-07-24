@@ -12,6 +12,7 @@ struct SettingsView: View {
     @AppStorage("removeFillers") private var removeFillers = true
     @AppStorage("cleanUp") private var cleanUp = true
     @AppStorage("handsFree") private var handsFree = false
+    @AppStorage("soundCues") private var soundCues = true
     @AppStorage("hotkeyMode") private var hotkeyMode = "fn"
     @AppStorage("rewriteStyle") private var rewriteStyle = "off"
     @AppStorage("accentHex") private var accentHex = "FF5D54"
@@ -40,6 +41,7 @@ struct SettingsView: View {
             }
             Section("Behavior") {
                 Toggle("Auto-paste at cursor (off = copy to clipboard only)", isOn: $autoPaste)
+                Toggle("Sound cues on record start/stop", isOn: $soundCues)
                 Toggle("Launch at login", isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { _, on in LoginItem.set(on) }
             }

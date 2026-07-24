@@ -15,6 +15,9 @@ if [ "$(uname -m)" != "arm64" ]; then
     exit 1
 fi
 
+FRESH=1
+[ -d "$DEST" ] && FRESH=0
+
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
@@ -36,8 +39,8 @@ ditto "$TMP/unpacked/Whispr.app" "$DEST"
 echo "==> removing quarantine flag…"
 xattr -dr com.apple.quarantine "$DEST" 2>/dev/null || true
 
-# fresh install = fresh onboarding
-defaults delete com.ck.whispr onboarded 2>/dev/null || true
+# fresh install = fresh onboarding; updates keep the user's completed state
+[ "$FRESH" = "1" ] && defaults delete com.ck.whispr onboarded 2>/dev/null || true
 
 echo "==> launching…"
 open "$DEST"

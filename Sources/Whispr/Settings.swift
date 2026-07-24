@@ -14,6 +14,12 @@ enum Settings {
         set { UserDefaults.standard.set(newValue, forKey: "onboarded") }
     }
 
+    /// Play a short sound when recording starts/stops (useful when the pill is hidden).
+    static var soundCues: Bool {
+        get { UserDefaults.standard.object(forKey: "soundCues") as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: "soundCues") }
+    }
+
     /// Bundle IDs of apps where Whispr dictation is disabled.
     static var disabledApps: [String] {
         get { UserDefaults.standard.stringArray(forKey: "disabledApps") ?? [] }
