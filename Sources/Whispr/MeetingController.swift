@@ -33,8 +33,12 @@ final class MeetingController: ObservableObject {
         self.transcriber = transcriber
     }
 
+    private var starting = false
+
     func start() async {
-        guard !isRunning else { return }
+        guard !isRunning, !starting else { return }
+        starting = true // synchronous, before any await — a second tap during startup must bounce
+        defer { starting = false }
         do {
             try mic.start()
             try await system.start()
@@ -53,10 +57,10 @@ final class MeetingController: ObservableObject {
 
     func stop() async {
         guard isRunning else { return }
+        isRunning = false // clear before awaits so a double-stop can't re-enter teardown
         timer?.invalidate(); timer = nil
         let micTail = mic.stop()
         let sysTail = await system.stop()
-        isRunning = false
         status = "finishing…"
         await transcribeChunk(micTail, speaker: "You")
         await transcribeChunk(sysTail, speaker: "Others")

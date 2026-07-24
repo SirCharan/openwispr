@@ -19,6 +19,9 @@ final class AppController {
     private let corrections = CorrectionsWatcher()
     private var previewTimer: Timer?
     private var previewBusy = false
+    private var previewTask: Task<Void, Never>?
+    /// Mirrors the actor's readiness for synchronous UI guards.
+    private var modelReady = false
     private let modelManager = ModelManager()
     private let transcriber = Transcriber()
     private let recorder = AudioRecorder()
@@ -29,7 +32,7 @@ final class AppController {
     func start() {
         NotificationCenter.default.addObserver(forName: .whisprHotkeyModeChanged, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in
-                guard let self, self.transcriber.isReady else { return }
+                guard let self, self.modelReady else { return }
                 self.attachHotkeys()
                 self.setStatus("ready — hold \(Self.hotkeyHint) to dictate")
             }
@@ -127,7 +130,9 @@ final class AppController {
                 self?.setStatus("downloading \(Int(frac * 100))%")
             }
             setStatus("loading model…")
+            modelReady = false
             try await transcriber.load(model: model, folder: folder)
+            modelReady = true
             setStatus("ready — hold \(Self.hotkeyHint) to dictate")
         } catch {
             setStatus("model error")
@@ -152,6 +157,7 @@ final class AppController {
 
     /// Attach the active trigger: fn monitor (default) or the custom shortcut. Re-call on mode change.
     func attachHotkeys() {
+        if recorder.isRecording { stopDictation() } // never swap monitors mid-recording (drops the key-up)
         hotkeys = nil
         fnMonitor = nil
         if Settings.hotkeyMode == "fn" {
@@ -184,7 +190,7 @@ final class AppController {
     // MARK: - Dictation flow (hold hotkey → record → release → transcribe → paste)
 
     private func startDictation() {
-        guard transcriber.isReady, !recorder.isRecording else { return }
+        guard modelReady, !recorder.isRecording else { return }
         if let front = AppMonitor.frontmostBundleID(), Settings.disabledApps.contains(front) {
             setStatus("disabled for \(AppMonitor.name(for: front))")
             return
@@ -215,6 +221,7 @@ final class AppController {
 
     private func stopPreviewLoop() {
         previewTimer?.invalidate(); previewTimer = nil
+        previewTask?.cancel(); previewTask = nil
         previewBusy = false
     }
 
@@ -223,10 +230,11 @@ final class AppController {
         let samples = recorder.snapshot(last: 10)
         guard samples.count > 16000 else { return } // need >1s
         previewBusy = true
-        Task {
+        previewTask = Task {
             defer { previewBusy = false }
-            guard let raw = try? await transcriber.transcribe(samples, language: Settings.languageCode),
-                  recorder.isRecording else { return }
+            guard !Task.isCancelled,
+                  let raw = try? await transcriber.transcribe(samples, language: Settings.languageCode),
+                  !Task.isCancelled, recorder.isRecording else { return }
             let words = raw.split(separator: " ").suffix(8).joined(separator: " ")
             indicator.model.preview = words
         }

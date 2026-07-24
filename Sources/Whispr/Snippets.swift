@@ -17,7 +17,7 @@ enum SnippetStore {
     }
 
     static func save(_ s: [Replacement]) {
-        if let data = try? JSONEncoder().encode(s) { try? data.write(to: url) }
+        if let data = try? JSONEncoder().encode(s) { try? data.write(to: url, options: .atomic) }
     }
 
     static func apply(_ text: String, _ snippets: [Replacement]) -> String {

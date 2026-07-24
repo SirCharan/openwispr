@@ -4,7 +4,9 @@ import WhisperKit
 enum TranscriberError: Error { case notLoaded }
 
 /// Wraps a loaded WhisperKit pipeline. Load once, transcribe many times.
-final class Transcriber {
+/// An actor: WhisperKit is NOT safe under concurrent inference (preview loop, dictation,
+/// meeting chunks, and file import all share this instance) — actor isolation serializes them.
+actor Transcriber {
     private var pipe: WhisperKit?
     private(set) var loadedModel: String?
 

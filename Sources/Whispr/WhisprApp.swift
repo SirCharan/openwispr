@@ -32,6 +32,10 @@ enum Whispr {
             runSysAudioTest(seconds: Double(args[i + 1]) ?? 5)
             exit(0)
         }
+        if let i = args.firstIndex(of: "--concurrency-test"), i + 1 < args.count {
+            runConcurrencyTest(path: args[i + 1])
+            exit(0)
+        }
 
         // --- normal menu-bar app ---
         let app = NSApplication.shared
@@ -75,6 +79,28 @@ enum Whispr {
             let samples = await rec.stop()
             let rms = samples.isEmpty ? 0 : sqrt(samples.reduce(0) { $0 + $1 * $1 } / Float(samples.count))
             print("sysaudio-test: samples=\(samples.count) (~\(String(format: "%.1f", Double(samples.count) / 16000))s) rms=\(String(format: "%.4f", rms))")
+            exit(0)
+        }
+        dispatchMain()
+    }
+
+    /// Two overlapping transcriptions through ONE Transcriber — proves actor serialization
+    /// (pre-actor this was the crash/garble class the audit flagged).
+    private static func runConcurrencyTest(path: String) {
+        Task { @MainActor in
+            let mm = ModelManager()
+            let t = Transcriber()
+            do {
+                let folder = try await mm.ensureDownloaded(mm.selectedModel) { _ in }
+                try await t.load(model: mm.selectedModel, folder: folder)
+                async let a = t.transcribeFile(path)
+                async let b = t.transcribeFile(path)
+                let (ra, rb) = try await (a, b)
+                let ok = !ra.isEmpty && ra == rb
+                print(ok ? "concurrency-test PASS: \"\(ra)\"" : "concurrency-test FAIL: \"\(ra)\" vs \"\(rb)\"")
+            } catch {
+                print("concurrency-test FAIL: \(error)")
+            }
             exit(0)
         }
         dispatchMain()

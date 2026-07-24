@@ -34,7 +34,7 @@ enum HistoryStore {
     }
 
     static func save(_ h: [HistoryEntry]) {
-        if let data = try? JSONEncoder().encode(h) { try? data.write(to: url) }
+        if let data = try? JSONEncoder().encode(h) { try? data.write(to: url, options: .atomic) }
     }
 
     static func clear() { save([]) }

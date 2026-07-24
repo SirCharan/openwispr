@@ -30,7 +30,7 @@ enum DictionaryStore {
     }
 
     static func save(_ d: DictionaryData) {
-        if let data = try? JSONEncoder().encode(d) { try? data.write(to: url) }
+        if let data = try? JSONEncoder().encode(d) { try? data.write(to: url, options: .atomic) }
     }
 
     static func apply(_ text: String, _ d: DictionaryData) -> String {

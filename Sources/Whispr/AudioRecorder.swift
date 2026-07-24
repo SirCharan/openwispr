@@ -22,6 +22,7 @@ final class AudioRecorder {
     }
 
     func start() throws {
+        guard !isRecording else { return } // double-start would install a second tap → NSException
         lock.lock(); samples.removeAll(keepingCapacity: true); lock.unlock()
 
         let input = engine.inputNode
