@@ -268,7 +268,13 @@ final class AppController {
                     Paster.deliver(text, autoPaste: Settings.autoPaste)
                     HistoryStore.add(text, seconds: Double(samples.count) / 16000)
                     corrections.notePaste(text)
-                    setStatus("ready")
+                    if Settings.autoPaste && !Permissions.hasAccessibility {
+                        // grant missing (or invalidated by a rebuild) — say so instead of failing silently
+                        setStatus("copied — grant Accessibility to auto-paste")
+                        Permissions.requestAccessibility()
+                    } else {
+                        setStatus("ready")
+                    }
                 }
             } catch {
                 setStatus("transcribe error")
