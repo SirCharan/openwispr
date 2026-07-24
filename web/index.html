@@ -70,7 +70,7 @@
   .pill-text { font-size: 15px; color: var(--text); text-align: left; min-width: 0; white-space: nowrap; overflow: hidden; }
   .caret { display: inline-block; width: 1px; height: 1em; background: var(--accent); vertical-align: -2px; margin-left: 1px; animation: blink 1s step-end infinite; }
   .demo-cap { font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
-  .demo-cap kbd { background: var(--surface); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; padding: 1px 7px; font-size: 11px; font-family: var(--mono); text-transform: none; letter-spacing: 0; }
+  .demo-cap kbd { background: var(--surface); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; padding: 1px 7px; font-size: 12px; font-family: var(--mono); text-transform: none; letter-spacing: 0; }
 
   /* install + download */
   .cta { display: flex; flex-direction: column; align-items: center; gap: 16px; margin-top: 34px; }
@@ -79,7 +79,7 @@
   .cmd-row code { font-family: var(--mono); font-size: 12.5px; color: var(--text); white-space: pre-wrap; word-break: break-all; line-height: 1.5; }
   .cmd-row code::before { content: "$ "; color: var(--accent); }
   .copy { background: none; border: 1px solid var(--line); border-radius: 8px; color: var(--muted);
-    font-size: 11px; letter-spacing: .1em; text-transform: uppercase; padding: 6px 12px; cursor: pointer; flex-shrink: 0; font-family: var(--mono); transition: color .2s, border-color .2s; }
+    font-size: 12px; letter-spacing: .1em; text-transform: uppercase; padding: 6px 12px; cursor: pointer; flex-shrink: 0; font-family: var(--mono); transition: color .2s, border-color .2s; }
   .copy:hover { color: var(--accent); border-color: var(--accent); }
   .btn { display: inline-flex; align-items: center; gap: 10px; background: var(--accent); color: var(--paper); text-decoration: none;
     font-weight: 600; font-size: 15px; padding: 13px 26px; border-radius: 12px; box-shadow: var(--shadow);
@@ -87,7 +87,7 @@
   .btn:hover { transform: translateY(-2px); filter: brightness(1.05); }
   .btn svg { width: 17px; height: 17px; }
   .req { color: var(--muted); font-size: 13px; }
-  .ver { font-family: var(--mono); font-size: 11px; color: var(--accent); border: 1px solid rgba(226,84,62,.35); border-radius: 100px; padding: 2px 10px; background: var(--accent-soft); }
+  .ver { font-family: var(--mono); font-size: 12px; color: var(--accent); border: 1px solid rgba(226,84,62,.35); border-radius: 100px; padding: 2px 10px; background: var(--accent-soft); }
 
   /* ---------- sections ---------- */
   section { padding: 72px 0; border-top: 1px solid var(--line); }
@@ -114,7 +114,7 @@
   .lc::before { content: ""; position: absolute; top: -1px; left: 18px; right: 18px; height: 6px; border-radius: 0 0 3px 3px;
     background: repeating-linear-gradient(90deg, var(--accent) 0 12px, transparent 12px 18px); opacity: .55; }
   .lc:hover { transform: rotate(-.6deg) translateY(-3px); border-color: rgba(226,84,62,.4); }
-  .lc .tab { display: inline-block; font-family: var(--mono); font-size: 10px; letter-spacing: .2em; text-transform: uppercase;
+  .lc .tab { display: inline-block; font-family: var(--mono); font-size: 12px; letter-spacing: .2em; text-transform: uppercase;
     background: var(--text); color: var(--bg); padding: 3px 10px; border-radius: 3px; margin-bottom: 14px; font-style: normal; }
   .lc .tab.hot { background: var(--accent); }
   .lc h3 { font-family: var(--serif); font-weight: 400; font-size: 20px; margin-bottom: 10px; }
@@ -134,7 +134,7 @@
 
   /* ---------- feature grid ---------- */
   .grid-6 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-  .no { font-family: var(--mono); font-size: 10.5px; letter-spacing: .2em; text-transform: uppercase; color: var(--accent); display: block; margin-bottom: 10px; }
+  .no { font-family: var(--mono); font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: var(--accent); display: block; margin-bottom: 10px; }
 
   /* ---------- meetings ---------- */
   .meet { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; }
@@ -144,9 +144,9 @@
   .meet li b { color: var(--text); font-weight: 600; }
   .transcript { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); }
   .t-head { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); padding-bottom: 14px; margin-bottom: 16px; }
-  .t-rec { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 10.5px; letter-spacing: .16em; color: var(--accent); }
+  .t-rec { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 12px; letter-spacing: .16em; color: var(--accent); }
   .t-line { display: grid; grid-template-columns: 74px 1fr; gap: 12px; padding: 8px 0; font-size: 14px; }
-  .t-line .who { font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); padding-top: 3px; }
+  .t-line .who { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); padding-top: 3px; }
   .t-line.you .who { color: var(--accent); }
   .t-line p { color: var(--text); }
   .ornaments { display: flex; align-items: center; justify-content: flex-start; gap: 32px; margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--line); }
@@ -161,8 +161,8 @@
   .vu svg { width: 140px; height: 80px; display: block; }
   .needle { transform-origin: 70px 72px; animation: sweep 3.2s ease-in-out infinite alternate; }
   @keyframes sweep { from { transform: rotate(-42deg) } to { transform: rotate(34deg) } }
-  .autosave { font-family: var(--mono); font-size: 11.5px; color: var(--muted); margin-top: 18px; }
-  .autosave code { color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: 5px; padding: 1px 7px; font-size: 11px; white-space: pre-wrap; word-break: break-all; }
+  .autosave { font-family: var(--mono); font-size: 12px; color: var(--muted); margin-top: 18px; }
+  .autosave code { color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: 5px; padding: 1px 7px; font-size: 12px; white-space: pre-wrap; word-break: break-all; }
 
   /* ---------- personas ---------- */
   .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
