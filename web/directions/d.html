@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>OpenWispr — D · Evolved</title>
+<meta name="description" content="Say it. It's typed. Free open-source on-device dictation for macOS." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0C0A09;
+    --surface: #171310;
+    --surface-2: #1E1915;
+    --line: #2B2521;
+    --text: #F4F1EC;
+    --muted: #948C82;
+    --accent: #FF6B47;
+    --accent-soft: rgba(255,107,71,.12);
+    --radius: 16px;
+    --sys: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    --serif: "Young Serif", Georgia, serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sys); line-height: 1.55; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1020px; margin: 0 auto; padding: 0 24px; }
+  a { color: inherit; }
+
+  nav { display: flex; align-items: center; justify-content: space-between; padding: 26px 0; }
+  .brand { font-family: var(--serif); font-size: 25px; letter-spacing: .2px; }
+  .brand span { color: var(--accent); }
+  .nav-link { color: var(--muted); text-decoration: none; font-size: 14px; transition: color .2s; padding: 10px 6px; }
+  .nav-link:hover { color: var(--text); }
+
+  .hero { padding: 84px 0 56px; text-align: center; }
+  .eyebrow { display: inline-block; font-size: 12px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--muted); border: 1px solid var(--line); border-radius: 100px; padding: 6px 16px; margin-bottom: 34px; }
+  .eyebrow b { color: var(--accent); letter-spacing: 0; font-weight: 600; }
+  h1 { font-family: var(--serif); font-weight: 400; font-size: clamp(54px, 10.5vw, 118px); line-height: .98; letter-spacing: -2px; }
+  h1 em { font-style: normal; color: var(--accent); }
+  .lede { color: var(--muted); font-size: clamp(16px, 2.4vw, 20px); max-width: 580px; margin: 26px auto 0; }
+  .lede b { color: var(--text); font-weight: 600; }
+
+  /* organic waveform: varied widths + heights */
+  .wave { display: flex; align-items: center; justify-content: center; gap: 6px; height: 72px; margin: 44px 0 8px; }
+  .wave i { border-radius: 6px; background: var(--accent); animation: pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { transform: scaleY(.28); opacity:.45 } 50% { transform: scaleY(1); opacity:1 } }
+  @media (prefers-reduced-motion: reduce) { .wave i { animation: none; transform: scaleY(.6); opacity:.8; } }
+
+  .cta { display: flex; flex-direction: column; align-items: center; gap: 14px; margin-top: 24px; }
+  .cmd-row { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--line);
+    border-radius: 12px; padding: 12px 14px; max-width: 100%; }
+  .cmd-row code { font-size: 13px; color: var(--text); overflow-x: auto; white-space: nowrap; }
+  .cmd-row code::before { content: "$ "; color: var(--accent); }
+  .copy { background: none; border: 1px solid var(--line); border-radius: 8px; color: var(--muted);
+    font-size: 12px; padding: 6px 12px; cursor: pointer; flex-shrink: 0; font-family: var(--sys); transition: color .2s, border-color .2s; }
+  .copy:hover { color: var(--text); border-color: var(--accent); }
+  .btn { display: inline-flex; align-items: center; gap: 10px; background: var(--accent); color: #fff; text-decoration: none;
+    font-weight: 600; font-size: 15px; padding: 13px 26px; border-radius: 12px; transition: transform .15s ease, filter .2s ease; }
+  .btn:hover { transform: translateY(-2px); filter: brightness(1.07); }
+  .btn svg { width: 17px; height: 17px; }
+  .req { color: var(--muted); font-size: 13px; }
+  .req a { color: var(--muted); }
+
+  section { padding: 64px 0; border-top: 1px solid var(--line); }
+  .kicker { color: var(--accent); font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 12px; }
+  h2 { font-family: var(--serif); font-weight: 400; font-size: clamp(30px, 5.4vw, 48px); letter-spacing: -.8px; margin-bottom: 30px; }
+  h3 { font-size: 17px; }
+
+  /* before / after */
+  .ba { display: grid; grid-template-columns: 1fr auto 1fr; gap: 20px; align-items: center; }
+  .ba-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 26px; font-size: 15.5px; }
+  .ba-card .tag { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 12px; }
+  .ba-card.raw { color: var(--muted); font-style: italic; background: var(--surface-2); }
+  .ba-card.clean { border-color: rgba(255,107,71,.45); }
+  .ba-card.clean .tag { color: var(--accent); }
+  .ba-arrow { color: var(--accent); font-size: 24px; }
+  .foot-note { color: var(--muted); font-size: 13px; margin-top: 14px; }
+  .foot-note b { color: var(--text); }
+
+  /* feature cards */
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 26px 24px; }
+  .card:hover { border-color: rgba(255,107,71,.35); }
+  .card h3 { font-family: var(--serif); font-weight: 400; font-size: 20px; margin-bottom: 10px; }
+  .card p { color: var(--muted); font-size: 14.5px; }
+  .card .dot { width: 46px; height: 46px; border-radius: 12px; background: var(--accent-soft); border: 1px solid rgba(255,107,71,.35);
+    display: grid; place-items: center; margin-bottom: 16px; }
+  .card .dot svg { width: 22px; height: 22px; stroke: var(--accent); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  kbd { background:#000; border:1px solid var(--line); border-bottom-width:2px; border-radius:6px; padding:1px 7px; font-size:13px; font-family: var(--sys); color: var(--text); }
+
+  footer { border-top: 1px solid var(--line); padding: 40px 0; color: var(--muted); font-size: 13.5px;
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  footer a { color: var(--muted); text-decoration: none; }
+  footer a:hover { color: var(--text); }
+
+  @media (max-width: 720px) {
+    .grid { grid-template-columns: 1fr; }
+    .ba { grid-template-columns: 1fr; }
+    .ba-arrow { transform: rotate(90deg); text-align: center; }
+    .hero { padding: 56px 0 36px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <div class="brand"><span>O</span>penWispr</div>
+    <a class="nav-link" href="https://github.com/SirCharan/whispr" target="_blank" rel="noopener">GitHub ↗</a>
+  </nav>
+
+  <header class="hero">
+    <span class="eyebrow">Free · Open Source · <b>On-device</b></span>
+    <h1>Say it.<br /><em>It's typed.</em></h1>
+    <p class="lede">Hold <b>fn</b>, speak, release. On-device Whisper types your words at the cursor. No cloud, no account, nothing leaves your Mac.</p>
+
+    <div class="wave" aria-hidden="true">
+      <i style="width:3px;height:26px;animation-delay:0s"></i>
+      <i style="width:6px;height:44px;animation-delay:.22s"></i>
+      <i style="width:4px;height:34px;animation-delay:.09s"></i>
+      <i style="width:8px;height:64px;animation-delay:.31s"></i>
+      <i style="width:5px;height:50px;animation-delay:.15s"></i>
+      <i style="width:9px;height:72px;animation-delay:.05s"></i>
+      <i style="width:4px;height:40px;animation-delay:.27s"></i>
+      <i style="width:7px;height:58px;animation-delay:.12s"></i>
+      <i style="width:5px;height:36px;animation-delay:.35s"></i>
+      <i style="width:3px;height:22px;animation-delay:.19s"></i>
+      <i style="width:6px;height:46px;animation-delay:.08s"></i>
+    </div>
+
+    <div class="cta">
+      <div class="cmd-row">
+        <code id="install-cmd">curl -fsSL https://whispr-black-chi.vercel.app/install.sh | sh</code>
+        <button class="copy" onclick="navigator.clipboard.writeText(document.getElementById('install-cmd').textContent).then(()=>{this.textContent='Copied';setTimeout(()=>this.textContent='Copy',1500)})">Copy</button>
+      </div>
+      <a class="btn" href="https://github.com/SirCharan/whispr/releases/latest/download/Whispr.dmg">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
+        Download .dmg
+      </a>
+      <span class="req">MIT licensed · macOS 14+ · Apple Silicon</span>
+    </div>
+  </header>
+
+  <section>
+    <div class="kicker">What it does to your words</div>
+    <h2>You ramble. It writes.</h2>
+    <div class="ba">
+      <div class="ba-card raw">
+        <span class="tag">What you said</span>
+        "um so uh i think we should um move the launch to thursday and uh tell the whole team"
+      </div>
+      <div class="ba-arrow">→</div>
+      <div class="ba-card clean">
+        <span class="tag">What OpenWispr types</span>
+        "I think we should move the launch to Thursday and tell the whole team."
+      </div>
+    </div>
+    <p class="foot-note">Filler words stripped, sentences capitalized, your custom vocabulary corrected. All on-device, before it pastes.</p>
+  </section>
+
+  <section>
+    <div class="kicker">Why OpenWispr</div>
+    <h2>Private by architecture.</h2>
+    <div class="grid">
+      <div class="card">
+        <div class="dot"><svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v3M8 22h8"/></svg></div>
+        <h3>100% on-device</h3>
+        <p>Whisper runs on the Apple Neural Engine. Your voice never touches a server; works fully offline. Optional AI cleanup stays local via Ollama.</p>
+      </div>
+      <div class="card">
+        <div class="dot"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M7 9h4M7 13h7M15 9h2"/></svg></div>
+        <h3>Meetings transcribed</h3>
+        <p>Captures your mic and the call's system audio (Zoom, Meet, Teams) and labels who said what, split by <b>You</b> / <b>Others</b>. Export as Markdown.</p>
+      </div>
+      <div class="card">
+        <div class="dot"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20z"/></svg></div>
+        <h3>Speak Hindi, type English</h3>
+        <p>13 languages, auto-detected or pinned. Speak in Hindi and OpenWispr types it in Roman script. Code-switch mid-sentence, it keeps up.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>OpenWispr · MIT licensed · <a href="https://github.com/SirCharan/whispr" target="_blank" rel="noopener">GitHub ↗</a></span>
+    <span><a href="./index.html">← all directions</a></span>
+  </footer>
+</div>
+</body>
+</html>

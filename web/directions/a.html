@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenWispr — A · Terminal Honest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050505;
+    --surface: #0D0F0D;
+    --accent: #33FF66;
+    --text: #E8FFE8;
+    --muted: #6A7A6A;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 15px;
+    line-height: 1.6;
+    position: relative;
+  }
+  /* scanline overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent 0px, transparent 3px,
+      rgba(0,0,0,0.18) 3px, rgba(0,0,0,0.18) 4px
+    );
+    z-index: 9999;
+  }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 0 24px; }
+
+  /* nav */
+  nav {
+    border-bottom: 1px solid var(--muted);
+    padding: 16px 0;
+  }
+  nav .wrap { display: flex; justify-content: space-between; align-items: center; }
+  .wordmark { font-weight: 700; font-size: 18px; color: var(--text); }
+  .wordmark .u { color: var(--accent); }
+  nav a.gh { color: var(--muted); font-size: 14px; }
+  nav a.gh:hover { color: var(--accent); }
+
+  /* cursor */
+  .cursor {
+    display: inline-block;
+    color: var(--accent);
+    animation: blink 1.06s step-end infinite;
+  }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+  /* hero */
+  header { padding: 96px 0 72px; }
+  h1 {
+    font-size: clamp(32px, 6vw, 56px);
+    font-weight: 700;
+    letter-spacing: -1px;
+  }
+  .pitch {
+    color: var(--muted);
+    font-size: clamp(15px, 2.4vw, 18px);
+    margin-top: 12px;
+  }
+  .pitch b { color: var(--accent); font-weight: 500; }
+
+  .wave {
+    color: var(--accent);
+    font-size: 20px;
+    letter-spacing: 2px;
+    margin-top: 28px;
+    user-select: none;
+  }
+  .wave span { display: inline-block; animation: wavepulse 1.2s infinite; }
+  .wave span:nth-child(2) { animation-delay: .1s; }
+  .wave span:nth-child(3) { animation-delay: .2s; }
+  .wave span:nth-child(4) { animation-delay: .3s; }
+  .wave span:nth-child(5) { animation-delay: .4s; }
+  .wave span:nth-child(6) { animation-delay: .5s; }
+  .wave span:nth-child(7) { animation-delay: .6s; }
+  .wave span:nth-child(8) { animation-delay: .7s; }
+  .wave span:nth-child(9) { animation-delay: .8s; }
+  .wave span:nth-child(10) { animation-delay: .9s; }
+  @keyframes wavepulse { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+
+  .install {
+    margin-top: 36px;
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    overflow-x: auto;
+  }
+  .install code {
+    font-family: inherit;
+    font-size: 14px;
+    white-space: nowrap;
+    flex: 1;
+  }
+  .install .prompt { color: var(--accent); font-weight: 700; }
+  .install button {
+    font-family: inherit;
+    font-size: 13px;
+    background: none;
+    border: 1px solid var(--muted);
+    color: var(--text);
+    padding: 6px 14px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .install button:hover { border-color: var(--accent); color: var(--accent); }
+  .dmg { display: inline-block; margin-top: 16px; color: var(--muted); font-size: 14px; }
+  .dmg:hover { color: var(--accent); }
+
+  /* section headers */
+  section { padding: 56px 0; border-top: 1px solid #1A211A; }
+  h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 32px;
+  }
+  h2::before { content: '## '; color: var(--muted); }
+
+  /* before/after */
+  .term {
+    background: var(--surface);
+    border: 1px solid var(--muted);
+    padding: 20px 22px;
+    font-size: 14px;
+  }
+  .term .line { display: block; margin: 4px 0; }
+  .term .tag { color: var(--muted); user-select: none; }
+  .term .in { color: var(--muted); font-style: italic; }
+  .term .out { color: var(--text); }
+  .term .ok { color: var(--accent); }
+
+  /* features */
+  .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .feat {
+    background: var(--surface);
+    border: 1px solid #2A332A;
+    border-top: 2px solid var(--accent);
+    padding: 22px;
+  }
+  .feat h3 { font-size: 15px; font-weight: 700; margin-bottom: 10px; }
+  .feat h3::before { content: '> '; color: var(--accent); }
+  .feat p { color: var(--muted); font-size: 13.5px; }
+  .feat p code { color: var(--text); font-family: inherit; }
+
+  /* footer */
+  footer {
+    border-top: 1px solid var(--muted);
+    padding: 28px 0 48px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  footer a { color: var(--muted); }
+  footer a:hover { color: var(--accent); }
+
+  @media (max-width: 720px) {
+    .features { grid-template-columns: 1fr; }
+    header { padding: 64px 0 48px; }
+    .install { flex-direction: column; align-items: stretch; }
+    .install button { align-self: flex-start; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cursor, .wave span { animation: none; }
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <span class="wordmark">openwispr<span class="u">_</span></span>
+    <a class="gh" href="https://github.com/openwispr/openwispr">[github]</a>
+  </div>
+</nav>
+
+<header>
+  <div class="wrap">
+    <h1>openwispr<span class="cursor">&#9612;</span></h1>
+    <p class="pitch">your voice, typed locally. <b>zero cloud.</b> hold fn, speak, done.</p>
+    <div class="wave" aria-hidden="true"><span>&#9601;</span><span>&#9603;</span><span>&#9606;</span><span>&#9608;</span><span>&#9606;</span><span>&#9603;</span><span>&#9601;</span><span>&#9603;</span><span>&#9606;</span><span>&#9601;</span></div>
+    <div class="install">
+      <code><span class="prompt">$</span> curl -fsSL https://whispr-black-chi.vercel.app/install.sh | sh</code>
+      <button id="copy" type="button">copy</button>
+    </div>
+    <a class="dmg" href="https://whispr-black-chi.vercel.app/OpenWispr.dmg">&darr; or download the .dmg directly</a>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2>what_it_does</h2>
+    <div class="term">
+      <span class="line"><span class="tag">stdin  &lt;</span> <span class="in">"um so uh move the launch to thursday"</span></span>
+      <span class="line"><span class="tag">stdout &gt;</span> <span class="out">Move the launch to Thursday.</span></span>
+      <span class="line"><span class="tag">&nbsp;</span></span>
+      <span class="line"><span class="ok">&#10003;</span> <span class="tag">typed at your cursor. 0 bytes left your machine.</span></span>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>features</h2>
+    <div class="features">
+      <div class="feat">
+        <h3>100% on-device</h3>
+        <p>Whisper runs locally on Apple Silicon. no API keys, no accounts, no network calls. optional cleanup via local AI (<code>ollama</code>) &mdash; also offline.</p>
+      </div>
+      <div class="feat">
+        <h3>meetings, transcribed</h3>
+        <p>captures both sides of a call and labels them <code>You</code> / <code>Others</code>. a full transcript, without a bot joining your meeting.</p>
+      </div>
+      <div class="feat">
+        <h3>speak hindi, type english</h3>
+        <p>13 languages, including Hindi transliterated to Roman script. dictate in the language you think in; it types the way you write.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>MIT licensed &middot; <a href="https://github.com/openwispr/openwispr">github</a></span>
+    <a href="./index.html">&larr; back to all directions</a>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('copy').addEventListener('click', function () {
+    var btn = this;
+    navigator.clipboard.writeText('curl -fsSL https://whispr-black-chi.vercel.app/install.sh | sh').then(function () {
+      btn.textContent = 'copied';
+      setTimeout(function () { btn.textContent = 'copy'; }, 1500);
+    });
+  });
+</script>
+
+</body>
+</html>

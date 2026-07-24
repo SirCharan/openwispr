@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenWispr — B · Analog Tape</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,600;6..96,800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F4EFE6; --surface:#EDE5D8; --accent:#C63D2F; --ink:#2A2118; --muted:#8A7B68;
+    --shadow:0 6px 24px rgba(90,60,30,.14), 0 2px 6px rgba(90,60,30,.10);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"Space Mono",monospace; font-size:15px; line-height:1.6;
+    position:relative;
+  }
+  body::before{
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:9;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+  }
+  .serif{font-family:"Bodoni Moda",serif}
+  .wrap{max-width:960px;margin:0 auto;padding:0 24px}
+  a{color:var(--accent)}
+  .caps{text-transform:uppercase;letter-spacing:.18em;font-size:11px;color:var(--muted)}
+
+  /* Nav */
+  nav{display:flex;justify-content:space-between;align-items:baseline;padding:28px 0;border-bottom:2px solid var(--ink)}
+  nav .logo{font-family:"Bodoni Moda",serif;font-weight:800;font-size:26px;color:var(--ink);text-decoration:none}
+  nav .gh{font-size:12px;text-decoration:none;border-bottom:1px solid var(--accent)}
+
+  /* Hero */
+  .hero{padding:72px 0 56px;display:grid;grid-template-columns:1.2fr .8fr;gap:48px;align-items:center}
+  h1{font-family:"Bodoni Moda",serif;font-weight:800;font-size:clamp(40px,6.5vw,72px);line-height:1.05;letter-spacing:-.01em}
+  h1 em{font-style:italic;color:var(--accent)}
+  .hero p.sub{margin-top:20px;color:var(--muted);max-width:44ch}
+
+  /* Cassette */
+  .cassette{
+    background:var(--surface);border:2px solid var(--ink);border-radius:14px;
+    padding:22px 26px;box-shadow:var(--shadow);transform:rotate(1.5deg);
+  }
+  .cassette .side{display:flex;justify-content:space-between;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
+  .reels{display:flex;justify-content:space-between;align-items:center;background:var(--bg);border:2px solid var(--ink);border-radius:10px;padding:16px 26px}
+  .reel{width:64px;height:64px;border-radius:50%;border:3px solid var(--ink);position:relative;animation:spin 6s linear infinite;background:radial-gradient(circle at center, var(--bg) 26%, var(--ink) 27%, var(--ink) 34%, var(--bg) 35%)}
+  .reel::before,.reel::after{content:"";position:absolute;inset:0;border-radius:50%}
+  .reel::before{background:conic-gradient(var(--ink) 0 14deg, transparent 14deg 120deg, var(--ink) 120deg 134deg, transparent 134deg 240deg, var(--ink) 240deg 254deg, transparent 254deg);mask:radial-gradient(circle, transparent 36%, #000 37%, #000 62%, transparent 63%);-webkit-mask:radial-gradient(circle, transparent 36%, #000 37%, #000 62%, transparent 63%)}
+  .tapeCounter{font-size:11px;color:var(--muted);text-align:center}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* VU meter */
+  .vu{margin-top:18px;text-align:center}
+  .vu svg{width:150px;height:84px}
+  .needle{transform-origin:75px 78px;animation:sweep 3.2s ease-in-out infinite alternate}
+  @keyframes sweep{from{transform:rotate(-42deg)}to{transform:rotate(34deg)}}
+
+  /* Install ticket */
+  .ticket{
+    margin-top:32px;background:var(--surface);border:2px dashed var(--ink);border-radius:6px;
+    padding:16px 18px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;box-shadow:var(--shadow)
+  }
+  .ticket code{font-size:12.5px;word-break:break-all;flex:1;min-width:220px}
+  .ticket button{
+    font-family:"Space Mono",monospace;font-size:11px;text-transform:uppercase;letter-spacing:.14em;
+    background:var(--accent);color:var(--bg);border:2px solid var(--ink);border-radius:4px;
+    padding:9px 16px;cursor:pointer;box-shadow:2px 2px 0 var(--ink)
+  }
+  .ticket button:active{transform:translate(2px,2px);box-shadow:none}
+  .dmg{display:inline-block;margin-top:14px;font-size:12px}
+
+  /* Before / after strip */
+  .strip{padding:56px 0;border-top:2px solid var(--ink)}
+  .strip h2, .features h2{font-family:"Bodoni Moda",serif;font-weight:600;font-size:32px;margin-bottom:28px}
+  .ba{display:grid;grid-template-columns:1fr auto 1fr;gap:20px;align-items:center}
+  .label-card{background:var(--surface);border:2px solid var(--ink);border-radius:4px;padding:20px 22px;box-shadow:var(--shadow)}
+  .label-card .tab{display:inline-block;font-size:10px;text-transform:uppercase;letter-spacing:.2em;background:var(--ink);color:var(--bg);padding:3px 10px;margin-bottom:12px}
+  .handwritten{transform:rotate(-1.4deg);font-family:"Bodoni Moda",serif;font-style:italic;font-size:18px;line-height:1.5;color:var(--muted)}
+  .typed{transform:rotate(.8deg)}
+  .typed .tab{background:var(--accent)}
+  .arrow{font-size:30px;color:var(--accent);text-align:center}
+
+  /* Features */
+  .features{padding:56px 0;border-top:2px solid var(--ink)}
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+  .card{
+    background:var(--surface);border:2px solid var(--ink);border-radius:6px;padding:26px 22px;
+    box-shadow:var(--shadow);position:relative
+  }
+  .card:nth-child(1){transform:rotate(-1.2deg)}
+  .card:nth-child(2){transform:rotate(.9deg)}
+  .card:nth-child(3){transform:rotate(-.7deg)}
+  .card::before{content:"";position:absolute;top:-2px;left:18px;right:18px;height:8px;background:repeating-linear-gradient(90deg,var(--accent) 0 14px,transparent 14px 20px)}
+  .card .no{font-size:11px;color:var(--accent);letter-spacing:.2em;text-transform:uppercase}
+  .card h3{font-family:"Bodoni Moda",serif;font-weight:800;font-size:24px;margin:10px 0 12px;line-height:1.15}
+  .card p{font-size:13px;color:var(--muted)}
+
+  /* Footer */
+  footer{border-top:2px solid var(--ink);padding:32px 0 48px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted)}
+  footer a{text-decoration:none;border-bottom:1px solid var(--accent)}
+
+  @media (max-width:720px){
+    .hero{grid-template-columns:1fr;gap:36px}
+    .ba{grid-template-columns:1fr}
+    .arrow{transform:rotate(90deg)}
+    .cards{grid-template-columns:1fr}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .reel,.needle{animation:none}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav>
+    <a class="logo" href="#">OpenWispr</a>
+    <a class="gh" href="https://github.com/dhamaniasad/openwispr">GitHub &nearr;</a>
+  </nav>
+
+  <section class="hero">
+    <div>
+      <p class="caps">Side A &middot; Free &amp; open source &middot; macOS</p>
+      <h1 style="margin-top:14px">Your voice, <em>on tape.</em><br>Typed by your&nbsp;Mac.</h1>
+      <p class="sub">Hold the fn key and speak. On-device Whisper transcribes and types it at your cursor. No cloud, no subscription, no tape hiss.</p>
+
+      <div class="ticket">
+        <span class="caps" style="width:100%">Install &middot; one line</span>
+        <code id="cmd">curl -fsSL https://whispr-black-chi.vercel.app/install.sh | sh</code>
+        <button id="copyBtn" onclick="copyCmd()">Copy</button>
+      </div>
+      <a class="dmg" href="https://whispr-black-chi.vercel.app/">or download the .dmg &darr;</a>
+    </div>
+
+    <div class="cassette" aria-hidden="true">
+      <div class="side"><span>OPENWISPR C-90</span><span>REC &#9679;</span></div>
+      <div class="reels">
+        <div class="reel"></div>
+        <div class="tapeCounter">00:00:07<br>DICTATING</div>
+        <div class="reel"></div>
+      </div>
+      <div class="vu">
+        <svg viewBox="0 0 150 90">
+          <path d="M20 78 A62 62 0 0 1 130 78" fill="none" stroke="#2A2118" stroke-width="2"/>
+          <path d="M108 34 A62 62 0 0 1 130 78" fill="none" stroke="#C63D2F" stroke-width="4"/>
+          <text x="18" y="72" font-size="9" fill="#8A7B68" font-family="Space Mono">-20</text>
+          <text x="118" y="72" font-size="9" fill="#C63D2F" font-family="Space Mono">+3</text>
+          <text x="68" y="20" font-size="9" fill="#8A7B68" font-family="Space Mono">VU</text>
+          <line class="needle" x1="75" y1="78" x2="75" y2="26" stroke="#C63D2F" stroke-width="2"/>
+          <circle cx="75" cy="78" r="4" fill="#2A2118"/>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <section class="strip">
+    <h2>From mumble to manuscript.</h2>
+    <div class="ba">
+      <div class="label-card handwritten">
+        <span class="tab" style="font-style:normal;font-family:'Space Mono',monospace">You said</span><br>
+        &ldquo;uh so basically we should um ship the the onboarding flow by friday&hellip; i think?&rdquo;
+      </div>
+      <div class="arrow">&rarr;</div>
+      <div class="label-card typed">
+        <span class="tab">It typed</span><br>
+        We should ship the onboarding flow by Friday.
+      </div>
+    </div>
+  </section>
+
+  <section class="features">
+    <h2>Three tracks. No B-sides.</h2>
+    <div class="cards">
+      <div class="card">
+        <span class="no">Track 01</span>
+        <h3>100% on-device</h3>
+        <p>Whisper runs locally on your Mac. Your voice never leaves the machine: no API keys, no cloud, no bill. Optional local AI cleanup via Ollama.</p>
+      </div>
+      <div class="card">
+        <span class="no">Track 02</span>
+        <h3>Meetings, transcribed</h3>
+        <p>Records both sides of a call and labels who said what (You / Others), so the minutes write themselves while you actually listen.</p>
+      </div>
+      <div class="card">
+        <span class="no">Track 03</span>
+        <h3>Speak Hindi, type English</h3>
+        <p>13 languages, including Hindi transliterated to Roman script. Bolo Hindi mein, likha jaayega waise hi. Code-switch freely.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>MIT licensed &middot; <a href="https://github.com/dhamaniasad/openwispr">GitHub</a></span>
+    <a href="./index.html">&larr; all directions</a>
+  </footer>
+
+</div>
+<script>
+function copyCmd(){
+  navigator.clipboard.writeText(document.getElementById('cmd').textContent).then(function(){
+    var b=document.getElementById('copyBtn'); b.textContent='Copied';
+    setTimeout(function(){b.textContent='Copy'},1500);
+  });
+}
+</script>
+</body>
+</html>

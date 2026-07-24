@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenWispr — C · Signal Lime</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0B0D0C; --surface:#141715; --line:#232824; --lime:#C6F432;
+  --text:#F2F4F0; --muted:#7A827B;
+  --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --display:"Archivo",var(--sans);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1024px;margin:0 auto;padding:0 24px}
+/* nav */
+nav{border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;justify-content:space-between;align-items:center;height:64px}
+.wordmark{font-family:var(--display);font-weight:900;letter-spacing:-.03em;font-size:20px}
+.wordmark span{color:var(--lime)}
+.navlink{font-family:var(--mono);font-size:13px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:6px 12px;transition:border-color .15s,color .15s}
+.navlink:hover{border-color:var(--lime);color:var(--lime)}
+/* hero */
+.hero{padding:96px 0 0}
+h1{font-family:var(--display);font-weight:900;letter-spacing:-.045em;font-size:clamp(40px,7vw,76px);line-height:1.02;text-transform:lowercase;max-width:14ch}
+h1 em{font-style:normal;color:var(--lime)}
+.pitch{margin-top:24px;max-width:52ch;color:var(--muted);font-size:17px}
+.pitch strong{color:var(--text);font-weight:600}
+.key{display:inline-block;font-family:var(--mono);font-size:.85em;color:var(--lime);border:1px solid var(--line);border-bottom-width:2px;border-radius:6px;padding:1px 8px;background:var(--surface);vertical-align:baseline}
+/* scope */
+.scope{margin-top:56px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--surface)}
+.scope svg{display:block;width:100%;height:96px}
+.scope-label{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;padding:8px 0 0}
+/* install */
+.install{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-top:48px}
+.cmd{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 16px;font-family:var(--mono);font-size:13px;overflow-x:auto;max-width:100%}
+.cmd .p{color:var(--lime);user-select:none}
+.cmd code{white-space:nowrap;color:var(--text)}
+.copy{font-family:var(--mono);font-size:12px;color:var(--bg);background:var(--lime);border:none;border-radius:6px;padding:6px 12px;cursor:pointer;flex-shrink:0}
+.copy:active{transform:translateY(1px)}
+.dmg{font-family:var(--mono);font-size:13px;color:var(--muted);border-bottom:1px solid var(--line);padding-bottom:2px}
+.dmg:hover{color:var(--lime);border-color:var(--lime)}
+/* spec sheet */
+section{padding:88px 0 0}
+.sec-head{margin-bottom:32px}
+h2{font-family:var(--display);font-weight:800;letter-spacing:-.03em;font-size:26px;text-transform:lowercase}
+table{width:100%;border-collapse:collapse}
+.spec th,.spec td{text-align:left;padding:16px 20px 16px 0;border-top:1px solid var(--line);vertical-align:top}
+.spec tr:last-child td{border-bottom:1px solid var(--line)}
+.spec th{font-family:var(--mono);font-size:11px;font-weight:400;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;width:120px;white-space:nowrap}
+.spec .in{color:var(--muted);font-style:italic;width:42%}
+.spec .arrow{color:var(--lime);font-family:var(--mono);width:32px}
+.spec .out{color:var(--text)}
+.spec-wrap{overflow-x:auto}
+/* features */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.mod{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:28px 24px}
+.mod h3{font-family:var(--display);font-weight:800;font-size:18px;letter-spacing:-.02em;text-transform:lowercase;margin:20px 0 10px}
+.mod p{color:var(--muted);font-size:14px}
+.mod .idx{font-family:var(--mono);font-size:11px;color:var(--lime)}
+.meter{display:flex;gap:6px;margin-top:22px}
+.meter i{width:5px;height:5px;border-radius:50%;background:var(--line)}
+.meter i.on{background:var(--lime)}
+/* footer */
+footer{margin-top:96px;border-top:1px solid var(--line)}
+footer .wrap{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;padding-top:24px;padding-bottom:32px}
+footer,footer a{font-family:var(--mono);font-size:12px;color:var(--muted)}
+footer a:hover{color:var(--lime)}
+.foot-l{display:flex;gap:20px}
+@media (max-width:720px){
+  .hero{padding-top:64px}
+  .grid{grid-template-columns:1fr}
+  section{padding-top:64px}
+  .spec th{display:none}
+  .spec .in{width:auto}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+
+<nav><div class="wrap">
+  <a class="wordmark" href="#">openwispr <span>∿</span></a>
+  <a class="navlink" href="https://github.com/ck-delta/whispr" target="_blank" rel="noopener">github ↗</a>
+</div></nav>
+
+<header class="hero"><div class="wrap">
+  <h1>speak. it types. <em>nothing leaves your mac.</em></h1>
+  <p class="pitch">Hold <span class="key">fn</span>, say the thing, release. On-device Whisper types it at your cursor — any app, any field. <strong>No cloud. No account. No audio off the machine.</strong> Free, open source, MIT.</p>
+  <div class="install">
+    <div class="cmd">
+      <span class="p">$</span>
+      <code id="cmd">curl -fsSL https://whispr-black-chi.vercel.app/install.sh | sh</code>
+      <button class="copy" id="copy" aria-label="Copy install command">copy</button>
+    </div>
+    <a class="dmg" href="https://whispr-black-chi.vercel.app/OpenWispr.dmg">or download .dmg →</a>
+  </div>
+</div>
+<div class="scope" aria-hidden="true">
+  <div class="wrap"><div class="scope-label">input · mic 01 · 16 kHz</div></div>
+  <svg viewBox="0 0 1200 96" preserveAspectRatio="none">
+    <polyline id="wave" fill="none" stroke="#C6F432" stroke-width="1.5" stroke-linejoin="round"/>
+  </svg>
+</div>
+</header>
+
+<section><div class="wrap">
+  <div class="sec-head"><h2>raw speech in. clean text out.</h2></div>
+  <div class="spec-wrap"><table class="spec">
+    <tr><th>dictation</th><td class="in">"umm so basically send the uh deck to priya by friday"</td><td class="arrow">→</td><td class="out">Send the deck to Priya by Friday.</td></tr>
+    <tr><th>hinglish</th><td class="in">"kal ka standup cancel kar do, main leave pe hoon"</td><td class="arrow">→</td><td class="out">kal ka standup cancel kar do, main leave pe hoon</td></tr>
+    <tr><th>meeting</th><td class="in">47 min all-hands recording</td><td class="arrow">→</td><td class="out">Transcript, labeled You / Others, searchable.</td></tr>
+  </table></div>
+</div></section>
+
+<section><div class="wrap">
+  <div class="sec-head"><h2>the spec</h2></div>
+  <div class="grid">
+    <div class="mod">
+      <span class="idx">A/01</span>
+      <h3>100% on-device</h3>
+      <p>Whisper runs locally on Apple silicon. Airplane mode works. Optional local AI cleanup via Ollama — also on your machine.</p>
+      <div class="meter" data-on="14" aria-hidden="true"></div>
+    </div>
+    <div class="mod">
+      <span class="idx">A/02</span>
+      <h3>meetings transcribed</h3>
+      <p>Capture any call, get a transcript split into You and Others. Nothing uploaded, nothing to invite into the call.</p>
+      <div class="meter" data-on="10" aria-hidden="true"></div>
+    </div>
+    <div class="mod">
+      <span class="idx">A/03</span>
+      <h3>speak hindi, type english</h3>
+      <p>13 languages including Hindi with Roman-script output. Think in one language, ship text in another.</p>
+      <div class="meter" data-on="13" aria-hidden="true"></div>
+    </div>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <div class="foot-l">
+    <span>MIT license</span>
+    <a href="https://github.com/ck-delta/whispr" target="_blank" rel="noopener">github</a>
+  </div>
+  <a href="./index.html">← all directions</a>
+</div></footer>
+
+<script>
+(function(){
+  var wave=document.getElementById('wave'),W=1200,H=96,N=160,t=0;
+  var reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function frame(){
+    var pts=[];
+    for(var i=0;i<=N;i++){
+      var x=i/N*W;
+      var env=Math.exp(-Math.pow((i/N-0.5)*2.6,2)); // energy burst mid-line
+      var y=H/2
+        + Math.sin(i*0.55+t*1.7)*10*env
+        + Math.sin(i*0.13+t*0.9)*18*env
+        + Math.sin(i*1.9+t*3.1)*3;
+      pts.push(x.toFixed(1)+','+y.toFixed(1));
+    }
+    wave.setAttribute('points',pts.join(' '));
+  }
+  frame();
+  if(!reduced){(function loop(){t+=0.05;frame();requestAnimationFrame(loop);})();}
+
+  // dot-matrix meters
+  document.querySelectorAll('.meter').forEach(function(m){
+    var on=+m.dataset.on;
+    for(var i=0;i<16;i++){var d=document.createElement('i');if(i<on)d.className='on';m.appendChild(d);}
+  });
+
+  // copy button
+  var btn=document.getElementById('copy');
+  btn.addEventListener('click',function(){
+    navigator.clipboard.writeText(document.getElementById('cmd').textContent).then(function(){
+      btn.textContent='copied';setTimeout(function(){btn.textContent='copy';},1400);
+    });
+  });
+})();
+</script>
+</body>
+</html>

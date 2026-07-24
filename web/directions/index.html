@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>OpenWispr — choose a design direction</title>
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  body { background: #101012; color: #eee; font-family: -apple-system, system-ui, sans-serif; padding: 48px 24px; }
+  .wrap { max-width: 880px; margin: 0 auto; }
+  h1 { font-size: 28px; margin-bottom: 6px; }
+  p.sub { color: #999; margin-bottom: 32px; }
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  a.card { display: block; text-decoration: none; color: inherit; border: 1px solid #2a2a2e; border-radius: 12px;
+    padding: 22px; transition: transform .15s ease, border-color .2s; }
+  a.card:hover { transform: translateY(-3px); border-color: #666; }
+  .chips { display: flex; gap: 6px; margin: 12px 0; }
+  .chip { width: 26px; height: 26px; border-radius: 6px; border: 1px solid rgba(255,255,255,.15); }
+  h2 { font-size: 18px; }
+  .tag { font-size: 12px; color: #888; letter-spacing: .08em; text-transform: uppercase; }
+  .desc { color: #aaa; font-size: 13.5px; margin-top: 8px; line-height: 1.5; }
+  .a h2 { font-family: ui-monospace, monospace; color: #33FF66; }
+  .b { background: #F4EFE6; color: #2A2118; border-color: #d8cdba !important; }
+  .b h2 { font-family: Georgia, serif; color: #C63D2F; } .b .tag, .b .desc { color: #8A7B68; }
+  .c h2 { color: #C6F432; font-weight: 900; letter-spacing: -.5px; }
+  .d h2 { font-family: Georgia, serif; color: #FF6B47; }
+  @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>OpenWispr: pick the design language</h1>
+  <p class="sub">Four complete directions, each a live mini-landing. Open each, feel it, pick one. The winner becomes the site, the app, and the onboarding.</p>
+  <div class="grid">
+    <a class="card a" href="./a.html">
+      <span class="tag">Direction A</span>
+      <h2>terminal honest_</h2>
+      <div class="chips"><span class="chip" style="background:#050505"></span><span class="chip" style="background:#33FF66"></span><span class="chip" style="background:#E8FFE8"></span></div>
+      <p class="desc">OLED black · phosphor green · JetBrains Mono · blinking cursor + ASCII waveform. Open-source trust, dialed to 11.</p>
+    </a>
+    <a class="card b" href="./b.html">
+      <span class="tag">Direction B</span>
+      <h2>Analog Tape</h2>
+      <div class="chips"><span class="chip" style="background:#F4EFE6"></span><span class="chip" style="background:#C63D2F"></span><span class="chip" style="background:#2A2118"></span></div>
+      <p class="desc">Warm cream light theme · tape red · Bodoni + Space Mono · spinning reels + VU meter. Nobody else is warm.</p>
+    </a>
+    <a class="card c" href="./c.html">
+      <span class="tag">Direction C</span>
+      <h2>signal lime</h2>
+      <div class="chips"><span class="chip" style="background:#0B0D0C"></span><span class="chip" style="background:#C6F432"></span><span class="chip" style="background:#F2F4F0"></span></div>
+      <p class="desc">Graphite · electric lime · Archivo heavy · live oscilloscope + keycaps. Braun × Teenage Engineering precision.</p>
+    </a>
+    <a class="card d" href="./d.html">
+      <span class="tag">Direction D</span>
+      <h2>Evolved</h2>
+      <div class="chips"><span class="chip" style="background:#0C0A09"></span><span class="chip" style="background:#FF6B47"></span><span class="chip" style="background:#f2f2f0"></span></div>
+      <p class="desc">The current DNA (dark, serif, waveform) renamed and refined. Lowest-risk continuity.</p>
+    </a>
+  </div>
+</div>
+</body>
+</html>
