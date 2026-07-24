@@ -11,6 +11,7 @@ enum Whispr {
             TextProcessor.selfTest()
             DictionaryStore.selfTest()
             SnippetStore.selfTest()
+            Stats.selfTest()
             Task { @MainActor in
                 CorrectionsWatcher.selfTest()
                 exit(0)

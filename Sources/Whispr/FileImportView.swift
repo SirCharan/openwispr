@@ -94,24 +94,3 @@ struct FileImportView: View {
     }
 }
 
-/// Hosts the file-import view in a window.
-@MainActor
-final class FileImportWindowController {
-    private var window: NSWindow?
-    private var model: FileImportModel?
-
-    func show(transcriber: Transcriber) {
-        if window == nil {
-            let m = FileImportModel(transcriber: transcriber)
-            model = m
-            let win = NSWindow(contentViewController: NSHostingController(rootView: FileImportView(model: m)))
-            win.title = "Transcribe File"
-            win.styleMask = [.titled, .closable, .resizable]
-            win.isReleasedWhenClosed = false
-            window = win
-        }
-        NSApp.activate(ignoringOtherApps: true)
-        window?.center()
-        window?.makeKeyAndOrderFront(nil)
-    }
-}

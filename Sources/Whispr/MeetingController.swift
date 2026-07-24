@@ -61,6 +61,7 @@ final class MeetingController: ObservableObject {
         await transcribeChunk(micTail, speaker: "You")
         await transcribeChunk(sysTail, speaker: "Others")
         status = "done"
+        if !lines.isEmpty { Stats.recordMeeting() }
     }
 
     /// Rotate a stream when its speaker pauses (quiet tail) after enough audio,

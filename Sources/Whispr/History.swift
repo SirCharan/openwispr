@@ -4,6 +4,9 @@ struct HistoryEntry: Codable, Identifiable {
     var id = UUID()
     var date = Date()
     var text: String
+    var seconds: Double? // recording duration; absent in pre-v0.5 entries
+
+    var words: Int { text.split(separator: " ").count }
 }
 
 /// Persists recent transcripts to Application Support/Whispr/history.json.
@@ -23,9 +26,9 @@ enum HistoryStore {
         return h
     }
 
-    static func add(_ text: String) {
+    static func add(_ text: String, seconds: Double? = nil) {
         var h = load()
-        h.insert(HistoryEntry(text: text), at: 0)
+        h.insert(HistoryEntry(text: text, seconds: seconds), at: 0)
         if h.count > cap { h = Array(h.prefix(cap)) }
         save(h)
     }

@@ -14,8 +14,8 @@ final class AppController {
     let state = AppState()
     private let mainWindow = MainWindowController()
     private var fnMonitor: FnKeyMonitor?
-    private let meetingWindow = MeetingWindowController()
-    private let importWindow = FileImportWindowController()
+    private lazy var meetingCtrl = MeetingController(transcriber: transcriber)
+    private lazy var importModel = FileImportModel(transcriber: transcriber)
     private let corrections = CorrectionsWatcher()
     private var previewTimer: Timer?
     private var previewBusy = false
@@ -24,7 +24,6 @@ final class AppController {
     private let recorder = AudioRecorder()
     private var hotkeys: HotkeyManager?
     private let indicator = RecordingIndicator()
-    private let settingsWindow = SettingsWindowController()
     private var onboarding: OnboardingWindowController?
 
     func start() {
@@ -33,6 +32,14 @@ final class AppController {
                 guard let self, self.transcriber.isReady else { return }
                 self.attachHotkeys()
                 self.setStatus("ready — hold \(Self.hotkeyHint) to dictate")
+            }
+        }
+        NotificationCenter.default.addObserver(forName: .whisprModelChanged, object: nil, queue: .main) { [weak self] note in
+            Task { @MainActor in
+                guard let self, let name = note.object as? String,
+                      name != self.modelManager.selectedModel else { return }
+                self.modelManager.selectedModel = name
+                await self.loadSelectedModel()
             }
         }
         if Settings.onboarded {
@@ -44,12 +51,7 @@ final class AppController {
     }
 
     func showMainWindow() {
-        mainWindow.show(
-            state: state,
-            onSettings: { [weak self] in self?.showSettings() },
-            onMeeting: { [weak self] in self?.showMeeting() },
-            onImport: { [weak self] in self?.showImport() }
-        )
+        mainWindow.show(state: state, meetingController: meetingCtrl, importModel: importModel)
     }
 
     private func bootModel() async {
@@ -134,25 +136,18 @@ final class AppController {
     }
 
     private func showMeeting() {
-        guard transcriber.isReady else { setStatus("model still loading…"); return }
-        meetingWindow.show(transcriber: transcriber)
+        state.pane = .meetings
+        showMainWindow()
     }
 
     private func showImport() {
-        guard transcriber.isReady else { setStatus("model still loading…"); return }
-        importWindow.show(transcriber: transcriber)
+        state.pane = .importFile
+        showMainWindow()
     }
 
     private func showSettings() {
-        settingsWindow.show(
-            currentModel: modelManager.selectedModel,
-            models: ModelManager.available,
-            onReloadModel: { [weak self] name in
-                guard let self, name != self.modelManager.selectedModel else { return }
-                self.modelManager.selectedModel = name
-                Task { await self.loadSelectedModel() }
-            }
-        )
+        state.pane = .settings
+        showMainWindow()
     }
 
     /// Attach the active trigger: fn monitor (default) or the custom shortcut. Re-call on mode change.
@@ -271,7 +266,7 @@ final class AppController {
                     setStatus("ready (no speech)")
                 } else {
                     Paster.deliver(text, autoPaste: Settings.autoPaste)
-                    HistoryStore.add(text)
+                    HistoryStore.add(text, seconds: Double(samples.count) / 16000)
                     corrections.notePaste(text)
                     setStatus("ready")
                 }

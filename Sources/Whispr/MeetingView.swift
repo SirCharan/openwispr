@@ -85,26 +85,3 @@ struct MeetingView: View {
     }
 }
 
-/// Hosts the meeting view in a resizable window.
-@MainActor
-final class MeetingWindowController {
-    private var window: NSWindow?
-    private var controller: MeetingController?
-
-    func show(transcriber: Transcriber) {
-        if window == nil {
-            let ctrl = MeetingController(transcriber: transcriber)
-            controller = ctrl
-            let host = NSHostingController(rootView: MeetingView(controller: ctrl))
-            let win = NSWindow(contentViewController: host)
-            win.title = "Whispr Meeting"
-            win.styleMask = [.titled, .closable, .resizable, .miniaturizable]
-            win.isReleasedWhenClosed = false
-            win.setContentSize(NSSize(width: 560, height: 460))
-            window = win
-        }
-        NSApp.activate(ignoringOtherApps: true)
-        window?.center()
-        window?.makeKeyAndOrderFront(nil)
-    }
-}
