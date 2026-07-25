@@ -38,4 +38,12 @@ enum HistoryStore {
     }
 
     static func clear() { save([]) }
+
+    /// Replace an entry's text (in-app transcript correction).
+    static func update(id: UUID, text: String) {
+        var h = load()
+        guard let i = h.firstIndex(where: { $0.id == id }) else { return }
+        h[i].text = text
+        save(h)
+    }
 }

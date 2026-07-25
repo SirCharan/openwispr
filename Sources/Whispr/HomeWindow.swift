@@ -238,25 +238,48 @@ private struct DictationsPane: View {
         }
     }
 
+    @State private var editingID: UUID?
+    @State private var editText = ""
+
     private func row(_ e: HistoryEntry) -> some View {
         HStack(alignment: .top, spacing: 14) {
             Text(e.date.formatted(.dateTime.hour().minute()))
                 .font(.system(size: 12, design: .monospaced))
                 .foregroundStyle(Brand.muted)
                 .padding(.top, 2)
-            Text(e.text).font(.system(size: 13.5)).foregroundStyle(Brand.text)
+            if editingID == e.id {
+                TextField("", text: $editText, axis: .vertical)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 13.5)).foregroundStyle(Brand.text)
+                    .onSubmit { commitEdit(e) }
+            } else {
+                Text(e.text).font(.system(size: 13.5)).foregroundStyle(Brand.text)
+                    .onTapGesture(count: 2) { editingID = e.id; editText = e.text }
+            }
             Spacer(minLength: 0)
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 10).fill(Brand.surface))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Brand.line))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(editingID == e.id ? Brand.coral : Brand.line))
         .contextMenu {
             Button("Copy") {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(e.text, forType: .string)
             }
+            Button("Correct…") { editingID = e.id; editText = e.text }
         }
+    }
+
+    /// Save the edit; spelling-level changes (not rephrases) offer the dictionary toast.
+    private func commitEdit(_ e: HistoryEntry) {
+        let edited = editText.trimmingCharacters(in: .whitespacesAndNewlines)
+        editingID = nil
+        guard !edited.isEmpty, edited != e.text else { return }
+        HistoryStore.update(id: e.id, text: edited)
+        refresh()
+        let pairs = CorrectionsWatcher.corrections(original: e.text, edited: edited)
+        if !pairs.isEmpty { CorrectionToast.shared.show(pairs) }
     }
 }
 

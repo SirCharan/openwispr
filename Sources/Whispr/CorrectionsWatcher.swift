@@ -38,21 +38,7 @@ final class CorrectionsWatcher {
     }
 
     private func offer(_ pairs: [(from: String, to: String)]) {
-        let alert = NSAlert()
-        alert.messageText = "Add correction to dictionary?"
-        let list = pairs.map { "“\($0.from)” → “\($0.to)”" }.joined(separator: "\n")
-        alert.informativeText = "You edited the last transcript. Teach OpenWispr:\n\(list)"
-        alert.addButton(withTitle: "Add")
-        alert.addButton(withTitle: "Ignore")
-        NSApp.activate(ignoringOtherApps: true)
-        if alert.runModal() == .alertFirstButtonReturn {
-            var d = DictionaryStore.load()
-            for p in pairs {
-                d.vocab.removeAll { $0.lowercased() == p.to.lowercased() }
-                d.vocab.append(p.to)
-            }
-            DictionaryStore.save(d)
-        }
+        CorrectionToast.shared.show(pairs) // floating one-click prompt; never steals focus
     }
 
     /// Pure diff core: same-word-count texts, changed word pairs with JW 0.70–0.95
@@ -68,7 +54,11 @@ final class CorrectionsWatcher {
         let trim = CharacterSet(charactersIn: ".,!?;:\"'()")
         for (wa, wb) in zip(a, b) {
             let ca = wa.trimmingCharacters(in: trim), cb = wb.trimmingCharacters(in: trim)
-            guard ca.lowercased() != cb.lowercased(), ca.count >= 3, cb.count >= 3 else { continue }
+            guard ca != cb, ca.count >= 3, cb.count >= 3 else { continue }
+            if ca.lowercased() == cb.lowercased() {
+                out.append((ca, cb)) // case-only fix ("delhi" → "Delhi") is a spelling correction too
+                continue
+            }
             let jw = DictionaryStore.jaroWinkler(ca.lowercased(), cb.lowercased())
             if jw >= 0.70 && jw <= 0.95 { out.append((ca, cb)) }
         }
@@ -85,6 +75,8 @@ final class CorrectionsWatcher {
         assert(none.isEmpty, "should reject dissimilar texts")
         let same = corrections(original: "same text here", edited: "same text here")
         assert(same.isEmpty, "identical texts should yield nothing")
+        let caseOnly = corrections(original: "flying to delhi tomorrow", edited: "flying to Delhi tomorrow")
+        assert(caseOnly.count == 1 && caseOnly[0].to == "Delhi", "case-only fix should count: \(caseOnly)")
         print("CorrectionsWatcher.selfTest PASS")
     }
 }
