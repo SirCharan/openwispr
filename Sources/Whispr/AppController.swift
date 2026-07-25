@@ -30,6 +30,7 @@ final class AppController {
     private let recorder = AudioRecorder()
     private var hotkeys: HotkeyManager?
     private let indicator = RecordingIndicator()
+    private lazy var idleWidget = IdleWidget(onTap: { [weak self] in self?.startDictation() })
     private var onboarding: OnboardingWindowController?
 
     func start() {
@@ -39,6 +40,7 @@ final class AppController {
                 guard let self, self.modelReady else { return }
                 self.attachHotkeys()
                 self.setStatus("ready — hold \(Self.hotkeyHint) to dictate")
+                if Settings.showIdleWidget { self.idleWidget.show() } else { self.idleWidget.hide() }
             }
         }
         NotificationCenter.default.addObserver(forName: .whisprModelChanged, object: nil, queue: .main) { [weak self] note in
@@ -154,6 +156,7 @@ final class AppController {
             try await transcriber.load(model: model, folder: folder)
             modelReady = true
             setStatus("ready — hold \(Self.hotkeyHint) to dictate")
+            idleWidget.show()
         } catch {
             setStatus("model error")
             NSLog("[Whispr] model load failed: \(error)")
@@ -224,6 +227,7 @@ final class AppController {
                 onStop: { [weak self] in self?.stopDictation() }
             )
             if Settings.soundCues { NSSound(named: "Pop")?.play() }
+            idleWidget.hide() // the recording pill takes its spot
             setStatus("listening…")
             startPreviewLoop()
         } catch {
@@ -269,6 +273,7 @@ final class AppController {
         _ = recorder.stop()
         menuBar.setRecording(false)
         indicator.hide()
+        idleWidget.show()
         setStatus("ready — hold \(Self.hotkeyHint) to dictate")
     }
 
@@ -290,6 +295,7 @@ final class AppController {
         let samples = recorder.stop()
         menuBar.setRecording(false)
         indicator.hide()
+        idleWidget.show()
         if Settings.soundCues { NSSound(named: "Tink")?.play() }
         setStatus("transcribing…")
         transcribeAndDeliver(samples)

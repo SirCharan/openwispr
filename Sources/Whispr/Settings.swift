@@ -14,6 +14,12 @@ enum Settings {
         set { UserDefaults.standard.set(newValue, forKey: "onboarded") }
     }
 
+    /// Show the small persistent floating mic pill (click to dictate).
+    static var showIdleWidget: Bool {
+        get { UserDefaults.standard.object(forKey: "showIdleWidget") as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: "showIdleWidget") }
+    }
+
     /// Play a short sound when recording starts/stops (useful when the pill is hidden).
     static var soundCues: Bool {
         get { UserDefaults.standard.object(forKey: "soundCues") as? Bool ?? true }
