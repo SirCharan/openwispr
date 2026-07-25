@@ -15,6 +15,7 @@ enum Whispr {
             Transliterate.selfTest()
             Task { @MainActor in
                 CorrectionsWatcher.selfTest()
+                AXEditWatcher.selfTest()
                 exit(0)
             }
             dispatchMain()

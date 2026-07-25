@@ -240,6 +240,7 @@ private struct DictationsPane: View {
 
     @State private var editingID: UUID?
     @State private var editText = ""
+    @FocusState private var editFocused: Bool
 
     private func row(_ e: HistoryEntry) -> some View {
         HStack(alignment: .top, spacing: 14) {
@@ -251,7 +252,13 @@ private struct DictationsPane: View {
                 TextField("", text: $editText, axis: .vertical)
                     .textFieldStyle(.plain)
                     .font(.system(size: 13.5)).foregroundStyle(Brand.text)
+                    .focused($editFocused)
                     .onSubmit { commitEdit(e) }
+                    .onChange(of: editFocused) { _, focused in
+                        if !focused && editingID == e.id { commitEdit(e) } // click-away saves too
+                    }
+                    .onExitCommand { editingID = nil } // Esc cancels
+                    .onAppear { editFocused = true }
             } else {
                 Text(e.text).font(.system(size: 13.5)).foregroundStyle(Brand.text)
                     .onTapGesture(count: 2) { editingID = e.id; editText = e.text }

@@ -18,6 +18,7 @@ final class AppController {
     private lazy var meetingCtrl = MeetingController(transcriber: transcriber)
     private lazy var importModel = FileImportModel(transcriber: transcriber)
     private let corrections = CorrectionsWatcher()
+    private let axWatcher = AXEditWatcher()
     private var previewTimer: Timer?
     private var previewBusy = false
     private var previewTask: Task<Void, Never>?
@@ -219,6 +220,7 @@ final class AppController {
             setStatus("disabled for \(AppMonitor.name(for: front))")
             return
         }
+        axWatcher.stop() // new dictation supersedes the previous watch
         do {
             try recorder.start()
             menuBar.setRecording(true)
@@ -324,6 +326,12 @@ final class AppController {
                     Paster.deliver(text, autoPaste: Settings.autoPaste)
                     HistoryStore.add(text, seconds: Double(samples.count) / 16000)
                     corrections.notePaste(text)
+                    if Settings.autoPaste {
+                        // watch the field we pasted into for in-place spelling fixes (~0.7s: after Cmd+V lands)
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) { [weak self] in
+                            self?.axWatcher.watch(transcript: text)
+                        }
+                    }
                     if Settings.autoPaste && !Permissions.hasAccessibility {
                         // grant missing (or invalidated by a rebuild) — say so instead of failing silently
                         setStatus("copied — grant Accessibility to auto-paste")

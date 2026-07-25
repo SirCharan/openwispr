@@ -12,7 +12,7 @@ final class CorrectionsWatcher {
 
     func notePaste(_ transcript: String) {
         lastTranscript = transcript
-        deadline = Date().addingTimeInterval(60)
+        deadline = Date().addingTimeInterval(180)
         lastChangeCount = NSPasteboard.general.changeCount
         if timer == nil {
             timer = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
