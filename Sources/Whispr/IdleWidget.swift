@@ -37,8 +37,9 @@ final class IdleWidget {
             panel = p
         }
         if let p = panel, let screen = NSScreen.main {
+            // bottom-left corner: out of the reading line, clear of the (usually centered) Dock
             let f = screen.visibleFrame
-            p.setFrameOrigin(NSPoint(x: f.midX - p.frame.width / 2, y: f.minY + 24))
+            p.setFrameOrigin(NSPoint(x: f.minX + 16, y: f.minY + 16))
         }
         panel?.orderFrontRegardless()
     }
