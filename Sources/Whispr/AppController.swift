@@ -49,6 +49,15 @@ final class AppController {
                 await self.loadSelectedModel()
             }
         }
+        // a second launch attempt (open -n) asks us to surface the home window before it exits
+        DistributedNotificationCenter.default().addObserver(
+            forName: .init("org.openwispr.showHome"), object: nil, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.showMainWindow()
+                NSApp.activate(ignoringOtherApps: true)
+            }
+        }
         if Settings.onboarded {
             showMainWindow()
             Task { await bootModel() }

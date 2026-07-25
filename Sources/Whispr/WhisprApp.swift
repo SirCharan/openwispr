@@ -44,7 +44,12 @@ enum Whispr {
             let twins = NSRunningApplication.runningApplications(withBundleIdentifier: myID)
                 .filter { $0.processIdentifier != myPID }
             if let existing = twins.first {
-                existing.activate() // hand focus to the copy already running, then bow out
+                // tell the running copy to show its home window (activate alone shows nothing
+                // for a menu-bar app whose window is closed), then bow out
+                DistributedNotificationCenter.default().postNotificationName(
+                    .init("org.openwispr.showHome"), object: nil, userInfo: nil, deliverImmediately: true
+                )
+                existing.activate()
                 exit(0)
             }
         }
@@ -150,5 +155,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         controller = AppController()
         controller?.start()
+    }
+
+    /// Finder double-click / `open` on the running instance: show the home window.
+    /// Without this, clicking a menu-bar-only app in /Applications appears to do nothing.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        controller?.showMainWindow()
+        return true
     }
 }
