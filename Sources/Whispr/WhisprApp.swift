@@ -38,6 +38,21 @@ enum Whispr {
             exit(0)
         }
 
+        // --- single-instance guard: two copies = two fn monitors = every transcript pasted twice ---
+        let myPID = ProcessInfo.processInfo.processIdentifier
+        if let myID = Bundle.main.bundleIdentifier {
+            let twins = NSRunningApplication.runningApplications(withBundleIdentifier: myID)
+                .filter { $0.processIdentifier != myPID }
+            if let existing = twins.first {
+                existing.activate() // hand focus to the copy already running, then bow out
+                exit(0)
+            }
+        }
+        // terminate any legacy Whispr-era instance (old bundle id) — same double-paste hazard
+        for legacy in NSRunningApplication.runningApplications(withBundleIdentifier: "com.ck.whispr") {
+            legacy.terminate()
+        }
+
         // --- normal menu-bar app ---
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory) // menu-bar-only; pairs with LSUIElement
