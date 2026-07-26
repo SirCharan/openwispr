@@ -1,24 +1,30 @@
 import SwiftUI
 import AppKit
 
-/// Live meeting transcript: start/stop, You/Others lines, export Markdown.
+/// Live meeting transcript: start/pause/stop, timestamped speaker lines, rename-at-stop, export.
 struct MeetingView: View {
     @ObservedObject var controller: MeetingController
+    @State private var screenRecOK = CGPreflightScreenCaptureAccess()
+    @State private var renames: [String: String] = [:]
 
     var body: some View {
         VStack(spacing: 0) {
             HStack {
                 Circle()
-                    .fill(controller.isRunning ? Color.red : Color.secondary.opacity(0.4))
+                    .fill(controller.isRunning ? (controller.isPaused ? Color.orange : Color.red) : Color.secondary.opacity(0.4))
                     .frame(width: 9, height: 9)
                 Text(controller.status).font(.caption).foregroundStyle(.secondary)
                 Spacer()
                 if controller.isRunning {
+                    Button(controller.isPaused ? "Resume" : "Pause") {
+                        Task { controller.isPaused ? await controller.resume() : await controller.pause() }
+                    }
                     Button("Stop") { Task { await controller.stop() } }
                         .tint(.red)
                 } else {
                     Button("Start recording") { Task { await controller.start() } }
                         .keyboardShortcut(.defaultAction)
+                        .disabled(!screenRecOK) // pre-start check: no surprises at meeting time
                 }
                 Button(controller.summarizing ? "Summarizing…" : "Summarize") {
                     Task { await controller.summarize() }
@@ -45,18 +51,20 @@ struct MeetingView: View {
             if controller.lines.isEmpty {
                 Spacer()
                 VStack(spacing: 8) {
-                    Image(systemName: controller.needsScreenRec ? "exclamationmark.shield" : "person.2.wave.2")
-                        .font(.system(size: 36)).foregroundStyle(controller.needsScreenRec ? .orange : .secondary)
-                    if controller.needsScreenRec {
-                        Text("macOS blocked system-audio capture. Enable OpenWispr under Screen & System Audio Recording, then relaunch the app.")
+                    Image(systemName: !screenRecOK || controller.needsScreenRec ? "exclamationmark.shield" : "person.2.wave.2")
+                        .font(.system(size: 36)).foregroundStyle(!screenRecOK || controller.needsScreenRec ? .orange : .secondary)
+                    if !screenRecOK || controller.needsScreenRec {
+                        Text("Meetings need Screen Recording permission (that's how macOS exposes system audio). Enable OpenWispr, then relaunch the app.")
                             .foregroundStyle(.secondary).multilineTextAlignment(.center)
                         Button("Open Screen Recording settings") {
                             NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!)
                         }
+                        Button("I've enabled it — re-check") { screenRecOK = CGPreflightScreenCaptureAccess() }
+                            .buttonStyle(.plain).font(.caption).foregroundStyle(.secondary)
                     } else {
-                        Text("Start recording to capture your mic (You) and system audio (Others).")
+                        Text("Start recording to capture your mic (You) and the other side's audio — remote voices are separated into Speaker A/B after you stop.")
                             .foregroundStyle(.secondary).multilineTextAlignment(.center)
-                        Text("System audio needs Screen Recording permission. Transcripts autosave to Documents/OpenWispr.")
+                        Text("Transcript checkpoints to Documents/OpenWispr after every line. First meeting downloads the speaker model (~100 MB) once.")
                             .font(.caption).foregroundStyle(.tertiary)
                     }
                 }
@@ -66,10 +74,13 @@ struct MeetingView: View {
                 ScrollViewReader { proxy in
                     List(controller.lines) { line in
                         HStack(alignment: .top, spacing: 8) {
+                            Text(MeetingController.mmss(line.start))
+                                .font(.system(size: 11, design: .monospaced)).foregroundStyle(.tertiary)
+                                .frame(width: 38, alignment: .trailing)
                             Text(line.speaker)
                                 .font(.caption.bold())
                                 .foregroundStyle(line.speaker == "You" ? Color.accentColor : .orange)
-                                .frame(width: 48, alignment: .trailing)
+                                .frame(width: 70, alignment: .trailing)
                             Text(line.text)
                         }
                         .id(line.id)
@@ -81,7 +92,42 @@ struct MeetingView: View {
                 }
             }
         }
-        .frame(minWidth: 520, minHeight: 400)
+        .frame(minWidth: 560, minHeight: 400)
+        .onAppear { screenRecOK = CGPreflightScreenCaptureAccess() }
+        .sheet(isPresented: $controller.showRenameSheet) { renameSheet }
+    }
+
+    /// Post-meeting labeling: name each detected speaker (ck's flow).
+    private var renameSheet: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Label the speakers").font(.title3.bold())
+            Text("Type real names — the transcript and the saved file update everywhere.")
+                .font(.caption).foregroundStyle(.secondary)
+            ForEach(controller.distinctSpeakers, id: \.self) { s in
+                HStack {
+                    Text(s).font(.system(size: 12, design: .monospaced))
+                        .frame(width: 90, alignment: .trailing).foregroundStyle(.secondary)
+                    TextField(s == "You" ? "your name (optional)" : "e.g. Priya", text: Binding(
+                        get: { renames[s] ?? "" },
+                        set: { renames[s] = $0 }
+                    ))
+                    .textFieldStyle(.roundedBorder)
+                }
+            }
+            HStack {
+                Spacer()
+                Button("Skip") { controller.showRenameSheet = false; renames = [:] }
+                Button("Apply names") {
+                    controller.renameSpeakers(renames)
+                    controller.showRenameSheet = false
+                    renames = [:]
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(renames.values.allSatisfy { $0.trimmingCharacters(in: .whitespaces).isEmpty })
+            }
+        }
+        .padding(22)
+        .frame(width: 380)
     }
 
     private func export() {

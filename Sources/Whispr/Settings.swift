@@ -14,6 +14,12 @@ enum Settings {
         set { UserDefaults.standard.set(newValue, forKey: "onboarded") }
     }
 
+    /// Separate remote meeting voices into Speaker A/B via on-device diarization.
+    static var diarizationEnabled: Bool {
+        get { UserDefaults.standard.object(forKey: "diarizationEnabled") as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: "diarizationEnabled") }
+    }
+
     /// Show the small persistent floating mic pill (click to dictate).
     static var showIdleWidget: Bool {
         get { UserDefaults.standard.object(forKey: "showIdleWidget") as? Bool ?? true }

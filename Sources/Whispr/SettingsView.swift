@@ -14,6 +14,7 @@ struct SettingsView: View {
     @AppStorage("handsFree") private var handsFree = false
     @AppStorage("soundCues") private var soundCues = true
     @AppStorage("showIdleWidget") private var showIdleWidget = true
+    @AppStorage("diarizationEnabled") private var diarizationEnabled = true
     @AppStorage("hotkeyMode") private var hotkeyMode = "fn"
     @AppStorage("rewriteStyle") private var rewriteStyle = "off"
     @AppStorage("accentHex") private var accentHex = "FF5D54"
@@ -43,6 +44,7 @@ struct SettingsView: View {
             Section("Behavior") {
                 Toggle("Auto-paste at cursor (off = copy to clipboard only)", isOn: $autoPaste)
                 Toggle("Sound cues on record start/stop", isOn: $soundCues)
+                Toggle("Separate remote meeting speakers (A/B) by voice", isOn: $diarizationEnabled)
                 Toggle("Floating mic button (click to dictate)", isOn: $showIdleWidget)
                     .onChange(of: showIdleWidget) { _, _ in NotificationCenter.default.post(name: .whisprHotkeyModeChanged, object: nil) }
                 Toggle("Launch at login", isOn: $launchAtLogin)

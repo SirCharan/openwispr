@@ -16,6 +16,7 @@ enum Whispr {
             Task { @MainActor in
                 CorrectionsWatcher.selfTest()
                 AXEditWatcher.selfTest()
+                Diarizer.selfTest()
                 exit(0)
             }
             dispatchMain()
@@ -36,6 +37,10 @@ enum Whispr {
         }
         if let i = args.firstIndex(of: "--concurrency-test"), i + 1 < args.count {
             runConcurrencyTest(path: args[i + 1])
+            exit(0)
+        }
+        if let i = args.firstIndex(of: "--diarize-test"), i + 1 < args.count {
+            runDiarizeTest(path: args[i + 1])
             exit(0)
         }
 
@@ -122,6 +127,28 @@ enum Whispr {
                 print(ok ? "concurrency-test PASS: \"\(ra)\"" : "concurrency-test FAIL: \"\(ra)\" vs \"\(rb)\"")
             } catch {
                 print("concurrency-test FAIL: \(error)")
+            }
+            exit(0)
+        }
+        dispatchMain()
+    }
+
+    /// Download diarizer models + diarize a wav — proves the whole FluidAudio path headlessly.
+    private static func runDiarizeTest(path: String) {
+        Task { @MainActor in
+            do {
+                let samples = try WavEncoder.decode16kMono(path: path)
+                let d = Diarizer()
+                print("diarize-test: preparing models…")
+                try await d.prepare()
+                let segs = try await d.diarize(samples)
+                let speakers = Set(segs.map(\.speaker)).sorted()
+                print("diarize-test: \(segs.count) segments, speakers=\(speakers)")
+                for s in segs.prefix(10) {
+                    print("  \(s.speaker) \(String(format: "%.1f–%.1f", s.start, s.end))s")
+                }
+            } catch {
+                print("diarize-test FAIL: \(error)")
             }
             exit(0)
         }

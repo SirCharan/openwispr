@@ -26,6 +26,22 @@ enum WavEncoder {
         return data
     }
 
+    /// Decode a 16 kHz mono 16-bit PCM WAV (our own encode format) back to floats — test helper.
+    static func decode16kMono(path: String) throws -> [Float] {
+        let data = try Data(contentsOf: URL(fileURLWithPath: path))
+        guard data.count > 44 else { return [] }
+        let pcm = data.dropFirst(44)
+        var out: [Float] = []
+        out.reserveCapacity(pcm.count / 2)
+        var i = pcm.startIndex
+        while i + 1 < pcm.endIndex {
+            let v = Int16(littleEndian: Int16(bitPattern: UInt16(pcm[i]) | (UInt16(pcm[i + 1]) << 8)))
+            out.append(Float(v) / 32767)
+            i += 2
+        }
+        return out
+    }
+
     /// Assert-based self-check (ponytail: one runnable check for the money/parse path).
     static func selfTest() {
         let wav = encode([0, 0.5, -0.5, 1.0, -1.0], sampleRate: 16000)
