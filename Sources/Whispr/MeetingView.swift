@@ -54,9 +54,10 @@ struct MeetingView: View {
                     Image(systemName: !screenRecOK || controller.needsScreenRec ? "exclamationmark.shield" : "person.2.wave.2")
                         .font(.system(size: 36)).foregroundStyle(!screenRecOK || controller.needsScreenRec ? .orange : .secondary)
                     if !screenRecOK || controller.needsScreenRec {
-                        Text("Meetings need Screen Recording permission (that's how macOS exposes system audio). Enable OpenWispr, then relaunch the app.")
+                        Text("Meetings need Screen Recording permission (that's how macOS exposes system audio). Click below — that adds OpenWispr to the list — then switch it ON and relaunch. A leftover \"Whispr\" entry from the old app can be removed.")
                             .foregroundStyle(.secondary).multilineTextAlignment(.center)
-                        Button("Open Screen Recording settings") {
+                        Button("Request permission + open settings") {
+                            CGRequestScreenCaptureAccess() // registers OpenWispr in the pane; without this the row never appears
                             NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!)
                         }
                         Button("I've enabled it — re-check") { screenRecOK = CGPreflightScreenCaptureAccess() }
