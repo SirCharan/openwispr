@@ -377,5 +377,14 @@ final class MainWindowController {
         NSApp.activate(ignoringOtherApps: true)
         window?.center()
         window?.makeKeyAndOrderFront(nil)
+        DockPolicy.update() // Dock icon while a window is open
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification, object: window, queue: .main
+        ) { _ in
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(100)) // let the window finish closing
+                DockPolicy.update()
+            }
+        }
     }
 }

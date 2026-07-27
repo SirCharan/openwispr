@@ -19,6 +19,15 @@ final class OnboardingWindowController {
         NSApp.activate(ignoringOtherApps: true)
         win.center()
         win.makeKeyAndOrderFront(nil)
+        DockPolicy.update() // Dock icon while the wizard is open
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification, object: win, queue: .main
+        ) { _ in
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(100))
+                DockPolicy.update()
+            }
+        }
     }
 
     func close() { window?.close(); window = nil }
