@@ -15,6 +15,12 @@ struct MeetingView: View {
                     .frame(width: 9, height: 9)
                 Text(controller.status).font(.caption).foregroundStyle(.secondary)
                 Spacer()
+                Picker("Language", selection: $controller.meetingLanguage) {
+                    ForEach(Languages.list, id: \.code) { lang in Text(lang.name).tag(lang.code ?? "auto") }
+                }
+                .labelsHidden()
+                .frame(maxWidth: 130)
+                .help("Meeting language — lock to Hindi/English for mixed calls; Auto re-detects per chunk")
                 if controller.isRunning {
                     Button(controller.isPaused ? "Resume" : "Pause") {
                         Task { controller.isPaused ? await controller.resume() : await controller.pause() }

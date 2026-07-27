@@ -55,6 +55,21 @@ enum TextProcessor {
         text.replacingOccurrences(of: "\\bi\\b", with: "I", options: .regularExpression)
     }
 
+    /// Collapse Whisper hallucination loops: the same word 3+ times in a row → one occurrence.
+    /// Deliberate doubles ("no no") are preserved. Used on meeting chunks only.
+    static func collapseRepeats(_ text: String) -> String {
+        let words = text.split(separator: " ", omittingEmptySubsequences: true).map(String.init)
+        var out: [String] = []
+        var i = 0
+        while i < words.count {
+            var j = i
+            while j < words.count, words[j].lowercased() == words[i].lowercased() { j += 1 }
+            out.append(contentsOf: (j - i) >= 3 ? [words[i]] : Array(words[i..<j]))
+            i = j
+        }
+        return out.joined(separator: " ")
+    }
+
     static func selfTest() {
         let opts = Options(removeFillers: true, cleanUp: true)
         let a = process("um so uh this is , uh a test", options: opts)
@@ -63,6 +78,10 @@ enum TextProcessor {
         assert(b == "I think I can. Yes", "cap/I wrong: \(b)")
         let c = process("hello world", options: Options(removeFillers: false, cleanUp: false))
         assert(c == "hello world", "passthrough wrong: \(c)")
+        let d = collapseRepeats("आपको आपको आपको नहीं")
+        assert(d == "आपको नहीं", "repeat collapse wrong: \(d)")
+        let e = collapseRepeats("no no never")
+        assert(e == "no no never", "double preserved wrong: \(e)")
         print("TextProcessor.selfTest PASS")
     }
 }

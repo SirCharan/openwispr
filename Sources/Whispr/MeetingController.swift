@@ -24,6 +24,8 @@ final class MeetingController: ObservableObject {
     @Published private(set) var needsScreenRec = false
     @Published private(set) var savedTo: String?
     @Published var showRenameSheet = false
+    /// Per-meeting language override ("auto" = follow the global setting). Read per chunk, editable live.
+    @Published var meetingLanguage = "auto"
 
     private let mic = AudioRecorder()
     private let system = SystemAudioRecorder()
@@ -62,7 +64,7 @@ final class MeetingController: ObservableObject {
             }
         }
         do {
-            try mic.start()
+            try mic.start(voiceProcessing: true) // AEC: keep speaker playback out of "You"
             try await system.start()
         } catch {
             needsScreenRec = (error as NSError).domain.contains("ScreenCaptureKit")
@@ -107,7 +109,7 @@ final class MeetingController: ObservableObject {
     func resume() async {
         guard isRunning, isPaused else { return }
         do {
-            try mic.start()
+            try mic.start(voiceProcessing: true)
             try await system.start()
         } catch {
             status = "resume failed: \(error.localizedDescription)"
@@ -198,6 +200,28 @@ final class MeetingController: ObservableObject {
         }
     }
 
+    /// True when two lines from opposite streams overlap ≥50% of the shorter one and read the same
+    /// (JW > 0.82) — i.e. the mic heard the speaker. Pure; self-tested.
+    nonisolated static func isEchoPair(_ a: MeetingLine, _ b: MeetingLine) -> Bool {
+        let overlap = min(a.end, b.end) - max(a.start, b.start)
+        let shorter = min(a.end - a.start, b.end - b.start)
+        guard shorter > 0, overlap >= shorter * 0.5 else { return false }
+        return DictionaryStore.jaroWinkler(a.text.lowercased(), b.text.lowercased()) > 0.82
+    }
+
+    nonisolated static func selfTest() {
+        func line(_ s: String, _ t0: Double, _ t1: Double) -> MeetingLine {
+            MeetingLine(speaker: "x", text: s, start: t0, end: t1)
+        }
+        assert(isEchoPair(line("we should add a card for delta global", 7, 12),
+                          line("We should add a card for the delta global here", 7, 13)), "echo not caught")
+        assert(!isEchoPair(line("we should add a card", 7, 12),
+                           line("now we can go to the call", 7, 12)), "different text flagged")
+        assert(!isEchoPair(line("we should add a card", 0, 5),
+                           line("we should add a card", 40, 45)), "non-overlapping flagged")
+        print("MeetingController.selfTest PASS")
+    }
+
     private func rotateIfDue(buffered: Double, tail: Float, rotate: () -> Void) {
         guard buffered >= minChunkSeconds else { return }
         if tail < pauseRMS || buffered >= maxChunkSeconds { rotate() }
@@ -221,11 +245,17 @@ final class MeetingController: ObservableObject {
         let rms = sqrt(samples.reduce(0) { $0 + $1 * $1 } / Float(samples.count))
         guard rms > 0.002 else { return }
         do {
-            var raw = try await transcriber.transcribe(samples, language: Settings.languageCode)
+            let language = meetingLanguage == "auto" ? Settings.languageCode : meetingLanguage
+            var raw = try await transcriber.transcribe(samples, language: language)
             if Settings.outputMode == "roman" { raw = Transliterate.toLatin(raw) }
+            raw = TextProcessor.collapseRepeats(raw) // hallucination loops on short call chunks
             let text = TextProcessor.process(raw, options: Settings.textOptions)
             guard !text.isEmpty else { return }
-            lines.append(MeetingLine(speaker: speaker, text: text, start: start, end: start + duration))
+            let line = MeetingLine(speaker: speaker, text: text, start: start, end: start + duration)
+            // echo dedup: same words on both streams = speaker bleed; keep the digital (system) copy
+            if stream == .mic, lines.contains(where: { $0.speaker != "You" && Self.isEchoPair($0, line) }) { return }
+            if stream == .system { lines.removeAll { $0.speaker == "You" && Self.isEchoPair($0, line) } }
+            lines.append(line)
             lines.sort { $0.start < $1.start } // interleave You/Others in spoken order
             autosave() // live checkpoint
         } catch {

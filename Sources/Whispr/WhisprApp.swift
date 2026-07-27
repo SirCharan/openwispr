@@ -17,6 +17,7 @@ enum Whispr {
                 CorrectionsWatcher.selfTest()
                 AXEditWatcher.selfTest()
                 Diarizer.selfTest()
+                MeetingController.selfTest()
                 exit(0)
             }
             dispatchMain()
