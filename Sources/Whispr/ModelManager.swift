@@ -11,6 +11,7 @@ final class ModelManager {
     static let available = [
         "large-v3-v20240930_turbo", // ~1.5 GB, best accuracy/speed on Apple Silicon
         "large-v3-v20240930_626MB", // compressed large
+        "medium",                   // ~1.5 GB; best translate quality on shelf (use for Hindi→English)
         "small",
         "base",
         "tiny",

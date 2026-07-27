@@ -318,7 +318,7 @@ private struct ModelsPane: View {
                     Text("Roman letters (kaise ho)").tag("roman")
                     Text("English translation").tag("translate")
                 }
-                Text("Speak Hindi (or any language) and type it in Roman letters, or let Whisper translate to English. Applies to dictation and meetings. Note: English translation needs a non-turbo model (small/base/large-v3) — the turbo model transcribes only.")
+                Text("Speak Hindi (or any language) and type it in Roman letters, or let Whisper translate to English. Applies to dictation and meetings. Note: English translation needs a non-turbo model — pick \"medium\" for the best Hindi→English quality; the turbo model transcribes only.")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }
