@@ -54,23 +54,32 @@
   .lede { color: var(--muted); font-size: clamp(16px, 2.4vw, 19px); line-height: 1.7; max-width: 540px; margin: 26px auto 0; }
   .lede b { color: var(--text); font-weight: 600; }
 
-  /* the pill demo */
-  .demo-stage { display: flex; justify-content: center; margin: 52px 0 10px; }
-  .pill {
-    display: flex; align-items: center; gap: 14px; background: var(--paper); border: 1px solid var(--line);
-    border-radius: 100px; padding: 14px 24px 14px 18px; box-shadow: var(--shadow); max-width: 100%;
-    animation: float 5s ease-in-out infinite;
-  }
-  @keyframes float { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-6px) } }
-  .rec { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); flex-shrink: 0; animation: blink 1.3s ease-in-out infinite; }
-  @keyframes blink { 0%,100% { opacity: 1 } 50% { opacity: .25 } }
-  .pill-wave { display: flex; align-items: center; gap: 3px; height: 26px; flex-shrink: 0; }
-  .pill-wave i { width: 3px; border-radius: 3px; background: var(--accent); animation: pulse 1.4s ease-in-out infinite; }
-  @keyframes pulse { 0%,100% { transform: scaleY(.3); opacity: .4 } 50% { transform: scaleY(1); opacity: 1 } }
-  .pill-text { font-size: 15px; color: var(--text); text-align: left; min-width: 0; white-space: nowrap; overflow: hidden; }
-  .caret { display: inline-block; width: 1px; height: 1em; background: var(--accent); vertical-align: -2px; margin-left: 1px; animation: blink 1s step-end infinite; }
-  .demo-cap { font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
-  .demo-cap kbd { background: var(--surface); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; padding: 1px 7px; font-size: 12px; font-family: var(--mono); text-transform: none; letter-spacing: 0; }
+  /* the live "speak → text" scene */
+  .demo-stage { display: flex; justify-content: center; margin: 48px 0 8px; }
+  .scene { display: flex; align-items: center; gap: clamp(14px, 4vw, 40px); max-width: 100%; }
+  @keyframes blink { 0%,100% { opacity: 1 } 50% { opacity: 0 } }
+  @keyframes pulse { 0%,100% { transform: scaleY(.28); opacity: .4 } 50% { transform: scaleY(1); opacity: 1 } }
+  @keyframes talk { 0% { transform: scaleY(.28) } 100% { transform: scaleY(1) } }
+
+  /* speaker (bespoke SVG head, mouth talks, coral sound-waves toward the field) */
+  .speaker { position: relative; flex-shrink: 0; width: clamp(88px, 18vw, 122px); }
+  .speaker svg { width: 100%; height: auto; display: block; }
+  .speaker .lip { transform-box: fill-box; transform-origin: center; animation: talk .34s ease-in-out infinite alternate; }
+  .swaves { position: absolute; top: 60%; right: -14px; display: flex; align-items: center; gap: 4px; }
+  .swaves i { width: 3px; height: 16px; border-radius: 3px; background: var(--accent); animation: pulse 1.1s ease-in-out infinite; }
+  .swaves i:nth-child(2) { animation-delay: .18s } .swaves i:nth-child(3) { animation-delay: .36s }
+
+  /* text field the words land in */
+  .field { flex: 1; min-width: 0; max-width: 400px; background: var(--paper); border: 1px solid var(--line);
+    border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; text-align: left; }
+  .field-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 8px 12px; background: var(--surface); border-bottom: 1px solid var(--line); }
+  .field-dots { display: flex; gap: 5px } .field-dots span { width: 8px; height: 8px; border-radius: 50%; background: var(--line) }
+  .lang-tag { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
+  .field-body { padding: 15px 16px; min-height: 88px; font-size: 16.5px; line-height: 1.5; color: var(--text); }
+  .field-body .last { background: var(--accent-soft); border-radius: 3px; box-decoration-break: clone; -webkit-box-decoration-break: clone; padding: 0 1px; }
+  .caret { display: inline-block; width: 2px; height: 1.05em; background: var(--accent); vertical-align: -3px; margin-left: 1px; animation: blink 1s step-end infinite; }
+  .field-cap { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; color: var(--muted); margin-top: 12px; text-align: center; }
 
   /* install + download */
   .cta { display: flex; flex-direction: column; align-items: center; gap: 16px; margin-top: 34px; }
@@ -223,55 +232,6 @@
   footer a { color: var(--muted); text-decoration: none; }
   footer a:hover { color: var(--accent); }
 
-  /* ---------- hero signature: 3D cassette ---------- */
-  .demo-stage { perspective: 1300px; }
-  .cassette-stage { position: relative; transform-style: preserve-3d; will-change: transform; }
-  .cassette {
-    position: relative; width: 340px; max-width: 82vw; transform-style: preserve-3d;
-    /* rest tilt so the bottom + right depth faces read; JS refines with the pointer */
-    transform: rotateX(9deg) rotateY(-15deg);
-    transition: transform .12s ease-out;
-  }
-  .cass-body {
-    position: relative; aspect-ratio: 16 / 10; border-radius: 13px;
-    background:
-      linear-gradient(155deg, #FDFAF3 0%, var(--paper) 42%, var(--surface) 100%);
-    /* top-lip highlight + one tight directional shadow (down-right, tinted warm) — no bloom */
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 10px 14px 26px rgba(66,50,32,.16);
-    border: 1px solid var(--line);
-    padding: 20px 22px 16px;
-    display: flex; flex-direction: column; justify-content: space-between;
-    transform: translateZ(18px);
-  }
-  /* real thickness: tonal side faces, self-coloured (not black shadow boxes) */
-  .cass-face { position: absolute; }
-  .cass-face.bottom { left: 0; right: 0; bottom: 0; height: 36px; border-radius: 0 0 13px 13px;
-    background: linear-gradient(#CDC0A8, #B7A98C); transform: rotateX(-90deg) translateZ(18px); transform-origin: bottom; }
-  .cass-face.right { top: 0; bottom: 0; right: 0; width: 36px; border-radius: 0 13px 13px 0;
-    background: linear-gradient(100deg, #D5C9B2, #BBAD90); transform: rotateY(90deg) translateZ(18px); transform-origin: right; }
-  .cass-screw { position: absolute; width: 7px; height: 7px; border-radius: 50%;
-    background: radial-gradient(circle at 35% 35%, #B9AB8E, #8A7D64); box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); }
-  .cass-screw.tl { top: 9px; left: 9px } .cass-screw.tr { top: 9px; right: 9px }
-  .cass-screw.bl { bottom: 9px; left: 9px } .cass-screw.br { bottom: 9px; right: 9px }
-  .cass-window {
-    display: flex; align-items: center; justify-content: center; gap: 12px;
-    background: radial-gradient(120% 120% at 50% 0%, #2C2620, #17130F);
-    border-radius: 9px; padding: 16px 18px; border: 1px solid #0d0b08;
-    box-shadow: inset 0 2px 6px rgba(0,0,0,.5);
-  }
-  .cass-window .reel { border-color: #E9DFC9; width: 46px; height: 46px;
-    background: radial-gradient(circle at center, #17130F 26%, #E9DFC9 27%, #E9DFC9 34%, #17130F 35%); }
-  .cass-window .reel::before {
-    background: conic-gradient(#E9DFC9 0 14deg, transparent 14deg 120deg, #E9DFC9 120deg 134deg, transparent 134deg 240deg, #E9DFC9 240deg 254deg, transparent 254deg); }
-  .cass-tape { flex: 1; height: 3px; border-radius: 3px; background: linear-gradient(90deg, var(--accent), #c8412d); opacity: .85; max-width: 70px; }
-  .cass-label { display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
-    background: #FBF6EA; border: 1px solid var(--line); border-radius: 4px; padding: 5px 12px; transform: rotate(-.6deg);
-    box-shadow: 0 1px 0 rgba(0,0,0,.03); }
-  .cass-label .side-a { font-family: var(--serif); font-size: 16px; color: var(--text); letter-spacing: .3px; }
-  .cass-label .side-b { font-family: var(--mono); font-size: 9.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
-  /* the live pill floats in FRONT of the cassette (layered depth) */
-  .demo-stage .pill { position: relative; z-index: 2; margin-top: 22px; transform: translateZ(60px); }
-
   /* ---------- scroll reveal (JS sets the hidden state via gsap.from; visible without JS) ---------- */
   .reveal { will-change: transform, opacity; }
 
@@ -287,16 +247,16 @@
     .stat { width: 100%; }
     .stat-vs { align-self: center; padding: 2px 0; }
     .stat { padding: 24px 28px; flex: 1; }
-    .pill { padding: 12px 18px 12px 14px; }
-    .pill-text { font-size: 13px; }
+    .scene { flex-direction: column; gap: 18px; }
+    .field { max-width: 100%; width: 100%; }
+    .swaves { top: auto; bottom: -12px; right: 50%; transform: translateX(50%) rotate(90deg); }
     .eyebrow { white-space: normal; text-align: center; line-height: 1.7; }
-    .cassette { transform: rotateX(6deg) rotateY(-9deg); }  /* no pointer tilt on touch */
   }
   @media (prefers-reduced-motion: reduce) {
-    .pill, .rec, .pill-wave i, .caret, .reel, .needle, .logo { animation: none; }
-    .pill-wave i { transform: scaleY(.6); opacity: .85; }
+    .speaker .lip, .swaves i, .caret, .reel, .needle, .logo { animation: none; }
+    .speaker .lip { transform: scaleY(.7); }
+    .swaves i { transform: scaleY(.6); opacity: .85; }
     .lc:hover, .btn:hover { transform: none; }
-    .cassette { transition: none; }
     html { scroll-behavior: auto; }
   }
 </style>
@@ -320,43 +280,28 @@
     <p class="lede">Open-source dictation that never leaves your Mac. Hold <b>fn</b>, speak, release. On-device Whisper cleans your words and pastes them at the cursor.</p>
 
     <div class="demo-stage">
-      <div class="cassette-stage" id="cassetteStage">
-        <div class="cassette" id="cassette">
-          <div class="cass-body">
-            <span class="cass-screw tl"></span><span class="cass-screw tr"></span>
-            <span class="cass-screw bl"></span><span class="cass-screw br"></span>
-            <div class="cass-label">
-              <span class="side-a">OpenWispr</span>
-              <span class="side-b">Side A · on-device</span>
-            </div>
-            <div class="cass-window" aria-hidden="true">
-              <span class="reel"></span>
-              <span class="cass-tape"></span>
-              <span class="reel"></span>
-            </div>
-          </div>
-          <div class="cass-face bottom"></div>
-          <div class="cass-face right"></div>
+      <div class="scene">
+        <div class="speaker" aria-hidden="true">
+          <svg viewBox="0 0 120 120" fill="none">
+            <path d="M34 30 Q60 8 86 30" stroke="var(--text)" stroke-width="3" stroke-linecap="round"/>
+            <rect x="22" y="20" width="76" height="88" rx="32" fill="var(--surface)" stroke="var(--text)" stroke-width="3"/>
+            <circle cx="47" cy="58" r="4.5" fill="var(--text)"/>
+            <circle cx="73" cy="58" r="4.5" fill="var(--text)"/>
+            <ellipse class="lip" cx="60" cy="84" rx="13" ry="8" fill="var(--accent)"/>
+          </svg>
+          <span class="swaves"><i></i><i></i><i></i></span>
         </div>
 
-        <div>
-          <div class="demo-cap">Hold <kbd>fn</kbd> and speak</div>
-          <div class="pill" aria-hidden="true">
-            <span class="rec"></span>
-            <span class="pill-wave">
-              <i style="height:10px;animation-delay:0s"></i>
-              <i style="height:20px;animation-delay:.22s"></i>
-              <i style="height:14px;animation-delay:.09s"></i>
-              <i style="height:26px;animation-delay:.31s"></i>
-              <i style="height:18px;animation-delay:.15s"></i>
-              <i style="height:24px;animation-delay:.05s"></i>
-              <i style="height:12px;animation-delay:.27s"></i>
-            </span>
-            <span class="pill-text"><span id="typed"></span><span class="caret" id="caret"></span></span>
+        <div class="field" role="img" aria-label="OpenWispr transcribing speech to text on-device">
+          <div class="field-bar">
+            <span class="field-dots"><span></span><span></span><span></span></span>
+            <span class="lang-tag" id="langTag">EN</span>
           </div>
+          <div class="field-body"><span id="fieldType">Let's ship the update on Thursday.</span><span class="caret"></span></div>
         </div>
       </div>
     </div>
+    <p class="field-cap">Spoken here, typed there — on-device. English, हिन्दी, names, all local.</p>
 
     <div class="cta">
       <div class="cmd-row">
@@ -410,12 +355,12 @@
     <h2>You ramble. It writes.</h2>
     <div class="ba">
       <div class="lc raw">
-        <span class="tab">Take 1 (raw)</span><br />
+        <span class="tab"><svg width="14" height="11" viewBox="0 0 14 11" style="vertical-align:-1px;margin-right:5px" aria-hidden="true"><g fill="currentColor"><rect x="0" y="4" width="2" height="3" rx="1"/><rect x="3" y="2" width="2" height="7" rx="1"/><rect x="6" y="0" width="2" height="11" rx="1"/><rect x="9" y="3" width="2" height="5" rx="1"/><rect x="12" y="4" width="2" height="3" rx="1"/></g></svg>Spoken</span><br />
         "um so uh i think we should um move the launch to thursday and uh tell the whole team about it i guess"
       </div>
       <div class="ba-arrow">→</div>
       <div class="lc master">
-        <span class="tab hot">Master</span><br />
+        <span class="tab hot">Typed<span class="caret" style="margin-left:4px;vertical-align:-2px"></span></span><br />
         "I think we should move the launch to Thursday and tell the whole team."
       </div>
     </div>
@@ -638,56 +583,44 @@
 
   var REDUCE = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // hero pill: cycle real sentences word-by-word; waveform reacts (tall while "speaking")
+  // hero scene: speaker "talks", the field transcribes word-by-word, cycling real examples
+  // (English, Hindi in Devanagari, a hard proper name, Hinglish). Field ships example 1 in the
+  // HTML, so it reads fully even with JS off.
   (function () {
-    var el = document.getElementById('typed');
-    var caret = document.getElementById('caret');
-    var bars = document.querySelectorAll('.pill-wave i');
-    var phrases = [
-      '…move the launch to Thursday',
-      '…ship the fix and tell the team',
-      '…book the room for 3pm',
-      '…reply: sounds good, see you then'
+    var body = document.getElementById('fieldType');
+    var tag = document.getElementById('langTag');
+    var ex = [
+      { t: "Let's ship the update on Thursday.", lang: 'EN' },
+      { t: 'नमस्ते, कल टीम मीटिंग है।', lang: 'हिन्दी' },
+      { t: 'Meeting with Priya Nair about Aadhaar.', lang: 'Name' },
+      { t: 'kal launch karte hain, sab ready hai.', lang: 'Hinglish' }
     ];
-    if (REDUCE) { el.textContent = phrases[0]; caret.style.display = 'none'; return; }
-
-    function wave(active) {
-      bars.forEach(function (b) { b.style.animationPlayState = active ? 'running' : 'paused';
-        if (!active) b.style.transform = 'scaleY(.28)'; else b.style.transform = ''; });
+    if (REDUCE || !body || !tag) { return; } // HTML already shows example 1
+    function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    var p = 0;
+    function run() {
+      var words = ex[p].t.split(' ');
+      tag.textContent = ex[p].lang;
+      var k = 0;
+      (function addWord() {
+        var head = words.slice(0, k).join(' ');
+        body.innerHTML = esc(head) + (head ? ' ' : '') + '<span class="last">' + esc(words[k]) + '</span>';
+        k++;
+        if (k < words.length) { setTimeout(addWord, 150 + Math.random() * 130); }
+        else {
+          setTimeout(function () {
+            body.textContent = ex[p].t;                 // settle: drop the highlight
+            setTimeout(function () { p = (p + 1) % ex.length; run(); }, 1700);
+          }, 520);
+        }
+      })();
     }
-    var p = 0, i = 0, deleting = false;
-    wave(true);
-    (function tick() {
-      var phrase = phrases[p];
-      if (!deleting) {
-        el.textContent = phrase.slice(0, ++i);
-        if (i === phrase.length) { deleting = true; wave(false); return setTimeout(tick, 2200); }
-        setTimeout(tick, 46 + Math.random() * 70);
-      } else {
-        el.textContent = phrase.slice(0, --i);
-        if (i === 0) { deleting = false; p = (p + 1) % phrases.length; wave(true); return setTimeout(tick, 650); }
-        setTimeout(tick, 16);
-      }
-    })();
+    run();
   })();
 
-  // GSAP-driven layer: pointer-tilt on the cassette, scroll reveals, count-up, parallax, pinned beat.
-  // Deferred GSAP is ready by DOMContentLoaded. Everything here only ENHANCES already-visible content.
+  // GSAP-driven layer: scroll reveals + stat count-up. Enhances already-visible content only.
+  // Deferred GSAP is ready by DOMContentLoaded.
   window.addEventListener('DOMContentLoaded', function () {
-    var cassette = document.getElementById('cassette');
-    var stage = document.getElementById('cassetteStage');
-
-    // pointer tilt (desktop, motion-ok) — refines the resting 3D tilt toward the cursor
-    if (cassette && stage && !REDUCE && window.matchMedia('(hover: hover)').matches) {
-      var rx = 9, ry = -15;
-      window.addEventListener('pointermove', function (e) {
-        var r = stage.getBoundingClientRect();
-        var dx = (e.clientX - (r.left + r.width / 2)) / r.width;
-        var dy = (e.clientY - (r.top + r.height / 2)) / r.height;
-        cassette.style.transform = 'rotateX(' + (rx - dy * 10) + 'deg) rotateY(' + (ry + dx * 16) + 'deg)';
-      });
-    }
-
     if (REDUCE || !window.gsap || !window.ScrollTrigger) return;
     gsap.registerPlugin(ScrollTrigger);
 
@@ -711,15 +644,6 @@
         onUpdate: function () { node.textContent = '≈' + Math.round(obj.v); },
         onComplete: function () { node.textContent = '≈' + target; }
       });
-    });
-
-    // 3+4. parallax depth + scroll "story beat" as ONE tween on the STAGE (GSAP owns the stage;
-    //    pointer-tilt owns the inner #cassette, so the two transform sources never collide).
-    //    A hard pin is avoided on purpose: the hero is taller than the viewport, so pinning it
-    //    would crop the fold — this scrubbed drift+turn reads as the same beat without the clip.
-    gsap.to('.cassette-stage', {
-      yPercent: -16, rotateY: 6, rotateX: 3, scale: 1.03, ease: 'none',
-      scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: .6 }
     });
 
     ScrollTrigger.refresh();
