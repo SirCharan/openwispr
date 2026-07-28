@@ -213,6 +213,58 @@
   footer a { color: var(--muted); text-decoration: none; }
   footer a:hover { color: var(--accent); }
 
+  /* ---------- hero signature: 3D cassette ---------- */
+  .demo-stage { perspective: 1300px; }
+  .cassette-stage { position: relative; transform-style: preserve-3d; will-change: transform; }
+  .cassette {
+    position: relative; width: 340px; max-width: 82vw; transform-style: preserve-3d;
+    /* rest tilt so the bottom + right depth faces read; JS refines with the pointer */
+    transform: rotateX(9deg) rotateY(-15deg);
+    transition: transform .12s ease-out;
+  }
+  .cass-body {
+    position: relative; aspect-ratio: 16 / 10; border-radius: 13px;
+    background:
+      linear-gradient(155deg, #FDFAF3 0%, var(--paper) 42%, var(--surface) 100%);
+    /* top-lip highlight + one tight directional shadow (down-right, tinted warm) — no bloom */
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 10px 14px 26px rgba(66,50,32,.16);
+    border: 1px solid var(--line);
+    padding: 20px 22px 16px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    transform: translateZ(18px);
+  }
+  /* real thickness: tonal side faces, self-coloured (not black shadow boxes) */
+  .cass-face { position: absolute; }
+  .cass-face.bottom { left: 0; right: 0; bottom: 0; height: 36px; border-radius: 0 0 13px 13px;
+    background: linear-gradient(#CDC0A8, #B7A98C); transform: rotateX(-90deg) translateZ(18px); transform-origin: bottom; }
+  .cass-face.right { top: 0; bottom: 0; right: 0; width: 36px; border-radius: 0 13px 13px 0;
+    background: linear-gradient(100deg, #D5C9B2, #BBAD90); transform: rotateY(90deg) translateZ(18px); transform-origin: right; }
+  .cass-screw { position: absolute; width: 7px; height: 7px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #B9AB8E, #8A7D64); box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); }
+  .cass-screw.tl { top: 9px; left: 9px } .cass-screw.tr { top: 9px; right: 9px }
+  .cass-screw.bl { bottom: 9px; left: 9px } .cass-screw.br { bottom: 9px; right: 9px }
+  .cass-window {
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+    background: radial-gradient(120% 120% at 50% 0%, #2C2620, #17130F);
+    border-radius: 9px; padding: 16px 18px; border: 1px solid #0d0b08;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,.5);
+  }
+  .cass-window .reel { border-color: #E9DFC9; width: 46px; height: 46px;
+    background: radial-gradient(circle at center, #17130F 26%, #E9DFC9 27%, #E9DFC9 34%, #17130F 35%); }
+  .cass-window .reel::before {
+    background: conic-gradient(#E9DFC9 0 14deg, transparent 14deg 120deg, #E9DFC9 120deg 134deg, transparent 134deg 240deg, #E9DFC9 240deg 254deg, transparent 254deg); }
+  .cass-tape { flex: 1; height: 3px; border-radius: 3px; background: linear-gradient(90deg, var(--accent), #c8412d); opacity: .85; max-width: 70px; }
+  .cass-label { display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+    background: #FBF6EA; border: 1px solid var(--line); border-radius: 4px; padding: 5px 12px; transform: rotate(-.6deg);
+    box-shadow: 0 1px 0 rgba(0,0,0,.03); }
+  .cass-label .side-a { font-family: var(--serif); font-size: 16px; color: var(--text); letter-spacing: .3px; }
+  .cass-label .side-b { font-family: var(--mono); font-size: 9.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+  /* the live pill floats in FRONT of the cassette (layered depth) */
+  .demo-stage .pill { position: relative; z-index: 2; margin-top: 22px; transform: translateZ(60px); }
+
+  /* ---------- scroll reveal (JS sets the hidden state via gsap.from; visible without JS) ---------- */
+  .reveal { will-change: transform, opacity; }
+
   /* ---------- responsive + motion ---------- */
   @media (max-width: 720px) {
     .grid-6, .grid-3, .steps { grid-template-columns: 1fr; }
@@ -228,11 +280,13 @@
     .pill { padding: 12px 18px 12px 14px; }
     .pill-text { font-size: 13px; }
     .eyebrow { white-space: normal; text-align: center; line-height: 1.7; }
+    .cassette { transform: rotateX(6deg) rotateY(-9deg); }  /* no pointer tilt on touch */
   }
   @media (prefers-reduced-motion: reduce) {
     .pill, .rec, .pill-wave i, .caret, .reel, .needle { animation: none; }
     .pill-wave i { transform: scaleY(.6); opacity: .85; }
     .lc:hover, .btn:hover { transform: none; }
+    .cassette { transition: none; }
     html { scroll-behavior: auto; }
   }
 </style>
@@ -251,25 +305,45 @@
   </nav>
 
   <header class="hero">
-    <span class="eyebrow">Free · Open Source · <b>On-device</b> <span class="ver">v0.7</span></span>
+    <span class="eyebrow">Free · Open Source · <b>On-device</b> <span class="ver">v0.12</span></span>
     <h1>Say it.<br /><em>It's typed.</em></h1>
     <p class="lede">Open-source dictation that never leaves your Mac. Hold <b>fn</b>, speak, release. On-device Whisper cleans your words and pastes them at the cursor.</p>
 
     <div class="demo-stage">
-      <div>
-        <div class="demo-cap">Hold <kbd>fn</kbd> and speak</div>
-        <div class="pill" aria-hidden="true">
-          <span class="rec"></span>
-          <span class="pill-wave">
-            <i style="height:10px;animation-delay:0s"></i>
-            <i style="height:20px;animation-delay:.22s"></i>
-            <i style="height:14px;animation-delay:.09s"></i>
-            <i style="height:26px;animation-delay:.31s"></i>
-            <i style="height:18px;animation-delay:.15s"></i>
-            <i style="height:24px;animation-delay:.05s"></i>
-            <i style="height:12px;animation-delay:.27s"></i>
-          </span>
-          <span class="pill-text"><span id="typed"></span><span class="caret" id="caret"></span></span>
+      <div class="cassette-stage" id="cassetteStage">
+        <div class="cassette" id="cassette">
+          <div class="cass-body">
+            <span class="cass-screw tl"></span><span class="cass-screw tr"></span>
+            <span class="cass-screw bl"></span><span class="cass-screw br"></span>
+            <div class="cass-label">
+              <span class="side-a">OpenWispr</span>
+              <span class="side-b">Side A · on-device</span>
+            </div>
+            <div class="cass-window" aria-hidden="true">
+              <span class="reel"></span>
+              <span class="cass-tape"></span>
+              <span class="reel"></span>
+            </div>
+          </div>
+          <div class="cass-face bottom"></div>
+          <div class="cass-face right"></div>
+        </div>
+
+        <div>
+          <div class="demo-cap">Hold <kbd>fn</kbd> and speak</div>
+          <div class="pill" aria-hidden="true">
+            <span class="rec"></span>
+            <span class="pill-wave">
+              <i style="height:10px;animation-delay:0s"></i>
+              <i style="height:20px;animation-delay:.22s"></i>
+              <i style="height:14px;animation-delay:.09s"></i>
+              <i style="height:26px;animation-delay:.31s"></i>
+              <i style="height:18px;animation-delay:.15s"></i>
+              <i style="height:24px;animation-delay:.05s"></i>
+              <i style="height:12px;animation-delay:.27s"></i>
+            </span>
+            <span class="pill-text"><span id="typed"></span><span class="caret" id="caret"></span></span>
+          </div>
         </div>
       </div>
     </div>
@@ -533,6 +607,8 @@
 
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/ScrollTrigger.min.js" defer></script>
 <script>
   // copy buttons
   document.querySelectorAll('.copy').forEach(function (btn) {
@@ -545,29 +621,93 @@
     });
   });
 
-  // hero pill typing demo
+  var REDUCE = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // hero pill: cycle real sentences word-by-word; waveform reacts (tall while "speaking")
   (function () {
     var el = document.getElementById('typed');
     var caret = document.getElementById('caret');
-    var phrase = '…move the launch to Thursday';
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      el.textContent = phrase;
-      caret.style.display = 'none';
-      return;
+    var bars = document.querySelectorAll('.pill-wave i');
+    var phrases = [
+      '…move the launch to Thursday',
+      '…ship the fix and tell the team',
+      '…book the room for 3pm',
+      '…reply: sounds good, see you then'
+    ];
+    if (REDUCE) { el.textContent = phrases[0]; caret.style.display = 'none'; return; }
+
+    function wave(active) {
+      bars.forEach(function (b) { b.style.animationPlayState = active ? 'running' : 'paused';
+        if (!active) b.style.transform = 'scaleY(.28)'; else b.style.transform = ''; });
     }
-    var i = 0, deleting = false;
+    var p = 0, i = 0, deleting = false;
+    wave(true);
     (function tick() {
+      var phrase = phrases[p];
       if (!deleting) {
         el.textContent = phrase.slice(0, ++i);
-        if (i === phrase.length) { deleting = true; return setTimeout(tick, 2600); }
-        setTimeout(tick, 55 + Math.random() * 60);
+        if (i === phrase.length) { deleting = true; wave(false); return setTimeout(tick, 2200); }
+        setTimeout(tick, 46 + Math.random() * 70);
       } else {
         el.textContent = phrase.slice(0, --i);
-        if (i === 0) { deleting = false; return setTimeout(tick, 900); }
-        setTimeout(tick, 18);
+        if (i === 0) { deleting = false; p = (p + 1) % phrases.length; wave(true); return setTimeout(tick, 650); }
+        setTimeout(tick, 16);
       }
     })();
   })();
+
+  // GSAP-driven layer: pointer-tilt on the cassette, scroll reveals, count-up, parallax, pinned beat.
+  // Deferred GSAP is ready by DOMContentLoaded. Everything here only ENHANCES already-visible content.
+  window.addEventListener('DOMContentLoaded', function () {
+    var cassette = document.getElementById('cassette');
+    var stage = document.getElementById('cassetteStage');
+
+    // pointer tilt (desktop, motion-ok) — refines the resting 3D tilt toward the cursor
+    if (cassette && stage && !REDUCE && window.matchMedia('(hover: hover)').matches) {
+      var rx = 9, ry = -15;
+      window.addEventListener('pointermove', function (e) {
+        var r = stage.getBoundingClientRect();
+        var dx = (e.clientX - (r.left + r.width / 2)) / r.width;
+        var dy = (e.clientY - (r.top + r.height / 2)) / r.height;
+        cassette.style.transform = 'rotateX(' + (rx - dy * 10) + 'deg) rotateY(' + (ry + dx * 16) + 'deg)';
+      });
+    }
+
+    if (REDUCE || !window.gsap || !window.ScrollTrigger) return;
+    gsap.registerPlugin(ScrollTrigger);
+
+    // 1. section reveal — gsap.from so the natural (visible) state is the fallback
+    gsap.utils.toArray('section').forEach(function (sec) {
+      var items = sec.querySelectorAll('.lc, .stat, .chip, .step, .transcript, .meet ul li, .faq details, h2, .kicker, .sub, .ba-arrow');
+      gsap.from(items.length ? items : [sec], {
+        y: 26, opacity: 0, duration: .6, ease: 'power2.out', stagger: .05,
+        scrollTrigger: { trigger: sec, start: 'top 82%', once: true }
+      });
+    });
+
+    // 2. stat count-up (keeps the ≈ prefix)
+    gsap.utils.toArray('.stat .counter').forEach(function (node) {
+      var target = parseInt(node.textContent.replace(/\D/g, ''), 10) || 0;
+      var obj = { v: 0 };
+      gsap.to(obj, {
+        v: target, duration: 1.1, ease: 'power1.out',
+        scrollTrigger: { trigger: node, start: 'top 88%', once: true },
+        onUpdate: function () { node.textContent = '≈' + Math.round(obj.v); },
+        onComplete: function () { node.textContent = '≈' + target; }
+      });
+    });
+
+    // 3+4. parallax depth + scroll "story beat" as ONE tween on the STAGE (GSAP owns the stage;
+    //    pointer-tilt owns the inner #cassette, so the two transform sources never collide).
+    //    A hard pin is avoided on purpose: the hero is taller than the viewport, so pinning it
+    //    would crop the fold — this scrubbed drift+turn reads as the same beat without the clip.
+    gsap.to('.cassette-stage', {
+      yPercent: -16, rotateY: 6, rotateX: 3, scale: 1.03, ease: 'none',
+      scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: .6 }
+    });
+
+    ScrollTrigger.refresh();
+  });
 </script>
 </body>
 </html>
