@@ -8,10 +8,13 @@ final class AppState: ObservableObject {
     @Published var status = "starting…"
     @Published var isRecording = false
     @Published var pane: HomePane = .dictations
+    @Published var modelReady = true          // false → dictation no-ops; show the reload banner
+    @Published var modelError: String?        // set when the speech model fails to load
 }
 
 extension Notification.Name {
     static let whisprModelChanged = Notification.Name("whispr.modelChanged")
+    static let whisprReloadModel = Notification.Name("whispr.reloadModel")
 }
 
 // "Paper Studio" design tokens — identical hex values to web/index.html. One source, every surface.
@@ -148,6 +151,21 @@ private struct DictationsPane: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
+            if let err = state.modelError {
+                HStack(spacing: 10) {
+                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Brand.coral)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Speech model didn't load").font(.system(size: 13, weight: .semibold)).foregroundStyle(Brand.text)
+                        Text(err).font(.caption).foregroundStyle(Brand.muted).lineLimit(2)
+                    }
+                    Spacer()
+                    Button("Reload") { NotificationCenter.default.post(name: .whisprReloadModel, object: nil) }
+                        .buttonStyle(.borderedProminent).tint(Brand.coral)
+                }
+                .padding(12)
+                .background(RoundedRectangle(cornerRadius: 10).fill(Brand.coralSoft))
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Brand.coral.opacity(0.4)))
+            }
             statsRow
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass").foregroundStyle(Brand.muted).font(.system(size: 12))

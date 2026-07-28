@@ -57,4 +57,14 @@ final class OnboardingModel: ObservableObject {
     func refreshAccessibility() {
         axGranted = Permissions.hasAccessibility
     }
+
+    /// Personalize screen: voice ≈ 4× typing, so ~3/4 of daily typing time is saved.
+    static func hoursSavedPerWeek(typingHoursPerDay: Double) -> Double {
+        typingHoursPerDay * 0.75 * 7
+    }
+
+    static func selfTest() {
+        assert(abs(hoursSavedPerWeek(typingHoursPerDay: 3) - 15.75) < 0.001, "hours-saved math wrong")
+        print("OnboardingModel.selfTest PASS")
+    }
 }

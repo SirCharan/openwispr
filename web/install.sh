@@ -1,7 +1,7 @@
 #!/bin/sh
 # OpenWispr installer — downloads the latest release, installs to /Applications,
 # and removes the quarantine flag so Gatekeeper does not block the unsigned build.
-# Usage: curl -fsSL https://whispr-black-chi.vercel.app/install.sh | sh
+# Usage: curl -fsSL https://openwispr.vercel.app/install.sh | sh
 set -eu
 
 ZIP_URL="https://github.com/SirCharan/openwispr/releases/latest/download/OpenWispr.zip"

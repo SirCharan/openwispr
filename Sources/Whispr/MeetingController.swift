@@ -72,6 +72,12 @@ final class MeetingController: ObservableObject {
             _ = mic.stop()
             return
         }
+        system.onUnexpectedStop = { [weak self] in
+            Task { @MainActor in
+                guard let self, self.isRunning, !self.isPaused else { return }
+                self.status = "the other side's audio stopped (permission or display change) — press Stop, then start again to continue"
+            }
+        }
         isRunning = true
         isPaused = false
         needsScreenRec = false
@@ -269,6 +275,10 @@ final class MeetingController: ObservableObject {
         guard !lines.isEmpty, !summarizing else { return }
         summarizing = true
         defer { summarizing = false }
+        guard await LLMClient.available() else {
+            summary = "_No AI provider configured. Install Ollama from ollama.com (then `ollama pull llama3.2`), or add an API key in the AI settings — then click Summarize again._"
+            return
+        }
         let transcript = lines.map { "\($0.speaker): \($0.text)" }.joined(separator: "\n")
         do {
             summary = try await LLMClient.complete(

@@ -10,6 +10,9 @@ final class SystemAudioRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
     private var stream: SCStream?
     private let buffer = ResamplingBuffer()
     private(set) var isRecording = false
+    /// Fired if the OS tears the stream down mid-meeting (permission revoked, display change).
+    /// Lets MeetingController surface it instead of silently freezing "Others".
+    var onUnexpectedStop: (@Sendable () -> Void)?
 
     func start() async throws {
         let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
@@ -56,7 +59,9 @@ final class SystemAudioRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
 
     func stream(_ stream: SCStream, didStopWithError error: Error) {
         NSLog("[Whispr] system-audio stream stopped: \(error)")
+        let wasRecording = isRecording
         isRecording = false
+        if wasRecording { onUnexpectedStop?() } // only if it died mid-capture, not on normal stop()
     }
 
     private static func pcmBuffer(from sampleBuffer: CMSampleBuffer) -> AVAudioPCMBuffer? {

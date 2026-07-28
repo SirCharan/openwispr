@@ -2,33 +2,71 @@ import SwiftUI
 import KeyboardShortcuts
 import AVFoundation
 
-/// First-run wizard, nine steps: welcome → move-to-Applications → mic → accessibility →
-/// screen recording (optional) → model download → try-it → setup (hotkey + login) → done.
+/// First-run wizard, twelve steps: welcome → move → mic → mic-test → accessibility →
+/// hotkey-test → screen recording → model download → setup → try-it → personalize → done.
 struct OnboardingView: View {
     @ObservedObject var model: OnboardingModel
     @State private var launchAtLogin = false
+    @State private var loginItemFailed = false
     @AppStorage("hotkeyMode") private var hotkeyMode = "fn"
 
+    // 4 phases, mapped monotonically by step index.
+    private let phases = ["Permissions", "Set up", "Try it", "Done"]
+    private func phaseIndex(_ step: Int) -> Int {
+        switch step { case 0...6: 0; case 7...8: 1; case 9...10: 2; default: 3 }
+    }
+
     var body: some View {
-        VStack(spacing: 24) {
-            switch model.step {
-            case 0: welcome
-            case 1: move
-            case 2: mic
-            case 3: accessibility
-            case 4: screenRecording
-            case 5: download
-            case 6: practice
-            case 7: setup
-            default: done
+        VStack(spacing: 18) {
+            stepper
+            VStack(spacing: 20) {
+                switch model.step {
+                case 0: welcome
+                case 1: move
+                case 2: mic
+                case 3: MicTestStep(onContinue: { model.step = 4 })
+                case 4: accessibility
+                case 5: HotkeyTestStep(hotkeyMode: $hotkeyMode, onContinue: { model.step = 6 })
+                case 6: screenRecording
+                case 7: download
+                case 8: setup
+                case 9: practice
+                case 10: PersonalizeStep(onContinue: { model.step = 11 })
+                default: done
+                }
             }
+            .frame(maxHeight: .infinity)
         }
-        .padding(40)
-        .frame(width: 460, height: 420)
+        .padding(32)
+        .frame(width: 480, height: 480)
         .background(Brand.bg)
         .tint(Brand.coral)
         .preferredColorScheme(.light) // Paper Studio chrome, consistent with the home window
         .onAppear { model.refreshAccessibility() }
+    }
+
+    private var stepper: some View {
+        let active = phaseIndex(model.step)
+        return VStack(spacing: 8) {
+            HStack(spacing: 6) {
+                ForEach(Array(phases.enumerated()), id: \.offset) { i, name in
+                    Text(name.uppercased())
+                        .font(.system(size: 10, weight: i == active ? .bold : .medium, design: .monospaced))
+                        .foregroundStyle(i == active ? Brand.coral : (i < active ? Brand.text : Brand.muted))
+                    if i < phases.count - 1 {
+                        Image(systemName: "chevron.right").font(.system(size: 7)).foregroundStyle(Brand.muted)
+                    }
+                }
+            }
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Brand.line).frame(height: 3)
+                    Capsule().fill(Brand.coral)
+                        .frame(width: geo.size.width * CGFloat(active + 1) / CGFloat(phases.count), height: 3)
+                }
+            }
+            .frame(height: 3)
+        }
     }
 
     private var welcome: some View {
@@ -77,11 +115,11 @@ struct OnboardingView: View {
                 : "OpenWispr needs Accessibility for the fn dictation key AND to paste at your cursor. Without it the app can't hear the trigger.",
             button: model.axGranted ? "Continue" : "Open Accessibility settings",
             action: {
-                if model.axGranted { model.step = 4 }
+                if model.axGranted { model.step = 5 }
                 else { model.requestAccessibility() }
             },
             // fn trigger dies without AX — only allow skipping when a custom shortcut is the trigger
-            secondary: (model.axGranted || hotkeyMode == "fn") ? nil : ("Skip for now", { model.step = 4 })
+            secondary: (model.axGranted || hotkeyMode == "fn") ? nil : ("Skip for now", { model.step = 5 })
         )
     }
 
@@ -96,10 +134,10 @@ struct OnboardingView: View {
                 : "OpenWispr can transcribe calls: your mic plus the other side's audio. macOS exposes system audio through Screen Recording permission. Only audio is used. Skip if you only dictate.",
             button: (model.screenRecGranted || model.screenRecPrompted) ? "Continue" : "Enable meeting capture",
             action: {
-                if model.screenRecGranted || model.screenRecPrompted { model.step = 5; model.onStartModel() }
+                if model.screenRecGranted || model.screenRecPrompted { model.step = 7; model.onStartModel() }
                 else { model.requestScreenRecording() }
             },
-            secondary: ("Skip — dictation only", { model.step = 5; model.onStartModel() })
+            secondary: ("Skip — dictation only", { model.step = 7; model.onStartModel() })
         )
     }
 
@@ -120,11 +158,41 @@ struct OnboardingView: View {
                     .frame(maxWidth: 320)
                 Text(model.modelReady ? "Ready" : "\(Int(model.downloadProgress * 100))%")
                     .font(.caption).foregroundStyle(.secondary)
-                Button("Continue") { model.step = 6 }
+                Button("Continue") { model.step = 8 }
                     .keyboardShortcut(.defaultAction)
                     .disabled(!model.modelReady)
             }
         }
+    }
+
+    private var setup: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "slider.horizontal.3").font(.system(size: 52)).foregroundStyle(.tint)
+            Text("Make it yours").font(.title2).bold()
+            Form {
+                Picker("Dictation trigger:", selection: $hotkeyMode) {
+                    ForEach(Triggers.list, id: \.id) { t in Text(t.label).tag(t.id) }
+                    Text("Custom shortcut").tag("custom")
+                }
+                .onChange(of: hotkeyMode) { _, _ in NotificationCenter.default.post(name: .whisprHotkeyModeChanged, object: nil) }
+                if hotkeyMode == "custom" {
+                    KeyboardShortcuts.Recorder("Shortcut:", name: .dictate)
+                }
+                Toggle("Start OpenWispr at login", isOn: $launchAtLogin)
+                    .onChange(of: launchAtLogin) { _, on in
+                        if LoginItem.set(on) { loginItemFailed = false }
+                        else { launchAtLogin = false; loginItemFailed = true }
+                    }
+            }
+            .formStyle(.columns)
+            .frame(maxWidth: 320)
+            Text(loginItemFailed ? "Couldn't set launch-at-login — move OpenWispr to Applications first."
+                 : hotkeyMode == "fn" ? "Tip: set System Settings → Keyboard → “Press 🌐 key to” = Do Nothing."
+                 : "Everything can be changed later in Settings.")
+                .font(.caption).foregroundStyle(loginItemFailed ? .orange : .secondary)
+            Button("Continue") { model.step = 9 }.keyboardShortcut(.defaultAction).controlSize(.large)
+        }
+        .onAppear { launchAtLogin = LoginItem.isEnabled }
     }
 
     private var practice: some View {
@@ -152,42 +220,15 @@ struct OnboardingView: View {
                 }
                 HStack {
                     Button("Try again") { model.practice = .idle }
-                    Button("Continue") { model.step = 7 }.keyboardShortcut(.defaultAction)
+                    Button("Continue") { model.step = 10 }.keyboardShortcut(.defaultAction)
                 }
             }
 
             if case .result = model.practice {} else {
-                Button("Skip") { model.step = 7 }
+                Button("Skip") { model.step = 10 }
                     .buttonStyle(.plain).font(.caption).foregroundStyle(.secondary)
             }
         }
-    }
-
-    private var setup: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "slider.horizontal.3").font(.system(size: 52)).foregroundStyle(.tint)
-            Text("Make it yours").font(.title2).bold()
-            Form {
-                Picker("Dictation trigger:", selection: $hotkeyMode) {
-                    ForEach(Triggers.list, id: \.id) { t in Text(t.label).tag(t.id) }
-                    Text("Custom shortcut").tag("custom")
-                }
-                .onChange(of: hotkeyMode) { _, _ in NotificationCenter.default.post(name: .whisprHotkeyModeChanged, object: nil) }
-                if hotkeyMode == "custom" {
-                    KeyboardShortcuts.Recorder("Shortcut:", name: .dictate)
-                }
-                Toggle("Start OpenWispr at login", isOn: $launchAtLogin)
-                    .onChange(of: launchAtLogin) { _, on in LoginItem.set(on) }
-            }
-            .formStyle(.columns)
-            .frame(maxWidth: 320)
-            Text(hotkeyMode == "fn"
-                 ? "Tip: set System Settings → Keyboard → “Press 🌐 key to” = Do Nothing."
-                 : "Everything can be changed later in Settings.")
-                .font(.caption).foregroundStyle(.secondary)
-            Button("Continue") { model.step = 8 }.keyboardShortcut(.defaultAction).controlSize(.large)
-        }
-        .onAppear { launchAtLogin = LoginItem.isEnabled }
     }
 
     private var done: some View {
@@ -214,6 +255,134 @@ struct OnboardingView: View {
             if let secondary {
                 Button(secondary.0, action: secondary.1).buttonStyle(.plain).font(.caption).foregroundStyle(.secondary)
             }
+        }
+    }
+}
+
+// MARK: - Live mic test ("do the bars move when you speak?")
+
+private struct MicTestStep: View {
+    let onContinue: () -> Void
+    @StateObject private var meter = MicLevelMeter()
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "waveform").font(.system(size: 48)).foregroundStyle(.tint)
+            Text("Test your microphone").font(.title2).bold()
+            Text("Say a few words — do the bars move?")
+                .multilineTextAlignment(.center).foregroundStyle(.secondary)
+            HStack(spacing: 5) {
+                ForEach(0..<14, id: \.self) { i in
+                    Capsule()
+                        .fill(Double(i) / 14 < meter.level ? Brand.coral : Brand.line)
+                        .frame(width: 7, height: 34)
+                }
+            }
+            .frame(height: 40)
+            .padding(.vertical, 6)
+            .animation(.easeOut(duration: 0.08), value: meter.level)
+            HStack(spacing: 12) {
+                Button("Change microphone") {
+                    NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.sound?input")!)
+                }
+                Button("Yes, looks good") { onContinue() }
+                    .keyboardShortcut(.defaultAction).controlSize(.large)
+            }
+        }
+        .onAppear { meter.start() }
+        .onDisappear { meter.stop() }
+    }
+}
+
+// MARK: - Hotkey press-test ("does it light up when you press it?")
+
+private struct HotkeyTestStep: View {
+    @Binding var hotkeyMode: String
+    let onContinue: () -> Void
+    @State private var monitor: ModifierKeyMonitor?
+    @State private var lit = false
+    @State private var everFired = false
+
+    private var isModifier: Bool { hotkeyMode != "custom" }
+    private var label: String { Triggers.trigger(for: hotkeyMode).label }
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "keyboard").font(.system(size: 48)).foregroundStyle(.tint)
+            Text("Test the dictation key").font(.title2).bold()
+            if isModifier {
+                Text("Press and hold the \(label) key — does it light up?")
+                    .multilineTextAlignment(.center).foregroundStyle(.secondary)
+                Text(label)
+                    .font(.system(size: 22, weight: .semibold, design: .monospaced))
+                    .frame(width: 120, height: 76)
+                    .background(RoundedRectangle(cornerRadius: 14).fill(lit ? Brand.coral.opacity(0.25) : Brand.surface))
+                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(lit ? Brand.coral : Brand.line, lineWidth: lit ? 2 : 1))
+                    .animation(.easeOut(duration: 0.1), value: lit)
+                Text(everFired ? "Detected — you're good." : "Nothing yet? Accessibility may be off (previous step).")
+                    .font(.caption).foregroundStyle(everFired ? Brand.coral : .secondary)
+                HStack(spacing: 12) {
+                    Picker("", selection: $hotkeyMode) {
+                        ForEach(Triggers.list, id: \.id) { t in Text(t.label).tag(t.id) }
+                        Text("Custom").tag("custom")
+                    }
+                    .labelsHidden().frame(maxWidth: 130)
+                    .onChange(of: hotkeyMode) { _, _ in
+                        NotificationCenter.default.post(name: .whisprHotkeyModeChanged, object: nil)
+                        everFired = false; lit = false; attach()
+                    }
+                    Button("Continue") { onContinue() }.keyboardShortcut(.defaultAction).controlSize(.large)
+                }
+            } else {
+                Text("You've chosen a custom shortcut. Set it below, then test it live once setup finishes.")
+                    .multilineTextAlignment(.center).foregroundStyle(.secondary)
+                KeyboardShortcuts.Recorder("Shortcut:", name: .dictate)
+                Button("Continue") { onContinue() }.keyboardShortcut(.defaultAction).controlSize(.large)
+            }
+        }
+        .onAppear { attach() }
+        .onDisappear { monitor = nil }
+    }
+
+    private func attach() {
+        guard isModifier else { monitor = nil; return }
+        monitor = ModifierKeyMonitor(
+            trigger: Triggers.trigger(for: hotkeyMode),
+            onKeyDown: { lit = true; everFired = true },
+            onKeyUp: { lit = false }
+        )
+    }
+}
+
+// MARK: - Personalize (speed + time saved)
+
+private struct PersonalizeStep: View {
+    let onContinue: () -> Void
+    @State private var typingHours = 3.0
+
+    var body: some View {
+        VStack(spacing: 18) {
+            Text("Speaking is ~4× faster").font(.title2).bold()
+            HStack(spacing: 16) {
+                speedBar("Typing", "≈40 wpm", 0.25, Brand.line)
+                speedBar("Your voice", "≈150 wpm", 1.0, Brand.coral)
+            }
+            Divider().frame(maxWidth: 240)
+            Text("If you type about \(Int(typingHours))h a day, OpenWispr could save you")
+                .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
+            Text("\(Int(OnboardingModel.hoursSavedPerWeek(typingHoursPerDay: typingHours).rounded())) hours a week")
+                .font(.system(size: 30, weight: .bold, design: .serif)).foregroundStyle(Brand.coral)
+            Slider(value: $typingHours, in: 1...8, step: 1).frame(maxWidth: 260)
+            Button("Continue") { onContinue() }.keyboardShortcut(.defaultAction).controlSize(.large)
+        }
+    }
+
+    private func speedBar(_ title: String, _ sub: String, _ frac: CGFloat, _ color: Color) -> some View {
+        VStack(spacing: 6) {
+            Text(title).font(.caption.bold())
+            RoundedRectangle(cornerRadius: 6).fill(color).frame(width: 90 * max(0.25, frac), height: 18)
+                .frame(width: 90, alignment: .leading)
+            Text(sub).font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
         }
     }
 }

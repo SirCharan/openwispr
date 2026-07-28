@@ -16,7 +16,7 @@ Inspired by [Muesli](https://github.com/Muesli-HQ/muesli) — this is the dictat
 **Fastest — one line in Terminal (no security prompt):**
 
 ```bash
-curl -fsSL https://whispr-black-chi.vercel.app/install.sh | sh
+curl -fsSL https://openwispr.vercel.app/install.sh | sh
 ```
 
 **Or manually:**
@@ -24,7 +24,7 @@ curl -fsSL https://whispr-black-chi.vercel.app/install.sh | sh
 1. Download `OpenWispr.dmg` (or unzip `OpenWispr.zip`).
 2. Move it to `/Applications`.
 3. First launch: macOS shows **"OpenWispr" Not Opened** (the build is not notarized). Click **Done**, open **System Settings → Privacy & Security**, scroll down to "OpenWispr was blocked", and click **Open Anyway**. Terminal alternative: `xattr -dr com.apple.quarantine /Applications/OpenWispr.app`. Later launches open normally.
-4. OpenWispr has no Dock icon — it lives in the menu bar (mic icon); clicking the app in Applications opens its home window (stats, transcripts, settings) and lives in the menu bar (microphone icon). The setup wizard runs on first launch.
+4. OpenWispr lives in the menu bar (mic icon), not the Dock. Clicking the app in Applications opens its home window (stats, transcripts, settings). The setup wizard runs on first launch.
 
 ## First launch
 

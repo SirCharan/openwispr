@@ -52,6 +52,9 @@ final class AppController {
                 await self.loadSelectedModel()
             }
         }
+        NotificationCenter.default.addObserver(forName: .whisprReloadModel, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor in await self?.loadSelectedModel() }
+        }
         // a second launch attempt (open -n) asks us to surface the home window before it exits
         DistributedNotificationCenter.default().addObserver(
             forName: .init("org.openwispr.showHome"), object: nil, queue: .main
@@ -156,10 +159,15 @@ final class AppController {
             modelReady = false
             try await transcriber.load(model: model, folder: folder)
             modelReady = true
+            state.modelReady = true
+            state.modelError = nil
             setStatus("ready — hold \(Self.hotkeyHint) to dictate")
             idleWidget.show()
         } catch {
-            setStatus("model error")
+            modelReady = false
+            state.modelReady = false
+            state.modelError = error.localizedDescription
+            setStatus("model error — open OpenWispr to reload")
             NSLog("[Whispr] model load failed: \(error)")
         }
     }

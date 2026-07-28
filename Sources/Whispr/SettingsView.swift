@@ -20,6 +20,7 @@ struct SettingsView: View {
     @AppStorage("accentHex") private var accentHex = "FF5D54"
     @AppStorage("appearance") private var appearance = "system"
     @State private var launchAtLogin = LoginItem.isEnabled
+    @State private var loginItemFailed = false
     @State private var accessibilityOK = Permissions.hasAccessibility
 
     var body: some View {
@@ -48,7 +49,14 @@ struct SettingsView: View {
                 Toggle("Floating mic button (click to dictate)", isOn: $showIdleWidget)
                     .onChange(of: showIdleWidget) { _, _ in NotificationCenter.default.post(name: .whisprHotkeyModeChanged, object: nil) }
                 Toggle("Launch at login", isOn: $launchAtLogin)
-                    .onChange(of: launchAtLogin) { _, on in LoginItem.set(on) }
+                    .onChange(of: launchAtLogin) { _, on in
+                        if LoginItem.set(on) { loginItemFailed = false }
+                        else { launchAtLogin = false; loginItemFailed = true } // register fails outside /Applications
+                    }
+                if loginItemFailed {
+                    Text("Couldn't set launch-at-login. Move OpenWispr to your Applications folder first.")
+                        .font(.caption).foregroundStyle(.orange)
+                }
             }
             Section("Transcript cleanup") {
                 Toggle("Remove filler words (um, uh, er)", isOn: $removeFillers)
