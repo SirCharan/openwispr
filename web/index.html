@@ -65,6 +65,7 @@
   /* speaker = Pac-Man chomping toward the field (yellow + espresso rim/mouth), coral sound-waves */
   .speaker { position: relative; flex-shrink: 0; width: clamp(88px, 18vw, 122px); }
   .speaker svg { width: 100%; height: auto; display: block; }
+  .pac { transform: scaleX(-1); }   /* mouth faces right, toward the text field */
   .pac .jaw { transform-box: view-box; transform-origin: 60px 60px; }
   .pac .jaw.top { animation: chompTop .38s ease-in-out infinite alternate; }
   .pac .jaw.bottom { animation: chompBottom .38s ease-in-out infinite alternate; }
