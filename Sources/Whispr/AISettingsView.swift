@@ -7,10 +7,24 @@ struct AISettingsView: View {
     @State private var apiKey = ""
     @State private var status = "checking…"
     @State private var ollamaModels: [String] = []
+    @State private var smart = Settings.smartCleanup
 
     var body: some View {
         Form {
-            Section("Provider") {
+            Section("On-device cleanup") {
+                Toggle("Smart cleanup — Apple's on-device model (free, no setup)", isOn: $smart)
+                    .onChange(of: smart) { _, on in
+                        Settings.smartCleanup = on
+                        if on, Settings.rewriteStyle == "off" { Settings.rewriteStyle = "clean" }
+                    }
+                    .disabled(!AppleLocalEngine.isAvailable())
+                Text(AppleLocalEngine.isAvailable()
+                     ? "Fixes grammar, punctuation and formatting on your Mac — nothing leaves the device, no key needed."
+                     : "Needs macOS 26 with Apple Intelligence. Until then, use a provider below.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+
+            Section("Provider (fallback / advanced)") {
                 Picker("AI provider", selection: $provider) {
                     ForEach(LLMProvider.allCases, id: \.self) { Text($0.label).tag($0) }
                 }

@@ -8,6 +8,7 @@ struct OnboardingView: View {
     @ObservedObject var model: OnboardingModel
     @State private var launchAtLogin = false
     @State private var loginItemFailed = false
+    @State private var smartCleanup = Settings.smartCleanup
     @AppStorage("hotkeyMode") private var hotkeyMode = "fn"
 
     // 4 phases, mapped monotonically by step index.
@@ -183,6 +184,13 @@ struct OnboardingView: View {
                         if LoginItem.set(on) { loginItemFailed = false }
                         else { launchAtLogin = false; loginItemFailed = true }
                     }
+                if AppleLocalEngine.isAvailable() {
+                    Toggle("Smart cleanup — fix grammar & formatting on-device", isOn: $smartCleanup)
+                        .onChange(of: smartCleanup) { _, on in
+                            Settings.smartCleanup = on
+                            if on, Settings.rewriteStyle == "off" { Settings.rewriteStyle = "clean" }
+                        }
+                }
             }
             .formStyle(.columns)
             .frame(maxWidth: 320)
