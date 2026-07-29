@@ -258,7 +258,17 @@ private struct DictationsPane: View {
 
     @State private var editingID: UUID?
     @State private var editText = ""
+    @State private var hoverID: UUID?
+    @State private var copiedID: UUID?
     @FocusState private var editFocused: Bool
+
+    private func copy(_ e: HistoryEntry) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(e.text, forType: .string)
+        copiedID = e.id
+        let id = e.id
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { if copiedID == id { copiedID = nil } }
+    }
 
     private func row(_ e: HistoryEntry) -> some View {
         HStack(alignment: .top, spacing: 14) {
@@ -282,11 +292,22 @@ private struct DictationsPane: View {
                     .onTapGesture(count: 2) { editingID = e.id; editText = e.text }
             }
             Spacer(minLength: 0)
+            if editingID != e.id, hoverID == e.id || copiedID == e.id {
+                Button(action: { copy(e) }) {
+                    Image(systemName: copiedID == e.id ? "checkmark" : "doc.on.doc")
+                        .font(.system(size: 12))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(copiedID == e.id ? Brand.coral : Brand.muted)
+                .help(copiedID == e.id ? "Copied" : "Copy transcript")
+                .padding(.top, 1)
+            }
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 10).fill(Brand.surface))
         .overlay(RoundedRectangle(cornerRadius: 10).stroke(editingID == e.id ? Brand.coral : Brand.line))
+        .onHover { hoverID = $0 ? e.id : (hoverID == e.id ? nil : hoverID) }
         .contextMenu {
             Button("Copy") {
                 NSPasteboard.general.clearContents()
