@@ -165,9 +165,23 @@
   .ba-note { color: var(--muted); font-size: 13.5px; margin-top: 20px; }
   .ba-note b { color: var(--text); }
 
-  /* ---------- feature grid ---------- */
-  .grid-6 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-  .no { font-family: var(--mono); font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: var(--accent); display: block; margin-bottom: 10px; }
+  /* ---------- feature tracklist (cassette J-card) ---------- */
+  .tracklist { display: grid; grid-template-columns: minmax(200px, 280px) 1fr; gap: 26px; align-items: start; }
+  .tl-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+  .tl-item { display: flex; align-items: baseline; gap: 12px; padding: 13px 12px; border-bottom: 1px solid var(--line); cursor: pointer; transition: background .15s ease, color .15s ease; }
+  .tl-no { font-family: var(--mono); font-size: 12px; color: var(--muted); letter-spacing: .1em; flex-shrink: 0; }
+  .tl-name { font-family: var(--serif); font-size: 17px; color: var(--text); }
+  .tracklist.js .tl-item:hover { background: var(--surface); }
+  .tracklist.js .tl-item.active { background: var(--accent-soft); }
+  .tracklist.js .tl-item.active .tl-no, .tracklist.js .tl-item.active .tl-name { color: var(--accent); }
+  .tl-body { display: block; color: var(--muted); font-size: 14px; line-height: 1.6; margin-top: 6px; flex-basis: 100%; }
+  .tracklist.js .tl-body { display: none; }
+  .tl-detail { position: relative; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 30px 30px 34px; overflow: hidden; display: none; min-height: 190px; }
+  .tracklist.js .tl-detail { display: block; }
+  .tl-counter { position: absolute; top: 4px; right: 20px; font-family: var(--mono); font-weight: 700; font-size: 92px; line-height: 1; color: var(--line); opacity: .55; pointer-events: none; user-select: none; }
+  .tl-badge { display: inline-block; position: relative; font-family: var(--mono); font-size: 11px; letter-spacing: .2em; text-transform: uppercase; background: var(--text); color: var(--bg); padding: 3px 10px; border-radius: 3px; margin-bottom: 14px; }
+  .tl-detail h3 { position: relative; font-family: var(--serif); font-weight: 400; font-size: 24px; margin-bottom: 12px; }
+  .tl-detail p { position: relative; color: var(--muted); font-size: 15.5px; line-height: 1.7; max-width: 44ch; }
 
   /* ---------- meetings ---------- */
   .meet { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; }
@@ -251,7 +265,14 @@
 
   /* ---------- responsive + motion ---------- */
   @media (max-width: 720px) {
-    .grid-6, .grid-3, .steps { grid-template-columns: 1fr; }
+    .grid-3, .steps { grid-template-columns: 1fr; }
+    /* tracklist → plain stacked list on mobile (the split panel is awkward narrow) */
+    .tracklist { grid-template-columns: 1fr; gap: 0; }
+    .tracklist.js .tl-body { display: block; }
+    .tracklist.js .tl-detail { display: none; }
+    .tracklist.js .tl-item { cursor: default; flex-wrap: wrap; }
+    .tracklist.js .tl-item.active { background: transparent; }
+    .tracklist.js .tl-item.active .tl-no, .tracklist.js .tl-item.active .tl-name { color: inherit; }
     .ba { grid-template-columns: 1fr; }
     .ba-arrow { transform: rotate(90deg); }
     .meet { grid-template-columns: 1fr; gap: 32px; }
@@ -579,39 +600,41 @@
     <p class="ba-note">Fillers stripped, sentences capitalized, <b>your vocabulary corrected</b>. All on-device, before it pastes.</p>
   </section>
 
-  <section>
-    <div class="kicker">Feature reel</div>
-    <h2>Six tracks. No B-sides.</h2>
-    <div class="grid-6">
-      <div class="lc">
-        <span class="no">Track 01</span>
-        <h3>100% on-device Whisper</h3>
-        <p>Runs on the Apple Neural Engine via WhisperKit. Your voice never touches a server. Works fully offline, no account, no bill.</p>
-      </div>
-      <div class="lc">
-        <span class="no">Track 02</span>
-        <h3>Live preview pill</h3>
-        <p>A floating pill shows your words as you speak, so you see the transcription before it lands. Release the key and it pastes at the cursor.</p>
-      </div>
-      <div class="lc">
-        <span class="no">Track 03</span>
-        <h3>Learns your words</h3>
-        <p>A custom dictionary plus corrections it remembers. Product names, teammates, jargon: teach it once and it types them right.</p>
-      </div>
-      <div class="lc">
-        <span class="no">Track 04</span>
-        <h3>Snippets &amp; cleanup</h3>
-        <p>Say a trigger phrase, get your saved snippet. Filler removal and punctuation cleanup are built in. Your clipboard is restored after pasting.</p>
-      </div>
-      <div class="lc">
-        <span class="no">Track 05</span>
-        <h3>13 languages</h3>
-        <p>Auto-detected or pinned. Speak Hindi and get Roman script, or have it translated to English. Code-switch mid-sentence, it keeps up.</p>
-      </div>
-      <div class="lc">
-        <span class="no">Track 06</span>
-        <h3>Stats &amp; history</h3>
-        <p>Every dictation saved and searchable, with your words-per-day stats. Per-app disable and sound cues keep it polite where you want quiet.</p>
+  <section id="features">
+    <div class="kicker">Features</div>
+    <h2>Six things, done right.</h2>
+    <div class="tracklist" id="tracklist">
+      <ol class="tl-list">
+        <li class="tl-item active" data-i="0" data-title="100% on-device Whisper">
+          <span class="tl-no">01</span><span class="tl-name">On-device Whisper</span>
+          <p class="tl-body">Runs on the Apple Neural Engine via WhisperKit. Your voice never touches a server. Works fully offline, no account, no bill.</p>
+        </li>
+        <li class="tl-item" data-i="1" data-title="Live preview pill">
+          <span class="tl-no">02</span><span class="tl-name">Live preview pill</span>
+          <p class="tl-body">A floating pill shows your words as you speak, so you see the transcription before it lands. Release the key and it pastes at the cursor.</p>
+        </li>
+        <li class="tl-item" data-i="2" data-title="Learns your words">
+          <span class="tl-no">03</span><span class="tl-name">Learns your words</span>
+          <p class="tl-body">A custom dictionary plus corrections it remembers. Product names, teammates, jargon: teach it once and it types them right.</p>
+        </li>
+        <li class="tl-item" data-i="3" data-title="Snippets &amp; cleanup">
+          <span class="tl-no">04</span><span class="tl-name">Snippets &amp; cleanup</span>
+          <p class="tl-body">Say a trigger phrase, get your saved snippet. Filler removal and punctuation cleanup are built in. Your clipboard is restored after pasting.</p>
+        </li>
+        <li class="tl-item" data-i="4" data-title="13 languages">
+          <span class="tl-no">05</span><span class="tl-name">13 languages</span>
+          <p class="tl-body">Auto-detected or pinned. Speak Hindi and get Roman script, or have it translated to English. Code-switch mid-sentence, it keeps up.</p>
+        </li>
+        <li class="tl-item" data-i="5" data-title="Stats &amp; history">
+          <span class="tl-no">06</span><span class="tl-name">Stats &amp; history</span>
+          <p class="tl-body">Every dictation saved and searchable, with your words-per-day stats. Per-app disable and sound cues keep it polite where you want quiet.</p>
+        </li>
+      </ol>
+      <div class="tl-detail" aria-live="polite">
+        <span class="tl-counter" id="tlCounter">01</span>
+        <span class="tl-badge" id="tlBadge">Track 01</span>
+        <h3 id="tlTitle">100% on-device Whisper</h3>
+        <p id="tlBody">Runs on the Apple Neural Engine via WhisperKit. Your voice never touches a server. Works fully offline, no account, no bill.</p>
       </div>
     </div>
   </section>
@@ -838,6 +861,39 @@
       })();
     }
     run();
+  })();
+
+  // feature tracklist: click 01–06 → detail swaps; auto-advances ~4s, click/hover wins.
+  // Fallback (no JS): every .tl-body stays visible inline, so all six features read as a list.
+  (function () {
+    var tl = document.getElementById('tracklist');
+    if (!tl) return;
+    var items = Array.prototype.slice.call(tl.querySelectorAll('.tl-item'));
+    var title = document.getElementById('tlTitle');
+    var body = document.getElementById('tlBody');
+    var badge = document.getElementById('tlBadge');
+    var counter = document.getElementById('tlCounter');
+    if (!items.length || !title || !body) return;
+    tl.classList.add('js');
+    var cur = 0, timer = null;
+    function show(i) {
+      cur = i;
+      items.forEach(function (el, k) { el.classList.toggle('active', k === i); });
+      var it = items[i];
+      var n = it.querySelector('.tl-no').textContent;
+      title.textContent = it.getAttribute('data-title') || it.querySelector('.tl-name').textContent;
+      body.textContent = it.querySelector('.tl-body').textContent;
+      badge.textContent = 'Track ' + n;
+      counter.textContent = n;
+    }
+    function stop() { if (timer) { clearInterval(timer); timer = null; } }
+    function start() { if (REDUCE) return; stop(); timer = setInterval(function () { show((cur + 1) % items.length); }, 4000); }
+    items.forEach(function (el, i) {
+      el.addEventListener('click', function () { show(i); stop(); start(); });
+      el.addEventListener('mouseenter', stop);
+      el.addEventListener('mouseleave', start);
+    });
+    show(0); start();
   })();
 
   // GSAP-driven layer: scroll reveals + stat count-up. Enhances already-visible content only.
