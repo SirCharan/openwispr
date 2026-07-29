@@ -29,8 +29,9 @@
     --mono: "Space Mono", ui-monospace, Menlo, monospace;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scroll-behavior: smooth; }
-  body { background: var(--bg); color: var(--text); font-family: var(--sys); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  html { scroll-behavior: smooth; overflow-x: hidden; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sys); line-height: 1.6; -webkit-font-smoothing: antialiased; overflow-x: hidden; max-width: 100%; }
+  img, svg { max-width: 100%; }
   p, li { font-size: 15.5px; line-height: 1.7; }
   .wrap { max-width: 1020px; margin: 0 auto; padding: 0 24px; }
   a { color: inherit; }
@@ -282,10 +283,15 @@
     .stat { width: 100%; }
     .stat-vs { align-self: center; padding: 2px 0; }
     .stat { padding: 24px 28px; flex: 1; }
-    .scene { flex-direction: column; gap: 18px; }
+    .scene { flex-direction: column; gap: 16px; }
     .field { max-width: 100%; width: 100%; }
-    .swaves { top: auto; bottom: -12px; right: 50%; transform: translateX(50%) rotate(90deg); }
-    .eyebrow { white-space: normal; text-align: center; line-height: 1.7; }
+    .swaves { display: none; }                       /* points sideways; field now stacks below */
+    .speaker { width: 78px; }
+    .eyebrow { white-space: normal; text-align: center; line-height: 1.7; font-size: 11px;
+      letter-spacing: .08em; padding: 6px 12px; gap: 6px; max-width: 100%; }
+    .cmd-row code { overflow-wrap: anywhere; word-break: break-word; }
+    .field-cap, .lede { overflow-wrap: anywhere; }
+    .hero { padding: 44px 0 40px; }
   }
   @media (prefers-reduced-motion: reduce) {
     .pac .jaw, .swaves i, .caret, .reel, .needle, .marquee-track { animation: none; }
