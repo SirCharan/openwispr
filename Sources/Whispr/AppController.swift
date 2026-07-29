@@ -57,6 +57,14 @@ final class AppController {
         NotificationCenter.default.addObserver(forName: .whisprReloadModel, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in await self?.loadSelectedModel() }
         }
+        // toast suggested vocabulary → open the Dictionary pane with it staged, never write silently
+        NotificationCenter.default.addObserver(forName: .whisprStageVocab, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor in
+                self?.state.pane = .dictionary
+                self?.showMainWindow()
+                NSApp.activate(ignoringOtherApps: true)
+            }
+        }
         // a second launch attempt (open -n) asks us to surface the home window before it exits
         DistributedNotificationCenter.default().addObserver(
             forName: .init("org.openwispr.showHome"), object: nil, queue: .main

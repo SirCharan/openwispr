@@ -44,7 +44,8 @@ final class CorrectionsWatcher {
     /// Pure diff core: same-word-count texts, changed word pairs with JW 0.70–0.95
     /// (close enough to be the same intended word, different enough to matter).
     /// ponytail: equal-word-count alignment only; alignment for insert/delete edits not needed for word fixes.
-    static func corrections(original: String, edited: String) -> [(from: String, to: String)] {
+    static func corrections(original: String, edited: String,
+                            isRealWord: (String) -> Bool = DictionaryStore.defaultIsRealWord) -> [(from: String, to: String)] {
         let a = original.split(separator: " ").map(String.init)
         let b = edited.split(separator: " ").map(String.init)
         guard a.count == b.count, a.count > 1 else { return [] }
@@ -55,28 +56,32 @@ final class CorrectionsWatcher {
         for (wa, wb) in zip(a, b) {
             let ca = wa.trimmingCharacters(in: trim), cb = wb.trimmingCharacters(in: trim)
             guard ca != cb, ca.count >= 3, cb.count >= 3 else { continue }
-            if ca.lowercased() == cb.lowercased() {
-                out.append((ca, cb)) // case-only fix ("delhi" → "Delhi") is a spelling correction too
-                continue
-            }
-            let jw = DictionaryStore.jaroWinkler(ca.lowercased(), cb.lowercased())
-            if jw >= 0.70 && jw <= 0.95 { out.append((ca, cb)) }
+            if DictionaryStore.isSpellingFix(ca, cb, isRealWord: isRealWord) { out.append((ca, cb)) }
         }
         return Array(out.prefix(3)) // don't spam
     }
 
     static func selfTest() {
+        let english: Set<String> = ["notes", "not", "able", "add", "words", "the", "cluster",
+                                    "today", "deploy", "flying", "to", "tomorrow", "hello", "world"]
+        let stub: (String) -> Bool = { english.contains($0.lowercased()) }
+
         let pairs = corrections(
             original: "deploy the kubernetis cluster today",
-            edited: "deploy the Kubernetes cluster today"
+            edited: "deploy the Kubernetes cluster today",
+            isRealWord: stub
         )
         assert(pairs.count == 1 && pairs[0].to == "Kubernetes", "correction diff failed: \(pairs)")
-        let none = corrections(original: "hello world foo", edited: "completely different text")
+        let none = corrections(original: "hello world foo", edited: "completely different text", isRealWord: stub)
         assert(none.isEmpty, "should reject dissimilar texts")
-        let same = corrections(original: "same text here", edited: "same text here")
+        let same = corrections(original: "same text here", edited: "same text here", isRealWord: stub)
         assert(same.isEmpty, "identical texts should yield nothing")
-        let caseOnly = corrections(original: "flying to delhi tomorrow", edited: "flying to Delhi tomorrow")
+        let caseOnly = corrections(original: "flying to delhi tomorrow", edited: "flying to Delhi tomorrow", isRealWord: stub)
         assert(caseOnly.count == 1 && caseOnly[0].to == "Delhi", "case-only fix should count: \(caseOnly)")
+        // The poisoning case: editing "not" to "notes" is a content change, never a spelling fix.
+        let content = corrections(original: "i am not able to add words",
+                                  edited: "i am notes able to add words", isRealWord: stub)
+        assert(content.isEmpty, "must not learn ordinary English words: \(content)")
         print("CorrectionsWatcher.selfTest PASS")
     }
 }

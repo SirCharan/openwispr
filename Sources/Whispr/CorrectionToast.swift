@@ -9,7 +9,7 @@ final class CorrectionToast {
     private var panel: NSPanel?
     private var dismissTimer: Timer?
 
-    /// Show up to 3 spelling corrections; Add appends the corrected words to the dictionary vocab.
+    /// Show up to 3 spelling corrections; Add stages them in the Dictionary pane for confirmation.
     func show(_ pairs: [(from: String, to: String)]) {
         guard !pairs.isEmpty else { return }
         hide()
@@ -17,13 +17,13 @@ final class CorrectionToast {
         let view = ToastView(
             pairs: shown,
             onAdd: { [weak self] in
-                var d = DictionaryStore.load()
-                for p in shown {
-                    d.vocab.removeAll { $0.lowercased() == p.to.lowercased() }
-                    d.vocab.append(p.to)
-                }
-                DictionaryStore.save(d)
-                Stats.noteFixAccepted(shown.count) // Insights: "fixes you taught it"
+                // Never write to dictionary.json here. An open Dictionary pane holds its own
+                // in-memory copy and saves on every change, so a direct write from the toast
+                // was silently reverted (and vice versa). The pane is the single writer.
+                NotificationCenter.default.post(
+                    name: .whisprStageVocab, object: nil,
+                    userInfo: ["terms": shown.map(\.to)]
+                )
                 self?.hide()
             },
             onClose: { [weak self] in self?.hide() }

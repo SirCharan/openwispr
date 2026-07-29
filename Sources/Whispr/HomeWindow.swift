@@ -15,6 +15,9 @@ final class AppState: ObservableObject {
 extension Notification.Name {
     static let whisprModelChanged = Notification.Name("whispr.modelChanged")
     static let whisprReloadModel = Notification.Name("whispr.reloadModel")
+    /// Correction toast proposing vocabulary terms. `userInfo["terms"]` is `[String]`.
+    /// The toast never writes to the dictionary itself — the user confirms in the Dictionary pane.
+    static let whisprStageVocab = Notification.Name("whispr.stageVocab")
 }
 
 // "Paper Studio" design tokens — identical hex values to web/index.html. One source, every surface.

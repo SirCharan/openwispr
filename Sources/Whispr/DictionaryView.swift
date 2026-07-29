@@ -5,10 +5,16 @@ final class DictionaryModel: ObservableObject {
     @Published var data: DictionaryData { didSet { DictionaryStore.save(data) } }
     init() { data = DictionaryStore.load() }
 
-    func addVocab(_ term: String) {
+    /// Returns false when nothing was added, so the caller can say why instead of
+    /// clearing the field and looking broken.
+    @discardableResult
+    func addVocab(_ term: String) -> Bool {
         let v = term.trimmingCharacters(in: .whitespaces)
-        guard !v.isEmpty, !data.vocab.contains(v) else { return }
+        guard !v.isEmpty else { return false }
+        // case-insensitive: "Notes" and "notes" are the same entry to the matcher
+        guard !data.vocab.contains(where: { $0.lowercased() == v.lowercased() }) else { return false }
         data.vocab.append(v)
+        return true
     }
     func removeVocab(_ term: String) { data.vocab.removeAll { $0 == term } }
     func updateVocab(old: String, new: String) {
@@ -17,10 +23,13 @@ final class DictionaryModel: ObservableObject {
         if data.vocab.contains(v) { data.vocab.remove(at: i) } // edited into an existing term = merge
         else { data.vocab[i] = v }
     }
-    func addReplacement(from: String, to: String) {
+    @discardableResult
+    func addReplacement(from: String, to: String) -> Bool {
         let f = from.trimmingCharacters(in: .whitespaces)
-        guard !f.isEmpty else { return }
+        guard !f.isEmpty else { return false }
+        guard !data.replacements.contains(where: { $0.from.lowercased() == f.lowercased() }) else { return false }
         data.replacements.append(Replacement(from: f, to: to.trimmingCharacters(in: .whitespaces)))
+        return true
     }
     func removeReplacement(id: UUID) { data.replacements.removeAll { $0.id == id } }
     func updateReplacement(id: UUID, from: String, to: String) {
@@ -44,38 +53,96 @@ struct DictionaryView: View {
     @State private var editText = ""
     @State private var editTo = ""
     @FocusState private var editFocused: Bool
+    @State private var vocabNote: String?        // "Already in the list" etc.
+    @State private var replacementNote: String?
+    @State private var staged: [String] = []     // terms queued by the correction toast
+    @State private var fromToast = false         // the field currently holds a toast suggestion
+
+    private let stagedPrompt = "Suggested from your edit — press Add to keep it."
+    private var vocabTrimmed: String { newVocab.trimmingCharacters(in: .whitespaces) }
+    private var fromTrimmed: String { newFrom.trimmingCharacters(in: .whitespaces) }
 
     var body: some View {
         Form {
             Section("Vocabulary — fuzzy-corrected toward these spellings") {
                 HStack {
                     TextField("e.g. WhisperKit, Kubernetes", text: $newVocab)
-                        .onSubmit { model.addVocab(newVocab); newVocab = "" }
-                    Button("Add") { model.addVocab(newVocab); newVocab = "" }
+                        .onSubmit { commitNewVocab() }
+                    Button("Add") { commitNewVocab() }
+                        .disabled(vocabTrimmed.isEmpty)
+                }
+                if let vocabNote {
+                    Text(vocabNote).foregroundStyle(.secondary).font(.caption)
                 }
                 if model.data.vocab.isEmpty {
                     Text("No terms yet.").foregroundStyle(.secondary).font(.caption)
                 } else {
-                    List {
-                        ForEach(model.data.vocab, id: \.self) { term in vocabRow(term) }
-                    }.frame(minHeight: 80)
+                    ScrollViewReader { proxy in
+                        List {
+                            ForEach(model.data.vocab, id: \.self) { term in vocabRow(term).id(term) }
+                        }
+                        .frame(minHeight: 160)
+                        .onChange(of: model.data.vocab) { _, list in
+                            if let last = list.last { proxy.scrollTo(last, anchor: .bottom) }
+                        }
+                    }
                 }
             }
             Section("Replacements — exact phrase → text") {
                 HStack {
                     TextField("from", text: $newFrom)
+                        .onSubmit { commitNewReplacement() }
                     Image(systemName: "arrow.right").foregroundStyle(.secondary)
                     TextField("to", text: $newTo)
-                    Button("Add") { model.addReplacement(from: newFrom, to: newTo); newFrom = ""; newTo = "" }
+                        .onSubmit { commitNewReplacement() }
+                    Button("Add") { commitNewReplacement() }
+                        .disabled(fromTrimmed.isEmpty)
+                }
+                if let replacementNote {
+                    Text(replacementNote).foregroundStyle(.secondary).font(.caption)
                 }
                 if !model.data.replacements.isEmpty {
                     List {
                         ForEach(model.data.replacements) { r in replacementRow(r) }
-                    }.frame(minHeight: 80)
+                    }.frame(minHeight: 160)
                 }
             }
         }
         .formStyle(.grouped)
+        .onReceive(NotificationCenter.default.publisher(for: .whisprStageVocab)) { note in
+            let terms = (note.userInfo?["terms"] as? [String]) ?? []
+            guard !terms.isEmpty else { return }
+            newVocab = terms[0]
+            staged = Array(terms.dropFirst())
+            fromToast = true
+            vocabNote = stagedPrompt
+        }
+    }
+
+    // MARK: - Adding
+
+    private func commitNewVocab() {
+        guard !vocabTrimmed.isEmpty else { return }
+        if model.addVocab(newVocab) {
+            if fromToast { Stats.noteFixAccepted(1) }   // Insights: "fixes you taught it"
+            if staged.isEmpty {
+                newVocab = ""; vocabNote = nil; fromToast = false
+            } else {
+                newVocab = staged.removeFirst()
+                vocabNote = stagedPrompt
+            }
+        } else {
+            vocabNote = "\"\(vocabTrimmed)\" is already in the list."   // keep the text so it can be edited
+        }
+    }
+
+    private func commitNewReplacement() {
+        guard !fromTrimmed.isEmpty else { return }
+        if model.addReplacement(from: newFrom, to: newTo) {
+            newFrom = ""; newTo = ""; replacementNote = nil
+        } else {
+            replacementNote = "\"\(fromTrimmed)\" already has a replacement."
+        }
     }
 
     // MARK: rows
@@ -93,7 +160,16 @@ struct DictionaryView: View {
                 }
         } else {
             EditableRow(
-                label: { Text(term) },
+                label: {
+                    HStack(spacing: 6) {
+                        Text(term)
+                        if DictionaryStore.defaultIsRealWord(term), term == term.lowercased() {
+                            Image(systemName: "exclamationmark.triangle")
+                                .foregroundStyle(.secondary)
+                                .help("Common English word — it can capture similar words in your dictations. Consider removing it.")
+                        }
+                    }
+                },
                 edit: { beginVocabEdit(term) },
                 delete: { model.removeVocab(term) }
             )
@@ -165,10 +241,11 @@ private struct EditableRow<Label: View>: View {
                 Button(action: edit) { Image(systemName: "pencil") }
                     .buttonStyle(.plain).foregroundStyle(.secondary)
                     .help("Edit")
-                Button(action: delete) { Image(systemName: "xmark.circle.fill") }
-                    .buttonStyle(.plain).foregroundStyle(.secondary)
-                    .help("Delete")
             }
+            // Delete stays visible: hidden until hover, it reads as a missing feature.
+            Button(action: delete) { Image(systemName: "xmark.circle.fill") }
+                .buttonStyle(.plain).foregroundStyle(.secondary)
+                .help("Delete")
         }
         .contentShape(Rectangle())
         .onHover { hovering = $0 }
