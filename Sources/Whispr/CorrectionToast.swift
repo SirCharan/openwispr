@@ -23,6 +23,7 @@ final class CorrectionToast {
                     d.vocab.append(p.to)
                 }
                 DictionaryStore.save(d)
+                Stats.noteFixAccepted(shown.count) // Insights: "fixes you taught it"
                 self?.hide()
             },
             onClose: { [weak self] in self?.hide() }

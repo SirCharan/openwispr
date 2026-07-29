@@ -34,6 +34,7 @@ enum Brand {
 
 enum HomePane: String, CaseIterable, Identifiable {
     case dictations = "Dictations"
+    case insights = "Insights"
     case meetings = "Meetings"
     case importFile = "Transcribe File"
     case dictionary = "Dictionary"
@@ -48,6 +49,7 @@ enum HomePane: String, CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .dictations: "mic"
+        case .insights: "chart.bar.xaxis"
         case .meetings: "person.2.wave.2"
         case .importFile: "waveform.badge.plus"
         case .dictionary: "character.book.closed"
@@ -129,6 +131,7 @@ struct HomeView: View {
     private var detail: some View {
         switch pane {
         case .dictations: DictationsPane(state: state, search: $search)
+        case .insights: InsightsPane()
         case .meetings: MeetingView(controller: meetingController).background(Brand.bg)
         case .importFile: FileImportView(model: importModel).background(Brand.bg)
         case .dictionary: DictionaryView()

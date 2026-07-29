@@ -26,6 +26,8 @@ final class AppController {
     private var modelReady = false
     /// Samples of the last dictation whose transcription failed — recoverable via "Retry".
     private var failedSamples: [Float]?
+    /// Bundle id of the app being dictated into (captured at start, used for Insights per-app stats).
+    private var dictatingInto: String?
     private let modelManager = ModelManager()
     private let transcriber = Transcriber()
     private let recorder = AudioRecorder()
@@ -228,6 +230,7 @@ final class AppController {
             setStatus("disabled for \(AppMonitor.name(for: front))")
             return
         }
+        dictatingInto = AppMonitor.frontmostBundleID() // for the Insights per-app breakdown
         axWatcher.stop() // new dictation supersedes the previous watch
         do {
             try recorder.start()
@@ -332,7 +335,9 @@ final class AppController {
                     setStatus("ready (no speech)")
                 } else {
                     Paster.deliver(text, autoPaste: Settings.autoPaste)
-                    HistoryStore.add(text, seconds: Double(samples.count) / 16000)
+                    let seconds = Double(samples.count) / 16000
+                    HistoryStore.add(text, seconds: seconds)
+                    Stats.record(words: text.split(separator: " ").count, seconds: seconds, appBundleID: dictatingInto)
                     corrections.notePaste(text)
                     if Settings.autoPaste {
                         // watch the field we pasted into for in-place spelling fixes (~0.7s: after Cmd+V lands)
