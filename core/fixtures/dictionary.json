@@ -1,0 +1,118 @@
+{
+  "_comment": "Shared by core/src/dictionary.rs tests and DictionaryStore.selfTest (Swift). The English list is a stub so the gate needs no system spell checker.",
+  "english": [
+    "i", "am", "not", "able", "to", "add", "words", "notable",
+    "note", "notes", "noted", "nodes", "node", "mode", "model", "models",
+    "mobile", "open", "whisper", "love", "and", "deploy", "delta",
+    "the", "see", "here", "hello"
+  ],
+  "apply": [
+    {
+      "_why": "exact-case snap plus a fuzzy correction in one pass",
+      "vocab": ["WhisperKit", "Kubernetes"],
+      "replacements": [{ "from": "gonna", "to": "going to" }],
+      "input": "i love whisperkit and kubernetis",
+      "expected": "i love WhisperKit and Kubernetes"
+    },
+    {
+      "_why": "exact phrase replacement",
+      "vocab": ["WhisperKit", "Kubernetes"],
+      "replacements": [{ "from": "gonna", "to": "going to" }],
+      "input": "i'm gonna deploy",
+      "expected": "i'm going to deploy"
+    },
+    {
+      "_why": "regression: this came out as 'i am notes able to add words' before the real-word guard",
+      "vocab": ["notes", "model", "mobile", "Stratzy", "OpenWispr", "Obsidian"],
+      "input": "i am not able to add words",
+      "expected": "i am not able to add words"
+    },
+    {
+      "vocab": ["notes", "model", "mobile", "Stratzy", "OpenWispr", "Obsidian"],
+      "input": "note",
+      "expected": "note"
+    },
+    {
+      "vocab": ["notes", "model", "mobile", "Stratzy", "OpenWispr", "Obsidian"],
+      "input": "noted",
+      "expected": "noted"
+    },
+    {
+      "vocab": ["notes", "model", "mobile", "Stratzy", "OpenWispr", "Obsidian"],
+      "input": "nodes",
+      "expected": "nodes"
+    },
+    {
+      "vocab": ["notes", "model", "mobile", "Stratzy", "OpenWispr", "Obsidian"],
+      "input": "mode",
+      "expected": "mode"
+    },
+    {
+      "vocab": ["notes", "model", "mobile", "Stratzy", "OpenWispr", "Obsidian"],
+      "input": "models",
+      "expected": "models"
+    },
+    {
+      "_why": "recall: a phonetic near-miss of a proper noun is still corrected",
+      "vocab": ["notes", "model", "mobile", "Stratzy", "OpenWispr", "Obsidian"],
+      "input": "stratsea",
+      "expected": "Stratzy"
+    },
+    {
+      "vocab": ["WhisperKit", "Kubernetes"],
+      "input": "kubernetis",
+      "expected": "Kubernetes"
+    },
+    {
+      "_why": "two spoken words merge into one vocabulary term",
+      "vocab": ["notes", "model", "mobile", "Stratzy", "OpenWispr", "Obsidian"],
+      "input": "strat see",
+      "expected": "Stratzy"
+    },
+    {
+      "vocab": ["notes", "model", "mobile", "Stratzy", "OpenWispr", "Obsidian"],
+      "input": "open whisper",
+      "expected": "OpenWispr"
+    },
+    {
+      "_why": "a merge keeps the trailing punctuation",
+      "vocab": ["notes", "model", "mobile", "Stratzy", "OpenWispr", "Obsidian"],
+      "input": "open whisper.",
+      "expected": "OpenWispr."
+    },
+    {
+      "_why": "a merge must not swallow the next word when the first already matches alone",
+      "vocab": ["notes", "model", "mobile", "Stratzy", "OpenWispr", "Obsidian"],
+      "input": "stratsea and here",
+      "expected": "Stratzy and here"
+    },
+    {
+      "_why": "casing snap beats the real-word guard: 'delta' is both ordinary English and a vocabulary entry",
+      "vocab": ["Delta"],
+      "input": "delta",
+      "expected": "Delta"
+    },
+    {
+      "_why": "no vocabulary means no fuzzy pass at all",
+      "vocab": [],
+      "replacements": [{ "from": "gonna", "to": "going to" }],
+      "input": "i'm gonna deploy",
+      "expected": "i'm going to deploy"
+    }
+  ],
+  "jaro_winkler": [
+    { "a": "kubernetis", "b": "kubernetes", "min": 0.9 },
+    { "a": "cat", "b": "dog", "max": 0.5 }
+  ],
+  "phonetic_equal": [
+    ["Stratzy", "stratsea"],
+    ["Kubernetes", "kubernetis"]
+  ],
+  "phonetic_differ": [["cat", "dog"]],
+  "spelling_fix": [
+    { "_why": "case-only fix is worth learning", "from": "delhi", "to": "Delhi", "expected": true },
+    { "_why": "edited into ordinary English is a content change", "from": "not", "to": "notes", "expected": false },
+    { "_why": "proper-noun correction is worth learning", "from": "stratsea", "to": "Stratzy", "expected": true },
+    { "_why": "no edit at all", "from": "hello", "to": "hello", "expected": false }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "_comment": "Shared by core/src/snippets.rs tests and SnippetStore.selfTest (Swift).",
+  "cases": [
+    {
+      "snippets": [{ "from": "my email", "to": "ck@example.com" }],
+      "input": "please send my email now",
+      "expected": "please send ck@example.com now"
+    },
+    {
+      "_why": "the trigger matches whatever case it was spoken in; the expansion keeps its own",
+      "snippets": [{ "from": "my email", "to": "ck@example.com" }],
+      "input": "Please send My Email now",
+      "expected": "Please send ck@example.com now"
+    },
+    {
+      "_why": "a trigger inside a longer word must not expand",
+      "snippets": [{ "from": "sig", "to": "Charandeep Kapoor" }],
+      "input": "the signal is strong",
+      "expected": "the signal is strong"
+    },
+    {
+      "_why": "an empty trigger is skipped rather than matching everywhere",
+      "snippets": [{ "from": "", "to": "boom" }],
+      "input": "untouched text",
+      "expected": "untouched text"
+    },
+    {
+      "_why": "several snippets apply in order",
+      "snippets": [
+        { "from": "my email", "to": "ck@example.com" },
+        { "from": "my site", "to": "openwispr.vercel.app" }
+      ],
+      "input": "my email and my site",
+      "expected": "ck@example.com and openwispr.vercel.app"
+    }
+  ]
+}

@@ -63,8 +63,15 @@ final class OnboardingModel: ObservableObject {
         typingHoursPerDay * 0.75 * 7
     }
 
+    /// Driven by the `hours_saved_per_week` table in `core/fixtures/stats.json`, so the number
+    /// shown in onboarding is the same on macOS and Windows.
     static func selfTest() {
-        assert(abs(hoursSavedPerWeek(typingHoursPerDay: 3) - 15.75) < 0.001, "hours-saved math wrong")
-        print("OnboardingModel.selfTest PASS")
+        let f = Fixtures.load(Stats.FixtureFile.self, "stats.json")
+        Fixtures.expect(!f.hoursSavedPerWeek.isEmpty, "stats.json has no hoursSavedPerWeek cases")
+        for c in f.hoursSavedPerWeek {
+            Fixtures.expectClose(hoursSavedPerWeek(typingHoursPerDay: c.typingHoursPerDay), c.expected,
+                                 "hoursSavedPerWeek(\(c.typingHoursPerDay))")
+        }
+        print("OnboardingModel.selfTest PASS (\(f.hoursSavedPerWeek.count) cases)")
     }
 }

@@ -1,0 +1,52 @@
+name: ci-macos
+
+# Guards the macOS build against changes made for the Windows port. The shared parity
+# fixtures only mean something if both platforms are held to them, so a change under
+# core/fixtures/ runs this job as well as ci-windows.
+on:
+  push:
+    branches: [master]
+    paths:
+      - "Sources/**"
+      - "core/fixtures/**"
+      - "Package.swift"
+      - "build_app.sh"
+      - ".github/workflows/ci-macos.yml"
+  pull_request:
+    paths:
+      - "Sources/**"
+      - "core/fixtures/**"
+      - "Package.swift"
+      - "build_app.sh"
+      - ".github/workflows/ci-macos.yml"
+  workflow_dispatch:
+
+jobs:
+  swift:
+    name: swift build + selftest
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache SwiftPM
+        uses: actions/cache@v4
+        with:
+          path: |
+            .build
+            ~/Library/Caches/org.swift.swiftpm
+          key: spm-${{ runner.os }}-${{ hashFiles('Package.swift') }}
+          restore-keys: spm-${{ runner.os }}-
+
+      - name: Build the app bundle
+        run: ./build_app.sh
+
+      # Reads core/fixtures/, the same tables the Rust core is tested against. A divergence
+      # between the two implementations fails here and in ci-windows, not in a user's dictation.
+      - name: Run headless selftest
+        run: |
+          set -o pipefail
+          ./build/OpenWispr.app/Contents/MacOS/OpenWispr --selftest 2>&1 | tee selftest.log
+          grep -q "OnboardingModel.selfTest PASS" selftest.log
+
+      - name: Assert the fixtures shipped inside the bundle
+        run: test -f build/OpenWispr.app/Contents/Resources/fixtures/dictionary.json

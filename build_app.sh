@@ -21,6 +21,10 @@ mkdir -p "$APP_BUNDLE/Contents/MacOS" "$APP_BUNDLE/Contents/Resources"
 cp "$BIN" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 cp Resources/Info.plist "$APP_BUNDLE/Contents/Info.plist"
 [ -f Resources/AppIcon.icns ] && cp Resources/AppIcon.icns "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
+
+# Parity fixtures drive --selftest. They ship inside the bundle so the gate works on an
+# installed copy, not only from a checkout. The Rust core reads the same files.
+cp -R core/fixtures "$APP_BUNDLE/Contents/Resources/fixtures"
 printf 'APPL????' > "$APP_BUNDLE/Contents/PkgInfo"
 
 # Prefer the stable "Whispr Dev" identity: TCC grants (mic/accessibility/screen) survive

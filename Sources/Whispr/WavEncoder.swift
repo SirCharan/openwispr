@@ -45,12 +45,12 @@ enum WavEncoder {
     /// Assert-based self-check (ponytail: one runnable check for the money/parse path).
     static func selfTest() {
         let wav = encode([0, 0.5, -0.5, 1.0, -1.0], sampleRate: 16000)
-        assert(wav.count == 44 + 5 * 2, "header+data size wrong: \(wav.count)")
-        assert(Array(wav[0..<4]) == Array("RIFF".utf8), "missing RIFF")
-        assert(Array(wav[8..<12]) == Array("WAVE".utf8), "missing WAVE")
+        precondition(wav.count == 44 + 5 * 2, "header+data size wrong: \(wav.count)")
+        precondition(Array(wav[0..<4]) == Array("RIFF".utf8), "missing RIFF")
+        precondition(Array(wav[8..<12]) == Array("WAVE".utf8), "missing WAVE")
         // sampleRate field at offset 24, little-endian == 16000
         let sr = UInt32(wav[24]) | UInt32(wav[25]) << 8 | UInt32(wav[26]) << 16 | UInt32(wav[27]) << 24
-        assert(sr == 16000, "sampleRate wrong: \(sr)")
+        precondition(sr == 16000, "sampleRate wrong: \(sr)")
         print("WavEncoder.selfTest PASS")
     }
 }

@@ -2123,6 +2123,8 @@ dependencies = [
 name = "openwispr-core"
 version = "0.15.0"
 dependencies = [
+ "chrono",
+ "regex",
  "serde",
  "serde_json",
 ]

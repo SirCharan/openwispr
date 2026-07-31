@@ -31,10 +31,31 @@ enum SnippetStore {
         return s
     }
 
+    /// Driven by `core/fixtures/snippets.json`, the same table the Rust port is held to.
+    ///
+    /// The fixtures carry bare from/to pairs. `Replacement` cannot decode them directly: its
+    /// `id` has a default value, and Swift's synthesized decoder ignores defaults and demands
+    /// the key. So the pair is decoded on its own and mapped.
+    private struct FixtureFile: Decodable {
+        struct Pair: Decodable {
+            let from: String
+            let to: String
+        }
+        struct Case: Decodable {
+            let snippets: [Pair]
+            let input: String
+            let expected: String
+        }
+        let cases: [Case]
+    }
+
     static func selfTest() {
-        let snips = [Replacement(from: "my email", to: "ck@example.com")]
-        let a = apply("please send my email now", snips)
-        assert(a == "please send ck@example.com now", "snippet expand failed: \(a)")
-        print("SnippetStore.selfTest PASS")
+        let f = Fixtures.load(FixtureFile.self, "snippets.json")
+        Fixtures.expect(!f.cases.isEmpty, "snippets.json has no cases")
+        for c in f.cases {
+            let snips = c.snippets.map { Replacement(from: $0.from, to: $0.to) }
+            Fixtures.expectEqual(apply(c.input, snips), c.expected, "apply(\(c.input))")
+        }
+        print("SnippetStore.selfTest PASS (\(f.cases.count) cases)")
     }
 }

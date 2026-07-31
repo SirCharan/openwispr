@@ -60,10 +60,10 @@ actor Diarizer {
             Segment(speaker: "Speaker A", start: 0, end: 10),
             Segment(speaker: "Speaker B", start: 10, end: 20),
         ]
-        assert(assign(start: 2, end: 8, segments: segs) == "Speaker A", "assign A failed")
-        assert(assign(start: 12, end: 18, segments: segs) == "Speaker B", "assign B failed")
-        assert(assign(start: 8, end: 13, segments: segs) == "Speaker B", "max-overlap failed") // 2s A vs 3s B
-        assert(assign(start: 25, end: 30, segments: segs) == nil, "no-overlap should be nil")
+        precondition(assign(start: 2, end: 8, segments: segs) == "Speaker A", "assign A failed")
+        precondition(assign(start: 12, end: 18, segments: segs) == "Speaker B", "assign B failed")
+        precondition(assign(start: 8, end: 13, segments: segs) == "Speaker B", "max-overlap failed") // 2s A vs 3s B
+        precondition(assign(start: 25, end: 30, segments: segs) == nil, "no-overlap should be nil")
         print("Diarizer.selfTest PASS")
     }
 }

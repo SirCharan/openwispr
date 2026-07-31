@@ -9,9 +9,9 @@ enum Transliterate {
 
     static func selfTest() {
         let a = toLatin("कैसे हो")
-        assert(a.lowercased().contains("kaise"), "transliteration wrong: \(a)")
+        precondition(a.lowercased().contains("kaise"), "transliteration wrong: \(a)")
         let b = toLatin("hello world") // Latin input passes through
-        assert(b == "hello world", "latin passthrough wrong: \(b)")
+        precondition(b == "hello world", "latin passthrough wrong: \(b)")
         print("Transliterate.selfTest PASS")
     }
 }

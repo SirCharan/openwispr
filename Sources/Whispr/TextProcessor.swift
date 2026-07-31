@@ -70,18 +70,32 @@ enum TextProcessor {
         return out.joined(separator: " ")
     }
 
+    /// Driven by `core/fixtures/text.json`, the same table the Rust port is held to.
+    private struct FixtureFile: Decodable {
+        struct ProcessCase: Decodable {
+            let input: String
+            let removeFillers: Bool
+            let cleanUp: Bool
+            let expected: String
+        }
+        struct RepeatCase: Decodable {
+            let input: String
+            let expected: String
+        }
+        let process: [ProcessCase]
+        let collapseRepeats: [RepeatCase]
+    }
+
     static func selfTest() {
-        let opts = Options(removeFillers: true, cleanUp: true)
-        let a = process("um so uh this is , uh a test", options: opts)
-        assert(a == "So this is, a test", "filler/cleanup wrong: \(a)")
-        let b = process("i think i can . uh yes", options: opts)
-        assert(b == "I think I can. Yes", "cap/I wrong: \(b)")
-        let c = process("hello world", options: Options(removeFillers: false, cleanUp: false))
-        assert(c == "hello world", "passthrough wrong: \(c)")
-        let d = collapseRepeats("आपको आपको आपको नहीं")
-        assert(d == "आपको नहीं", "repeat collapse wrong: \(d)")
-        let e = collapseRepeats("no no never")
-        assert(e == "no no never", "double preserved wrong: \(e)")
-        print("TextProcessor.selfTest PASS")
+        let f = Fixtures.load(FixtureFile.self, "text.json")
+        Fixtures.expect(!f.process.isEmpty, "text.json has no process cases")
+        for c in f.process {
+            let got = process(c.input, options: Options(removeFillers: c.removeFillers, cleanUp: c.cleanUp))
+            Fixtures.expectEqual(got, c.expected, "process(\(c.input))")
+        }
+        for c in f.collapseRepeats {
+            Fixtures.expectEqual(collapseRepeats(c.input), c.expected, "collapseRepeats(\(c.input))")
+        }
+        print("TextProcessor.selfTest PASS (\(f.process.count + f.collapseRepeats.count) cases)")
     }
 }

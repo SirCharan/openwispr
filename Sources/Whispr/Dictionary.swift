@@ -244,54 +244,68 @@ enum DictionaryStore {
         return (m / Double(s1.count) + m / Double(s2.count) + (m - t) / m) / 3
     }
 
+    /// Driven by `core/fixtures/dictionary.json`, the same table the Rust port is held to.
+    /// Every threshold here was tuned against a real dictation failure, so the cases are
+    /// the contract: a change that moves any of them changes what users get.
+    private struct FixtureFile: Decodable {
+        struct Pair: Decodable {
+            let from: String
+            let to: String
+        }
+        struct ApplyCase: Decodable {
+            let vocab: [String]?
+            let replacements: [Pair]?
+            let input: String
+            let expected: String
+        }
+        struct ScoreCase: Decodable {
+            let a: String
+            let b: String
+            let min: Double?
+            let max: Double?
+        }
+        struct FixCase: Decodable {
+            let from: String
+            let to: String
+            let expected: Bool
+        }
+        /// Stub English so the gate is deterministic and needs no AppKit spell checker.
+        let english: [String]
+        let apply: [ApplyCase]
+        let jaroWinkler: [ScoreCase]
+        let phoneticEqual: [[String]]
+        let phoneticDiffer: [[String]]
+        let spellingFix: [FixCase]
+    }
+
     static func selfTest() {
-        // Stub English so the gate is deterministic and needs no AppKit spell checker.
-        let english: Set<String> = ["i", "am", "not", "able", "to", "add", "words", "notable",
-                                    "note", "noted", "nodes", "node", "mode", "model", "models",
-                                    "mobile", "open", "whisper", "love", "and", "deploy", "delta",
-                                    "the", "see", "here"]
+        let f = Fixtures.load(FixtureFile.self, "dictionary.json")
+        let english = Set(f.english.map { $0.lowercased() })
         let stub: (String) -> Bool = { english.contains($0.lowercased()) }
 
-        var d = DictionaryData()
-        d.vocab = ["WhisperKit", "Kubernetes"]
-        d.replacements = [Replacement(from: "gonna", to: "going to")]
-        let a = apply("i love whisperkit and kubernetis", d, isRealWord: stub)
-        assert(a.contains("WhisperKit"), "exact-case snap failed: \(a)")
-        assert(a.contains("Kubernetes"), "fuzzy correct failed: \(a)")
-        let b = apply("i'm gonna deploy", d, isRealWord: stub)
-        assert(b == "i'm going to deploy", "replacement failed: \(b)")
-        assert(jaroWinkler("kubernetis", "kubernetes") > 0.9, "JW too low")
-        assert(jaroWinkler("cat", "dog") < 0.5, "JW too high")
-
-        // Regression: ordinary English must survive a vocab full of look-alikes.
-        // This exact sentence came out as "i am notes able to add words" before the guard.
-        var e = DictionaryData()
-        e.vocab = ["notes", "model", "mobile", "Stratzy", "OpenWispr", "Obsidian"]
-        let plain = apply("i am not able to add words", e, isRealWord: stub)
-        assert(plain == "i am not able to add words", "real words must survive: \(plain)")
-        for w in ["note", "noted", "nodes", "mode", "models"] {
-            let out = apply(w, e, isRealWord: stub)
-            assert(out == w, "\(w) must not be rewritten: \(out)")
+        Fixtures.expect(!f.apply.isEmpty, "dictionary.json has no apply cases")
+        for c in f.apply {
+            var d = DictionaryData()
+            d.vocab = c.vocab ?? []
+            d.replacements = (c.replacements ?? []).map { Replacement(from: $0.from, to: $0.to) }
+            Fixtures.expectEqual(apply(c.input, d, isRealWord: stub), c.expected, "apply(\(c.input))")
         }
-
-        // Recall: phonetic near-misses of proper nouns must still be corrected.
-        assert(apply("stratsea", e, isRealWord: stub) == "Stratzy", "phonetic single-word failed")
-        assert(apply("kubernetis", d, isRealWord: stub) == "Kubernetes", "phonetic single-word failed")
-        assert(apply("strat see", e, isRealWord: stub) == "Stratzy", "two-word merge failed")
-        assert(apply("open whisper", e, isRealWord: stub) == "OpenWispr", "two-word merge failed")
-        assert(apply("open whisper.", e, isRealWord: stub) == "OpenWispr.", "merge dropped punctuation")
-        // a merge must never swallow the next word when the first already matches on its own
-        assert(apply("stratsea and here", e, isRealWord: stub) == "Stratzy and here",
-               "merge swallowed a word: \(apply("stratsea and here", e, isRealWord: stub))")
-
-        // Casing snap still wins over the guard: "delta" is a real word AND a vocab entry.
-        var k = DictionaryData()
-        k.vocab = ["Delta"]
-        assert(apply("delta", k, isRealWord: stub) == "Delta", "case snap must beat the real-word guard")
-
-        assert(phoneticKey("Stratzy") == phoneticKey("stratsea"), "phonetic key mismatch")
-        assert(phoneticKey("Kubernetes") == phoneticKey("kubernetis"), "phonetic key mismatch")
-        assert(phoneticKey("cat") != phoneticKey("dog"), "phonetic key collision")
-        print("DictionaryStore.selfTest PASS")
+        for c in f.jaroWinkler {
+            let score = jaroWinkler(c.a, c.b)
+            if let min = c.min { Fixtures.expect(score > min, "jw(\(c.a), \(c.b)) = \(score), want > \(min)") }
+            if let max = c.max { Fixtures.expect(score < max, "jw(\(c.a), \(c.b)) = \(score), want < \(max)") }
+        }
+        for pair in f.phoneticEqual {
+            Fixtures.expectEqual(phoneticKey(pair[0]), phoneticKey(pair[1]), "phonetic keys should match")
+        }
+        for pair in f.phoneticDiffer {
+            Fixtures.expect(phoneticKey(pair[0]) != phoneticKey(pair[1]),
+                            "phonetic keys should differ: \(pair[0]) vs \(pair[1])")
+        }
+        for c in f.spellingFix {
+            Fixtures.expectEqual(isSpellingFix(c.from, c.to, isRealWord: stub), c.expected,
+                                 "isSpellingFix(\(c.from), \(c.to))")
+        }
+        print("DictionaryStore.selfTest PASS (\(f.apply.count) apply cases)")
     }
 }

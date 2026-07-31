@@ -95,19 +95,19 @@ final class AXEditWatcher {
                       before: "notes:\ndeploy kubernetis now",
                       after: "notes:\ndeploy Kubernetes now please",
                       isRealWord: stub)
-        assert(p.count == 1 && p[0].to == "Kubernetes", "AX pair failed: \(p)")
+        precondition(p.count == 1 && p[0].to == "Kubernetes", "AX pair failed: \(p)")
         // pure rephrase: nothing similar appeared → no pairs
         let r = pairs(transcript: "send the report",
                       before: "send the report",
                       after: "ship the document",
                       isRealWord: stub)
-        assert(r.isEmpty, "rephrase should not pair: \(r)")
+        precondition(r.isEmpty, "rephrase should not pair: \(r)")
         // a content edit toward ordinary English must never be learned
         let c = pairs(transcript: "i am not able",
                       before: "i am not able",
                       after: "i am notes able",
                       isRealWord: stub)
-        assert(c.isEmpty, "must not learn ordinary English words: \(c)")
+        precondition(c.isEmpty, "must not learn ordinary English words: \(c)")
         print("AXEditWatcher.selfTest PASS")
     }
 }

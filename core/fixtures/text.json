@@ -1,0 +1,59 @@
+{
+  "_comment": "Shared by core/src/text.rs tests and TextProcessor.selfTest (Swift). Edit once, both platforms are held to it.",
+  "process": [
+    {
+      "input": "um so uh this is , uh a test",
+      "remove_fillers": true,
+      "clean_up": true,
+      "expected": "So this is, a test"
+    },
+    {
+      "input": "i think i can . uh yes",
+      "remove_fillers": true,
+      "clean_up": true,
+      "expected": "I think I can. Yes"
+    },
+    {
+      "input": "hello world",
+      "remove_fillers": false,
+      "clean_up": false,
+      "expected": "hello world"
+    },
+    {
+      "input": "  leading and   trailing   ",
+      "remove_fillers": false,
+      "clean_up": true,
+      "expected": "Leading and trailing"
+    },
+    {
+      "input": "i said hi ; then i left",
+      "remove_fillers": false,
+      "clean_up": true,
+      "expected": "I said hi; then I left"
+    },
+    {
+      "input": "does it work ? yes ! it does",
+      "remove_fillers": false,
+      "clean_up": true,
+      "expected": "Does it work? Yes! It does"
+    },
+    {
+      "input": "the ipad is idle",
+      "remove_fillers": false,
+      "clean_up": true,
+      "expected": "The ipad is idle"
+    },
+    {
+      "input": "um uh er",
+      "remove_fillers": true,
+      "clean_up": true,
+      "expected": ""
+    }
+  ],
+  "collapse_repeats": [
+    { "input": "आपको आपको आपको नहीं", "expected": "आपको नहीं" },
+    { "input": "no no never", "expected": "no no never" },
+    { "input": "the the the the end", "expected": "the end" },
+    { "input": "one two three", "expected": "one two three" }
+  ]
+}

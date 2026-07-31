@@ -219,11 +219,11 @@ final class MeetingController: ObservableObject {
         func line(_ s: String, _ t0: Double, _ t1: Double) -> MeetingLine {
             MeetingLine(speaker: "x", text: s, start: t0, end: t1)
         }
-        assert(isEchoPair(line("we should add a card for delta global", 7, 12),
+        precondition(isEchoPair(line("we should add a card for delta global", 7, 12),
                           line("We should add a card for the delta global here", 7, 13)), "echo not caught")
-        assert(!isEchoPair(line("we should add a card", 7, 12),
+        precondition(!isEchoPair(line("we should add a card", 7, 12),
                            line("now we can go to the call", 7, 12)), "different text flagged")
-        assert(!isEchoPair(line("we should add a card", 0, 5),
+        precondition(!isEchoPair(line("we should add a card", 0, 5),
                            line("we should add a card", 40, 45)), "non-overlapping flagged")
         print("MeetingController.selfTest PASS")
     }

@@ -44,10 +44,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: whisper-asr
-      - name: Report toolchain
-        run: |
-          cmake --version
-          cl 2>&1 | Select-Object -First 1
+      # Only CMake needs to be on PATH. Do not probe for `cl` here: cargo's cc crate locates
+      # MSVC through vswhere, so `cl` is absent from a plain shell and probing it fails the job
+      # before the build it was meant to describe ever runs.
+      - name: Report CMake version
+        run: cmake --version
       - name: Build with the asr feature
         run: cargo build -p openwispr --features asr --release
       - name: Assert whisper.cpp produced a static library

@@ -1,0 +1,105 @@
+{
+  "_comment": "Shared by core/src/stats.rs tests and Stats.selfTest / OnboardingModel.selfTest (Swift). Dates are expressed as days_ago so the cases never go stale.",
+  "hours_saved_per_week": [
+    { "typing_hours_per_day": 3, "expected": 15.75 },
+    { "typing_hours_per_day": 0, "expected": 0 },
+    { "typing_hours_per_day": 8, "expected": 42 }
+  ],
+  "streak": [
+    {
+      "_why": "today and yesterday count; the 5-day-old entry does not extend the run",
+      "entries": [
+        { "days_ago": 0, "text": "one two three", "seconds": 3 },
+        { "days_ago": 1, "text": "four five", "seconds": 60 },
+        { "days_ago": 5, "text": "six" }
+      ],
+      "expected": 2
+    },
+    {
+      "_why": "a gap older than yesterday means no current streak",
+      "entries": [{ "days_ago": 5, "text": "six" }],
+      "expected": 0
+    },
+    {
+      "_why": "yesterday alone still counts, so an unused morning does not zero it",
+      "entries": [{ "days_ago": 1, "text": "yesterday only", "seconds": 4 }],
+      "expected": 1
+    },
+    { "_why": "no entries at all", "entries": [], "expected": 0 }
+  ],
+  "avg_wpm": [
+    {
+      "_why": "two words in 60 seconds is 2 wpm",
+      "entries": [{ "days_ago": 1, "text": "four five", "seconds": 60 }],
+      "expected": 2
+    },
+    {
+      "_why": "entries under one second are excluded as unreliable",
+      "entries": [{ "days_ago": 0, "text": "fast burst here", "seconds": 0.5 }],
+      "expected": 0
+    },
+    {
+      "_why": "an entry with no duration cannot contribute",
+      "entries": [{ "days_ago": 0, "text": "no duration recorded" }],
+      "expected": 0
+    },
+    {
+      "_why": "4 words in 2 seconds is 120 wpm",
+      "entries": [{ "days_ago": 0, "text": "one two three four", "seconds": 2 }],
+      "expected": 120
+    },
+    {
+      "_why": "averaged across entries: 6 words over 3 minutes is 2 wpm",
+      "entries": [
+        { "days_ago": 0, "text": "one two three", "seconds": 90 },
+        { "days_ago": 1, "text": "four five six", "seconds": 90 }
+      ],
+      "expected": 2
+    }
+  ],
+  "time_saved_minutes": [
+    {
+      "_why": "400 words spoken at 100 wpm takes 4 min; typed at 40 wpm takes 10 min",
+      "words": 400,
+      "wpm": 100,
+      "expected": 6
+    },
+    { "_why": "nothing said, nothing saved", "words": 0, "wpm": 100, "expected": 0 },
+    {
+      "_why": "speaking slower than typing floors at zero rather than going negative",
+      "words": 100,
+      "wpm": 10,
+      "expected": 0
+    }
+  ],
+  "heat_bucket": [
+    { "words": 0, "max": 100, "expected": 0 },
+    { "words": 5, "max": 100, "expected": 1 },
+    { "words": 20, "max": 100, "expected": 2 },
+    { "words": 50, "max": 100, "expected": 3 },
+    { "words": 100, "max": 100, "expected": 4 },
+    { "_why": "no busiest day yet", "words": 10, "max": 0, "expected": 0 }
+  ],
+  "daily_series": [
+    {
+      "_why": "zero-filled, oldest first, exactly the requested length",
+      "days": 3,
+      "map_days_ago": { "0": 12 },
+      "expected_len": 3,
+      "expected_first": 0,
+      "expected_last": 12
+    },
+    {
+      "days": 7,
+      "map_days_ago": { "6": 4, "0": 9 },
+      "expected_len": 7,
+      "expected_first": 4,
+      "expected_last": 9
+    }
+  ],
+  "longest_streak": [
+    { "_why": "three in a row, then a gap", "days_ago": [0, 1, 2, 9], "expected": 3 },
+    { "_why": "a single active day", "days_ago": [3], "expected": 1 },
+    { "_why": "no active days", "days_ago": [], "expected": 0 }
+  ]
+}

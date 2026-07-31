@@ -7,6 +7,9 @@ enum Whispr {
 
         // --- headless gates (loop engineering) ---
         if args.contains("--selftest") {
+            // A failed check trips a precondition, which traps. Buffered stdout would be lost
+            // with it, leaving CI with an exit code and no idea which check failed.
+            setvbuf(stdout, nil, _IONBF, 0)
             WavEncoder.selfTest()
             TextProcessor.selfTest()
             DictionaryStore.selfTest()

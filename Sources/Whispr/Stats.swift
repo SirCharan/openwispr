@@ -148,29 +148,93 @@ enum Stats {
         return best
     }
 
+    /// Driven by `core/fixtures/stats.json`, the same table the Rust port is held to.
+    /// Dates are expressed as `daysAgo` offsets so the cases never go stale.
+    struct FixtureFile: Decodable {
+        struct HoursCase: Decodable {
+            let typingHoursPerDay: Double
+            let expected: Double
+        }
+        struct EntrySpec: Decodable {
+            let daysAgo: Int
+            let text: String
+            let seconds: Double?
+        }
+        struct StreakCase: Decodable {
+            let entries: [EntrySpec]
+            let expected: Int
+        }
+        struct SavedCase: Decodable {
+            let words: Int
+            let wpm: Int
+            let typingWpm: Int?
+            let expected: Double
+        }
+        struct HeatCase: Decodable {
+            let words: Int
+            let max: Int
+            let expected: Int
+        }
+        struct SeriesCase: Decodable {
+            let days: Int
+            let mapDaysAgo: [String: Int]
+            let expectedLen: Int
+            let expectedFirst: Int
+            let expectedLast: Int
+        }
+        struct LongestCase: Decodable {
+            let daysAgo: [Int]
+            let expected: Int
+        }
+        let hoursSavedPerWeek: [HoursCase]
+        let streak: [StreakCase]
+        let avgWpm: [StreakCase]
+        let timeSavedMinutes: [SavedCase]
+        let heatBucket: [HeatCase]
+        let dailySeries: [SeriesCase]
+        let longestStreak: [LongestCase]
+    }
+
+    private static func entries(_ specs: [FixtureFile.EntrySpec], now: Date) -> [HistoryEntry] {
+        let cal = Calendar.current
+        return specs.map {
+            HistoryEntry(date: cal.date(byAdding: .day, value: -$0.daysAgo, to: now)!,
+                         text: $0.text, seconds: $0.seconds)
+        }
+    }
+
     static func selfTest() {
+        let f = Fixtures.load(FixtureFile.self, "stats.json")
         let cal = Calendar.current
         let now = Date()
-        let today = HistoryEntry(text: "one two three", seconds: 3)
-        let yest = HistoryEntry(date: cal.date(byAdding: .day, value: -1, to: now)!, text: "four five", seconds: 60)
-        let gap = HistoryEntry(date: cal.date(byAdding: .day, value: -5, to: now)!, text: "six")
-        assert(streak(entries: [today, yest, gap], now: now) == 2, "streak wrong")
-        assert(streak(entries: [gap], now: now) == 0, "gap streak should be 0")
-        assert(avgWPM(entries: [yest]) == 2, "wpm wrong: \(avgWPM(entries: [yest]))")
+        let key = { (back: Int) in dayKey(cal.date(byAdding: .day, value: -back, to: now)!) }
 
-        // time saved: 400 words at 100 wpm spoken = 4 min; typed at 40 wpm = 10 min → 6 saved
-        assert(abs(timeSavedMinutes(words: 400, wpm: 100) - 6) < 0.001, "timeSaved wrong")
-        assert(timeSavedMinutes(words: 0, wpm: 100) == 0, "timeSaved empty wrong")
-        assert(timeSavedMinutes(words: 100, wpm: 10) == 0, "slower-than-typing should floor at 0")
-        // heat buckets
-        assert(heatBucket(words: 0, max: 100) == 0 && heatBucket(words: 5, max: 100) == 1
-               && heatBucket(words: 50, max: 100) == 3 && heatBucket(words: 100, max: 100) == 4, "heatBucket wrong")
-        // series is zero-filled, oldest first, right length
-        let series = dailySeries(days: 3, now: now, map: [dayKey(now): 12])
-        assert(series.count == 3 && series.last?.words == 12 && series.first?.words == 0, "dailySeries wrong")
-        // longest streak across a gap
-        let k = { (back: Int) in dayKey(cal.date(byAdding: .day, value: -back, to: now)!) }
-        assert(longestStreak(map: [k(0): 5, k(1): 5, k(2): 5, k(9): 5]) == 3, "longestStreak wrong")
-        print("Stats.selfTest PASS")
+        for c in f.streak {
+            Fixtures.expectEqual(streak(entries: entries(c.entries, now: now), now: now), c.expected, "streak")
+        }
+        for c in f.avgWpm {
+            Fixtures.expectEqual(avgWPM(entries: entries(c.entries, now: now)), c.expected, "avgWPM")
+        }
+        for c in f.timeSavedMinutes {
+            let got = timeSavedMinutes(words: c.words, wpm: c.wpm, typingWPM: c.typingWpm ?? 40)
+            Fixtures.expectClose(got, c.expected, "timeSavedMinutes(\(c.words), \(c.wpm))")
+        }
+        for c in f.heatBucket {
+            Fixtures.expectEqual(heatBucket(words: c.words, max: c.max), c.expected, "heatBucket")
+        }
+        for c in f.dailySeries {
+            var map: [String: Int] = [:]
+            for (back, words) in c.mapDaysAgo { map[key(Int(back)!)] = words }
+            let series = dailySeries(days: c.days, now: now, map: map)
+            Fixtures.expectEqual(series.count, c.expectedLen, "dailySeries length")
+            Fixtures.expectEqual(series.first?.words ?? -1, c.expectedFirst, "dailySeries oldest")
+            Fixtures.expectEqual(series.last?.words ?? -1, c.expectedLast, "dailySeries newest")
+        }
+        for c in f.longestStreak {
+            var map: [String: Int] = [:]
+            for back in c.daysAgo { map[key(back)] = 5 }
+            Fixtures.expectEqual(longestStreak(map: map), c.expected, "longestStreak")
+        }
+        print("Stats.selfTest PASS (\(f.streak.count + f.avgWpm.count + f.timeSavedMinutes.count) cases)")
     }
 }
