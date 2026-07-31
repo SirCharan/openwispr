@@ -7,9 +7,13 @@
 
 mod audio;
 mod cli;
+mod dictation;
 mod hardware;
+mod hook;
 mod models;
+mod paste;
 mod selftest;
+mod trigger;
 
 #[cfg(feature = "asr")]
 mod asr;

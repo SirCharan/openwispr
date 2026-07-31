@@ -384,6 +384,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "clipboard-win"
+version = "5.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bde03770d3df201d4fb868f2c9c59e66a3e4e2bd06692a0fe701e7103c7e84d4"
+dependencies = [
+ "error-code",
+]
+
+[[package]]
 name = "cmake"
 version = "0.1.58"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -844,6 +853,12 @@ dependencies = [
  "serde_core",
  "typeid",
 ]
+
+[[package]]
+name = "error-code"
+version = "3.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dea2df4cf52843e0452895c455a1a2cfbb842a1e7329671acf418fdc53ed4c59"
 
 [[package]]
 name = "fastrand"
@@ -2287,6 +2302,7 @@ checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
 name = "openwispr"
 version = "0.15.0"
 dependencies = [
+ "clipboard-win",
  "cpal",
  "openwispr-core",
  "serde",
@@ -2297,6 +2313,7 @@ dependencies = [
  "ureq",
  "whisper-rs",
  "windows 0.62.2",
+ "windows-core 0.62.2",
 ]
 
 [[package]]

@@ -4,7 +4,7 @@
 
 #[cfg(feature = "asr")]
 use crate::asr;
-use crate::{audio, hardware, models, selftest};
+use crate::{audio, dictation, hardware, models, selftest, trigger};
 
 pub fn run(args: &[String]) -> Option<i32> {
     let flag = args.first()?;
@@ -74,6 +74,24 @@ pub fn run(args: &[String]) -> Option<i32> {
             attach_console();
             Some(download_model(args.get(1).map(String::as_str)))
         }
+        // Hold-to-talk without any UI. This is how the hook, the paste path and per-app
+        // disable get verified on real hardware: no CI runner has an interactive desktop.
+        "--dictate" => {
+            attach_console();
+            let trigger = match args.get(1) {
+                Some(id) => match trigger::Trigger::from_id(id) {
+                    Some(t) => t,
+                    None => {
+                        eprintln!(
+                            "unknown trigger: {id}\ntry right-ctrl, right-alt, caps-lock, or key-<hex>"
+                        );
+                        return Some(2);
+                    }
+                },
+                None => trigger::Trigger::RightCtrl,
+            };
+            Some(dictation::run_headless(trigger))
+        }
         "--hardware" => {
             attach_console();
             let hw = hardware::probe();
@@ -109,6 +127,7 @@ Run with no arguments to start the app. Headless flags:
   --transcribe-file <wav> [model]  transcribe a 16 kHz mono WAV and print the text
   --download-model [id]            download a whisper model (no id lists them)
   --hardware                       print what this PC can run and which model to use
+  --dictate [trigger]              hold-to-talk with no window (default right-ctrl)
   --version                        print the version
   --help                           print this message";
 
