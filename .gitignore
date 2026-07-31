@@ -5,3 +5,13 @@ build/
 .swiftpm/
 Package.resolved
 .vercel
+
+# Rust workspace (core/ + windows/src-tauri) shares one target dir at the repo root
+/target/
+
+# Windows app frontend
+windows/node_modules/
+windows/dist/
+
+# Tauri writes these per build host — regenerated, not source
+windows/src-tauri/gen/schemas/

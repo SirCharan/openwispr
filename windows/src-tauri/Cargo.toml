@@ -1,0 +1,31 @@
+[package]
+name = "openwispr"
+description = "OpenWispr for Windows — local-first voice dictation."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+openwispr-core = { path = "../../core" }
+tauri = { version = "2.11", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# whisper.cpp is behind a feature flag until W3. Building it needs CMake and a C++
+# toolchain, so a contributor without CMake can still work on the UI and core logic.
+# CI always builds with `--features asr` on windows-latest, which is what proves the
+# MSVC build keeps working.
+whisper-rs = { version = "0.16", optional = true }
+
+[target.'cfg(windows)'.dependencies]
+# A Tauri release build is a GUI subsystem binary with no console, so CLI output goes
+# nowhere unless we attach to the parent console first. Needed for --selftest in CI.
+windows = { version = "0.62", features = ["Win32_System_Console", "Win32_Foundation"] }
+
+[features]
+default = []
+asr = ["whisper-rs"]

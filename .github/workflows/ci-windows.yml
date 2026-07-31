@@ -1,0 +1,110 @@
+name: ci-windows
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "core/**"
+      - "windows/**"
+      - "Cargo.toml"
+      - ".github/workflows/ci-windows.yml"
+  pull_request:
+    paths:
+      - "core/**"
+      - "windows/**"
+      - "Cargo.toml"
+      - ".github/workflows/ci-windows.yml"
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rust:
+    name: rust tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+      - run: cargo test --workspace
+
+  # The point of this job: prove whisper.cpp still compiles under MSVC. It is the single
+  # most likely thing to break the Windows port, so it gets its own job and fails loudly.
+  whisper-msvc:
+    name: whisper.cpp MSVC build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: whisper-asr
+      - name: Report toolchain
+        run: |
+          cmake --version
+          cl 2>&1 | Select-Object -First 1
+      - name: Build with the asr feature
+        run: cargo build -p openwispr --features asr --release
+      - name: Assert whisper.cpp produced a static library
+        shell: pwsh
+        run: |
+          $libs = Get-ChildItem -Path target -Recurse -Filter "*whisper*.lib" -ErrorAction SilentlyContinue
+          if (-not $libs) {
+            throw "no whisper*.lib under target/ — CMake did not build whisper.cpp"
+          }
+          $libs | ForEach-Object { "built: $($_.FullName) ($([math]::Round($_.Length/1MB,1)) MB)" }
+
+  app:
+    name: app build + selftest
+    runs-on: windows-latest
+    needs: rust
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: app-bundle
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: windows/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: windows
+        run: npm ci
+
+      - name: Frontend typecheck, build and tests
+        working-directory: windows
+        run: |
+          npm run build
+          npm test
+
+      - name: Build the app and NSIS installer
+        working-directory: windows
+        run: npm run tauri -- build
+
+      # A release build is a GUI subsystem binary, so this also proves AttachConsole works
+      # and CI is reading real output instead of asserting against an empty string.
+      - name: Run headless selftest
+        shell: pwsh
+        run: |
+          $exe = "target/release/openwispr.exe"
+          if (-not (Test-Path $exe)) { throw "missing $exe" }
+          $out = & $exe --selftest 2>&1 | Out-String
+          Write-Host $out
+          if ($LASTEXITCODE -ne 0) { throw "--selftest exited $LASTEXITCODE" }
+          if ($out -match "FAIL") { throw "a check failed" }
+          if ($out -notmatch "checks passed") { throw "no output captured from --selftest" }
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenWispr-Setup
+          path: target/release/bundle/nsis/*-setup.exe
+          if-no-files-found: error

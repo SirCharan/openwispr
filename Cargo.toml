@@ -1,0 +1,15 @@
+[workspace]
+resolver = "2"
+members = ["core", "windows/src-tauri"]
+
+[workspace.package]
+version = "0.15.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/SirCharan/openwispr"
+
+[profile.release]
+# whisper.cpp is the bulk of the binary; optimize for speed, strip symbols.
+lto = true
+codegen-units = 1
+strip = true
