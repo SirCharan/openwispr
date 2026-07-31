@@ -18,17 +18,29 @@ serde_json = "1"
 # on macOS, which is where it gets developed.
 cpal = "0.18"
 
-# whisper.cpp is behind a feature flag until W3. Building it needs CMake and a C++
-# toolchain, so a contributor without CMake can still work on the UI and core logic.
-# CI always builds with `--features asr` on windows-latest, which is what proves the
-# MSVC build keeps working.
+# whisper.cpp sits behind a feature flag: building it needs CMake and a C++ toolchain, so a
+# contributor without CMake can still work on the UI, the core logic and the model manager.
+# CI always builds with `--features asr` on windows-latest, which is what proves the MSVC
+# build keeps working.
 whisper-rs = { version = "0.16", optional = true }
 
+# Model download. Blocking, so no async runtime: `default-features = false` drops gzip, which
+# keeps the byte counter honest against content-length when resuming a partial file.
+ureq = { version = "3.3", default-features = false, features = ["rustls"] }
+sha2 = "0.10"
+
 [target.'cfg(windows)'.dependencies]
-# A Tauri release build is a GUI subsystem binary with no console, so CLI output goes
-# nowhere unless we attach to the parent console first. Needed for --selftest in CI.
-windows = { version = "0.62", features = ["Win32_System_Console", "Win32_Foundation"] }
+windows = { version = "0.62", features = [
+    "Win32_System_Console",           # AttachConsole, so --selftest can print from a GUI binary
+    "Win32_Foundation",
+    "Win32_Graphics_Dxgi",            # CreateDXGIFactory1: find the GPU for the hardware probe
+    "Win32_System_SystemInformation", # GlobalMemoryStatusEx: total RAM
+] }
 
 [features]
 default = []
 asr = ["whisper-rs"]
+# Opt-in GPU offload, not built by default. It stays declared even while nothing enables it:
+# hardware.rs reads cfg!(feature = "asr-gpu"), and an undeclared feature trips the
+# unexpected_cfgs lint, which is an error under CI's `clippy -D warnings`.
+asr-gpu = ["asr", "whisper-rs/vulkan"]

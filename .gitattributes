@@ -1,0 +1,2 @@
+# speech.wav's 44-byte header is load-bearing; never let CRLF translation near it.
+*.wav binary

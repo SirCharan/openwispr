@@ -54,6 +54,20 @@ pub fn sample_rate_of(bytes: &[u8]) -> Option<u32> {
     Some(u32::from_le_bytes([field[0], field[1], field[2], field[3]]))
 }
 
+/// Does this file use the exact 44-byte layout [`decode`] and [`sample_rate_of`] assume?
+///
+/// Worth checking before trusting either. A WAV with extra chunks before `data` is perfectly
+/// legal — `afconvert`, for one, inserts an `FLLR` padding chunk — but reading it as if the
+/// samples began at byte 44 yields noise, and transcribing noise looks like a bad model rather
+/// than a bad reader. Callers that accept a file from the user should reject on false.
+pub fn is_canonical(bytes: &[u8]) -> bool {
+    bytes.len() >= HEADER_BYTES
+        && &bytes[0..4] == b"RIFF"
+        && &bytes[8..12] == b"WAVE"
+        && &bytes[12..16] == b"fmt "
+        && &bytes[36..40] == b"data"
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -89,5 +103,28 @@ mod tests {
         let wav = encode(&[], SAMPLE_RATE);
         assert_eq!(wav.len(), HEADER_BYTES);
         assert!(decode(&wav).is_empty());
+    }
+
+    #[test]
+    fn our_own_output_is_canonical() {
+        assert!(is_canonical(&encode(&[0.1, 0.2], SAMPLE_RATE)));
+        assert!(is_canonical(&encode(&[], SAMPLE_RATE)));
+    }
+
+    #[test]
+    fn a_padding_chunk_before_data_is_rejected() {
+        // What afconvert produces: an FLLR filler chunk pushes `data` past byte 36.
+        let mut wav = encode(&[0.5; 8], SAMPLE_RATE);
+        wav.splice(36..36, b"FLLR\x08\x00\x00\x00abcdefgh".iter().copied());
+        assert!(!is_canonical(&wav), "must not be trusted as 44-byte layout");
+    }
+
+    #[test]
+    fn junk_is_rejected() {
+        assert!(!is_canonical(
+            b"not a wav at all, not even close...........now 44"
+        ));
+        assert!(!is_canonical(b"RIFF"));
+        assert!(!is_canonical(&[]));
     }
 }

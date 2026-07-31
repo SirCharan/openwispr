@@ -2,7 +2,9 @@
 //!
 //! `run` returns `Some(exit_code)` when it handled a flag, `None` to continue into the GUI.
 
-use crate::{audio, selftest};
+#[cfg(feature = "asr")]
+use crate::asr;
+use crate::{audio, hardware, models, selftest};
 
 pub fn run(args: &[String]) -> Option<i32> {
     let flag = args.first()?;
@@ -56,6 +58,36 @@ pub fn run(args: &[String]) -> Option<i32> {
             println!("{USAGE}");
             Some(0)
         }
+        // Mirrors the macOS binary: --transcribe-file speech.wav [ggml-model.bin]
+        "--transcribe-file" => {
+            attach_console();
+            match args.get(1) {
+                Some(wav) => Some(transcribe_file(wav, args.get(2).map(String::as_str))),
+                None => {
+                    eprintln!("--transcribe-file needs a 16 kHz WAV path\n\n{USAGE}");
+                    Some(2)
+                }
+            }
+        }
+        // No id: print the catalogue instead of guessing which model the user wanted.
+        "--download-model" => {
+            attach_console();
+            Some(download_model(args.get(1).map(String::as_str)))
+        }
+        "--hardware" => {
+            attach_console();
+            let hw = hardware::probe();
+            println!("{}", hw.verdict());
+            let model = models::by_id(hw.recommend()).expect("recommend() names a catalogue model");
+            println!(
+                "recommended: {} — {} MB download, ~{} MB RAM\n{}",
+                model.file,
+                model.bytes / 1_000_000,
+                model.ram_mb,
+                models::path_of(model).display()
+            );
+            Some(0)
+        }
         other if other.starts_with('-') => {
             attach_console();
             eprintln!("unknown flag: {other}\n\n{USAGE}");
@@ -71,11 +103,118 @@ OpenWispr — local-first voice dictation.
 
 Run with no arguments to start the app. Headless flags:
 
-  --selftest                     run the built-in checks, print PASS/FAIL per check
-  --record-test <secs> <out.wav> record from the default microphone to a 16 kHz mono WAV
-  --devices                      list the input devices this machine offers
-  --version                      print the version
-  --help                         print this message";
+  --selftest                       run the built-in checks, print PASS/FAIL per check
+  --record-test <secs> <out.wav>   record from the default microphone to a 16 kHz mono WAV
+  --devices                        list the input devices this machine offers
+  --transcribe-file <wav> [model]  transcribe a 16 kHz mono WAV and print the text
+  --download-model [id]            download a whisper model (no id lists them)
+  --hardware                       print what this PC can run and which model to use
+  --version                        print the version
+  --help                           print this message";
+
+fn download_model(id: Option<&str>) -> i32 {
+    let Some(id) = id else {
+        println!("models (pass an id to --download-model):");
+        for model in &models::MODELS {
+            println!("  {:<20} {}", model.id, model.label);
+        }
+        return 0;
+    };
+    let Some(model) = models::by_id(id) else {
+        eprintln!("unknown model: {id}\n\n{USAGE}");
+        return 2;
+    };
+    let mut shown = u64::MAX;
+    let result = models::ensure(model, &mut |done, total| {
+        let pct = done * 100 / total.max(1);
+        if pct != shown {
+            shown = pct;
+            println!("{pct}% ({done}/{total} bytes)");
+        }
+    });
+    match result {
+        Ok(path) => {
+            println!("{}", path.display());
+            0
+        }
+        Err(e) => {
+            eprintln!("{e}");
+            1
+        }
+    }
+}
+
+#[cfg(feature = "asr")]
+fn transcribe_file(wav: &str, model: Option<&str>) -> i32 {
+    use openwispr_core::wav;
+    use std::path::PathBuf;
+
+    let bytes = match std::fs::read(wav) {
+        Ok(bytes) => bytes,
+        Err(e) => {
+            eprintln!("{wav}: {e}");
+            return 1;
+        }
+    };
+    // Both checks below read fixed offsets, so the layout has to be the one we write.
+    if !wav::is_canonical(&bytes) {
+        eprintln!(
+            "{wav}: not a plain 44-byte-header WAV (extra chunks before the samples). \
+             Re-encode it: afconvert -f WAVE -d LEI16@16000 -c 1 in.wav out.wav"
+        );
+        return 1;
+    }
+    // whisper.cpp only takes 16 kHz mono; decoding a 44.1 kHz file would transcribe noise.
+    match wav::sample_rate_of(&bytes) {
+        Some(wav::SAMPLE_RATE) => {}
+        other => {
+            eprintln!(
+                "{wav}: need a {} Hz mono WAV, header says {other:?}",
+                wav::SAMPLE_RATE
+            );
+            return 1;
+        }
+    }
+    let samples = wav::decode(&bytes);
+
+    let model_path = match model {
+        Some(path) => PathBuf::from(path),
+        None => match std::env::var_os("OPENWISPR_MODEL") {
+            Some(path) => PathBuf::from(path),
+            None => models::path_of(
+                models::by_id(hardware::probe().recommend())
+                    .expect("recommend() names a catalogue model"),
+            ),
+        },
+    };
+    // English-only weights must be told "en"; the multilingual turbo model auto-detects.
+    let language = if model_path.to_string_lossy().contains(".en.") {
+        Some("en")
+    } else {
+        None
+    };
+    let threads = std::thread::available_parallelism().map_or(4, |n| n.get().min(8)) as i32;
+    match asr::transcribe(&model_path, &samples, language, false, threads) {
+        Ok(text) if text.trim().is_empty() => {
+            eprintln!("no speech recognised in {wav}");
+            1
+        }
+        Ok(text) => {
+            println!("{text}");
+            0
+        }
+        Err(e) => {
+            eprintln!("{e}");
+            1
+        }
+    }
+}
+
+#[cfg(not(feature = "asr"))]
+fn transcribe_file(_wav: &str, _model: Option<&str>) -> i32 {
+    eprintln!("this build has no transcription: rebuild with --features asr");
+    3
+}
 
 /// Reattach stdout/stderr to the console that launched us.
 ///
@@ -118,5 +257,20 @@ mod tests {
     fn version_and_help_exit_zero() {
         assert_eq!(run(&args(&["--version"])), Some(0));
         assert_eq!(run(&args(&["--help"])), Some(0));
+    }
+
+    #[test]
+    fn transcribe_file_without_a_path_exits_two() {
+        assert_eq!(run(&args(&["--transcribe-file"])), Some(2));
+    }
+
+    #[test]
+    fn download_model_rejects_an_unknown_id() {
+        assert_eq!(run(&args(&["--download-model", "medium.en"])), Some(2));
+    }
+
+    #[test]
+    fn listing_models_needs_no_network() {
+        assert_eq!(run(&args(&["--download-model"])), Some(0));
     }
 }

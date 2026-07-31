@@ -7,13 +7,18 @@
 
 mod audio;
 mod cli;
+mod hardware;
+mod models;
 mod selftest;
+
+#[cfg(feature = "asr")]
+mod asr;
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
 
-    // Headless flags mirror the macOS binary: --selftest, and later --record-test /
-    // --transcribe-file. When one is handled we exit with its code and never open a window.
+    // Headless flags mirror the macOS binary: --selftest, --record-test, --transcribe-file.
+    // When one is handled we exit with its code and never open a window.
     if let Some(code) = cli::run(&args) {
         std::process::exit(code);
     }

@@ -60,6 +60,51 @@ jobs:
           }
           $libs | ForEach-Object { "built: $($_.FullName) ($([math]::Round($_.Length/1MB,1)) MB)" }
 
+      # The `rust` job builds without the feature, so asr.rs is otherwise never linted.
+      - name: Clippy and test with the asr feature
+        run: |
+          cargo clippy -p openwispr --features asr --all-targets -- -D warnings
+          cargo test -p openwispr --features asr --release
+
+      # models::dir() is %LOCALAPPDATA%\OpenWispr\models, so pointing LOCALAPPDATA into the
+      # workspace makes the model cacheable. Keyed on the sha256 the code itself asserts.
+      - name: Cache the CI model
+        uses: actions/cache@v4
+        with:
+          path: appdata\OpenWispr\models\ggml-tiny.en.bin
+          key: ggml-tiny-en-921e4cf8686fdd993dcd081a5da5b6c365bfde1162e72b08d75ac75289920b1f
+
+      - name: Download tiny.en through the app's own model manager
+        shell: pwsh
+        env:
+          LOCALAPPDATA: ${{ github.workspace }}\appdata
+        run: |
+          $dir = "$env:LOCALAPPDATA\OpenWispr\models"
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          # Cold cache: seed a 1 MiB .part so the resume (HTTP 206) path is the one exercised,
+          # not skipped. A warm cache short-circuits on the sha256 instead.
+          if (-not (Test-Path "$dir\ggml-tiny.en.bin")) {
+            curl.exe -sL -r 0-1048575 -o "$dir\ggml-tiny.en.bin.part" `
+              "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en.bin"
+          }
+          & .\target\release\openwispr.exe --download-model tiny.en
+          if ($LASTEXITCODE -ne 0) { throw "--download-model exited $LASTEXITCODE" }
+          if (Test-Path "$dir\ggml-tiny.en.bin.part") { throw ".part left behind" }
+
+      # The end-to-end ASR gate: a committed 2.6s recording of "This is a test of the speech
+      # recognition system." must come back as text.
+      - name: Transcribe the committed speech fixture
+        shell: pwsh
+        env:
+          LOCALAPPDATA: ${{ github.workspace }}\appdata
+        run: |
+          $model = "$env:LOCALAPPDATA\OpenWispr\models\ggml-tiny.en.bin"
+          $out = & .\target\release\openwispr.exe --transcribe-file core\fixtures\speech.wav $model 2>&1 | Out-String
+          Write-Host $out
+          if ($LASTEXITCODE -ne 0) { throw "--transcribe-file exited $LASTEXITCODE" }
+          $t = $out.ToLower()
+          if ($t -notmatch "test" -or $t -notmatch "speech") { throw "transcript missing expected words" }
+
   app:
     name: app build + selftest
     runs-on: windows-latest
@@ -102,6 +147,16 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "--selftest exited $LASTEXITCODE" }
           if ($out -match "FAIL") { throw "a check failed" }
           if ($out -notmatch "checks passed") { throw "no output captured from --selftest" }
+
+      # Exercises DXGI and GlobalMemoryStatusEx on a real Windows box. The runner has only the
+      # Basic Render Driver, so it must report no discrete card and still exit 0.
+      - name: Run the hardware probe
+        shell: pwsh
+        run: |
+          $out = & target/release/openwispr.exe --hardware 2>&1 | Out-String
+          Write-Host $out
+          if ($LASTEXITCODE -ne 0) { throw "--hardware exited $LASTEXITCODE" }
+          if ($out -notmatch "recommended:") { throw "no recommendation printed" }
 
       - name: Upload installer
         uses: actions/upload-artifact@v4
