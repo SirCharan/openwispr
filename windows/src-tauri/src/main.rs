@@ -5,6 +5,7 @@
     windows_subsystem = "windows"
 )]
 
+mod audio;
 mod cli;
 mod selftest;
 

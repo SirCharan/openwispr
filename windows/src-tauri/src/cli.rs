@@ -2,7 +2,7 @@
 //!
 //! `run` returns `Some(exit_code)` when it handled a flag, `None` to continue into the GUI.
 
-use crate::selftest;
+use crate::{audio, selftest};
 
 pub fn run(args: &[String]) -> Option<i32> {
     let flag = args.first()?;
@@ -10,6 +10,41 @@ pub fn run(args: &[String]) -> Option<i32> {
         "--selftest" => {
             attach_console();
             Some(selftest::run())
+        }
+        // Mirrors the macOS binary: --record-test 3 out.wav
+        "--record-test" => {
+            attach_console();
+            let seconds = args
+                .get(1)
+                .and_then(|s| s.parse::<f64>().ok())
+                .unwrap_or(3.0);
+            match args.get(2) {
+                Some(path) => Some(audio::record_test(seconds, path)),
+                None => {
+                    eprintln!("--record-test needs a duration and an output path\n\n{USAGE}");
+                    Some(2)
+                }
+            }
+        }
+        "--devices" => {
+            attach_console();
+            match audio::Recorder::input_devices() {
+                Ok(names) if names.is_empty() => {
+                    println!("no input devices found");
+                    Some(1)
+                }
+                Ok(names) => {
+                    println!("input devices (default first):");
+                    for name in names {
+                        println!("  {name}");
+                    }
+                    Some(0)
+                }
+                Err(e) => {
+                    eprintln!("{e}");
+                    Some(1)
+                }
+            }
         }
         "--version" | "-v" => {
             attach_console();
@@ -36,9 +71,11 @@ OpenWispr — local-first voice dictation.
 
 Run with no arguments to start the app. Headless flags:
 
-  --selftest    run the built-in checks, print PASS/FAIL per check
-  --version     print the version
-  --help        print this message";
+  --selftest                     run the built-in checks, print PASS/FAIL per check
+  --record-test <secs> <out.wav> record from the default microphone to a 16 kHz mono WAV
+  --devices                      list the input devices this machine offers
+  --version                      print the version
+  --help                         print this message";
 
 /// Reattach stdout/stderr to the console that launched us.
 ///

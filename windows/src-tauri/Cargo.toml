@@ -14,6 +14,9 @@ openwispr-core = { path = "../../core" }
 tauri = { version = "2.11", features = [] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# WASAPI capture on Windows. cpal is cross-platform, so this module also compiles and runs
+# on macOS, which is where it gets developed.
+cpal = "0.18"
 
 # whisper.cpp is behind a feature flag until W3. Building it needs CMake and a C++
 # toolchain, so a contributor without CMake can still work on the UI and core logic.

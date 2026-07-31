@@ -8,12 +8,14 @@
 //! Pipeline order, matching `AppController.stopDictation`:
 //! raw transcript → [`dictionary::apply`] → [`text::process`] → [`snippets::apply`] → paste.
 
+pub mod audio;
 pub mod dictionary;
 pub mod fixtures;
 pub mod history;
 pub mod snippets;
 pub mod stats;
 pub mod text;
+pub mod wav;
 
 /// Run the transcript through the full pipeline in the order both platforms use.
 pub fn pipeline(
