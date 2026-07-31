@@ -87,9 +87,16 @@ jobs:
             curl.exe -sL -r 0-1048575 -o "$dir\ggml-tiny.en.bin.part" `
               "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en.bin"
           }
-          & .\target\release\openwispr.exe --download-model tiny.en
+          # ALWAYS pipe this binary's output through Out-String. openwispr.exe is a GUI
+          # subsystem binary, so PowerShell does not block on it: a bare call returns at once,
+          # leaves $LASTEXITCODE stale from the previous command, and the next line runs while
+          # the download is still in flight. Piping forces a wait until stdout closes.
+          $out = & .\target\release\openwispr.exe --download-model tiny.en 2>&1 | Out-String
+          Write-Host $out
           if ($LASTEXITCODE -ne 0) { throw "--download-model exited $LASTEXITCODE" }
           if (Test-Path "$dir\ggml-tiny.en.bin.part") { throw ".part left behind" }
+          $size = (Get-Item "$dir\ggml-tiny.en.bin").Length
+          if ($size -ne 77704715) { throw "model is $size bytes, expected 77704715" }
 
       # The end-to-end ASR gate: a committed 2.6s recording of "This is a test of the speech
       # recognition system." must come back as text.
