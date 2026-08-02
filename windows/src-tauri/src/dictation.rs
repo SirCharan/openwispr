@@ -34,7 +34,7 @@ pub struct Settings {
     pub remove_fillers: bool,
     pub clean_up: bool,
     pub dictionary: DictionaryData,
-    pub snippets: Vec<openwispr_core::dictionary::Replacement>,
+    pub snippets: Vec<openwispr_core::snippets::Snippet>,
     /// Executable names where dictation stays silent, e.g. "keepass.exe".
     pub disabled_apps: Vec<String>,
 }
@@ -230,7 +230,7 @@ pub fn run_headless(trigger: Trigger) -> i32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use openwispr_core::dictionary::Replacement;
+    use openwispr_core::snippets::Snippet;
 
     fn settings() -> Settings {
         Settings {
@@ -239,8 +239,8 @@ mod tests {
             remove_fillers: true,
             clean_up: true,
             dictionary: DictionaryData::default(),
-            snippets: vec![Replacement {
-                from: "my email".into(),
+            snippets: vec![Snippet {
+                triggers: vec!["my email".into()],
                 to: "ck@example.com".into(),
             }],
             disabled_apps: vec!["keepass.exe".to_string()],

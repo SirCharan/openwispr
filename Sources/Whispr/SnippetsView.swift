@@ -2,48 +2,92 @@ import SwiftUI
 
 @MainActor
 final class SnippetsModel: ObservableObject {
-    @Published var items: [Replacement] { didSet { SnippetStore.save(items) } }
+    @Published var items: [Snippet] { didSet { SnippetStore.save(items) } }
     init() { items = SnippetStore.load() }
 
-    func add(trigger: String, expansion: String) {
-        let t = trigger.trimmingCharacters(in: .whitespaces)
-        guard !t.isEmpty else { return }
-        items.append(Replacement(from: t, to: expansion))
+    func add(triggers: String, expansion: String) {
+        let list = Self.parse(triggers)
+        guard !list.isEmpty else { return }
+        items.append(Snippet(triggers: list, to: expansion))
     }
+
     func remove(_ offsets: IndexSet) { items.remove(atOffsets: offsets) }
+
+    /// Adds the starter rows that are not already present. Their expansions are empty until
+    /// the user fills them in, and an empty expansion never fires.
+    func addPresets() { items.append(contentsOf: SnippetStore.missingPresets(from: items)) }
+
+    var hasAllPresets: Bool { SnippetStore.missingPresets(from: items).isEmpty }
+
+    /// Triggers are edited as one comma-separated field: "add my email, add my e-mail".
+    static func parse(_ s: String) -> [String] {
+        s.split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+    }
+
+    static func join(_ triggers: [String]) -> String { triggers.joined(separator: ", ") }
 }
 
-/// Editor for voice snippets: say the trigger, get the expansion pasted.
+/// Editor for voice snippets: say a trigger phrase, get the expansion pasted.
 struct SnippetsView: View {
     @StateObject private var model = SnippetsModel()
-    @State private var trigger = ""
+    @State private var triggers = ""
     @State private var expansion = ""
 
     var body: some View {
         Form {
             Section("New snippet") {
-                TextField("Trigger phrase (e.g. my email)", text: $trigger)
+                TextField("Trigger phrases, comma separated", text: $triggers,
+                          prompt: Text("add my email, add my e-mail"))
                 TextField("Expands to…", text: $expansion, axis: .vertical).lineLimit(1...4)
-                Button("Add snippet") { model.add(trigger: trigger, expansion: expansion); trigger = ""; expansion = "" }
-                    .disabled(trigger.trimmingCharacters(in: .whitespaces).isEmpty)
+                Button("Add snippet") {
+                    model.add(triggers: triggers, expansion: expansion)
+                    triggers = ""
+                    expansion = ""
+                }
+                .disabled(SnippetsModel.parse(triggers).isEmpty)
+                Text("Use a phrase, not a bare word: \"add my email\" expands, while \"email\" on its own would fire in every sentence that mentions one.")
+                    .foregroundStyle(.secondary).font(.caption)
             }
             Section("Snippets") {
+                Button("Add my details") { model.addPresets() }
+                    .disabled(model.hasAllPresets)
                 if model.items.isEmpty {
-                    Text("No snippets yet. Say the trigger while dictating and it expands.")
+                    Text("No snippets yet. Say a trigger while dictating and it expands.")
                         .foregroundStyle(.secondary).font(.caption)
                 } else {
                     List {
-                        ForEach(model.items) { s in
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(s.from).bold()
-                                Text(s.to).font(.caption).foregroundStyle(.secondary).lineLimit(2)
-                            }
+                        ForEach($model.items) { $item in
+                            SnippetRow(item: $item)
                         }
                         .onDelete { model.remove($0) }
-                    }.frame(minHeight: 120)
+                    }.frame(minHeight: 160)
                 }
+                Text("Where two triggers overlap, the longer phrase wins, so the order of this list does not matter. A snippet with no expansion is ignored.")
+                    .foregroundStyle(.secondary).font(.caption)
             }
         }
         .formStyle(.grouped)
+    }
+}
+
+/// One editable row. Triggers round-trip through a comma-separated field, so the binding is
+/// held locally and written back on every edit.
+private struct SnippetRow: View {
+    @Binding var item: Snippet
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            TextField("Trigger phrases, comma separated", text: Binding(
+                get: { SnippetsModel.join(item.triggers) },
+                set: { item.triggers = SnippetsModel.parse($0) }
+            ))
+            .font(.body.bold())
+            TextField("Expands to…", text: $item.to, axis: .vertical)
+                .lineLimit(1...4)
+                .foregroundStyle(item.to.isEmpty ? .secondary : .primary)
+        }
+        .padding(.vertical, 2)
     }
 }

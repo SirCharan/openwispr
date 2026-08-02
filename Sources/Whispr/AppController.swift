@@ -337,8 +337,13 @@ final class AppController {
                 if Settings.outputMode == "roman" { raw = Transliterate.toLatin(raw) }
                 let corrected = DictionaryStore.apply(raw, DictionaryStore.load())
                 let cleaned = TextProcessor.process(corrected, options: Settings.textOptions)
-                var text = SnippetStore.apply(cleaned, SnippetStore.load())
-                text = await Self.rewriteIfEnabled(text) { [weak self] in self?.setStatus($0) }
+                // Snippets expand into sentinels, the rewrite runs around them, then the
+                // expansions go back. An email address or URL therefore reaches the cursor
+                // verbatim even with a rewrite style on. If the model eats a sentinel the
+                // rewrite is dropped whole rather than pasting a half-expanded line.
+                let expansion = SnippetStore.expand(cleaned, SnippetStore.load())
+                let rewritten = await Self.rewriteIfEnabled(expansion.protectedText) { [weak self] in self?.setStatus($0) }
+                let text = SnippetStore.restore(rewritten, tokens: expansion.tokens) ?? expansion.expandedText
                 if text.isEmpty {
                     setStatus("ready (no speech)")
                 } else {

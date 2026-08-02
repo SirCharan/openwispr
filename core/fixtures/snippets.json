@@ -2,36 +2,115 @@
   "_comment": "Shared by core/src/snippets.rs tests and SnippetStore.selfTest (Swift).",
   "cases": [
     {
-      "snippets": [{ "from": "my email", "to": "ck@example.com" }],
+      "snippets": [{ "triggers": ["my email"], "to": "ck@example.com" }],
       "input": "please send my email now",
       "expected": "please send ck@example.com now"
     },
     {
       "_why": "the trigger matches whatever case it was spoken in; the expansion keeps its own",
-      "snippets": [{ "from": "my email", "to": "ck@example.com" }],
+      "snippets": [{ "triggers": ["my email"], "to": "ck@example.com" }],
       "input": "Please send My Email now",
       "expected": "Please send ck@example.com now"
     },
     {
       "_why": "a trigger inside a longer word must not expand",
-      "snippets": [{ "from": "sig", "to": "Charandeep Kapoor" }],
+      "snippets": [{ "triggers": ["sig"], "to": "Charandeep Kapoor" }],
       "input": "the signal is strong",
       "expected": "the signal is strong"
     },
     {
       "_why": "an empty trigger is skipped rather than matching everywhere",
-      "snippets": [{ "from": "", "to": "boom" }],
+      "snippets": [{ "triggers": [""], "to": "boom" }],
       "input": "untouched text",
       "expected": "untouched text"
     },
     {
       "_why": "several snippets apply in order",
       "snippets": [
-        { "from": "my email", "to": "ck@example.com" },
-        { "from": "my site", "to": "openwispr.vercel.app" }
+        { "triggers": ["my email"], "to": "ck@example.com" },
+        { "triggers": ["my site"], "to": "openwispr.vercel.app" }
       ],
       "input": "my email and my site",
       "expected": "ck@example.com and openwispr.vercel.app"
+    },
+    {
+      "_why": "every trigger on a snippet expands to the same text: whisper writes a phrase several ways",
+      "snippets": [
+        {
+          "triggers": ["add my email", "add my e-mail", "add my e mail"],
+          "to": "ck@example.com"
+        }
+      ],
+      "input": "add my e-mail then add my e mail then add my email",
+      "expected": "ck@example.com then ck@example.com then ck@example.com"
+    },
+    {
+      "_why": "the longest trigger wins wherever two overlap, whatever order the rows were added in",
+      "snippets": [
+        { "triggers": ["add my email"], "to": "ck@example.com" },
+        { "triggers": ["add my email signature"], "to": "Charandeep Kapoor, Delta" }
+      ],
+      "input": "add my email signature and add my email",
+      "expected": "Charandeep Kapoor, Delta and ck@example.com"
+    },
+    {
+      "_why": "a preset row the user has not filled in yet is inert: it must not delete the trigger",
+      "snippets": [{ "triggers": ["add my linkedin"], "to": "" }],
+      "input": "add my linkedin please",
+      "expected": "add my linkedin please"
+    },
+    {
+      "_why": "an expansion is never rescanned, so a trigger sitting inside canned text stays put",
+      "snippets": [
+        { "triggers": ["my site"], "to": "openwispr.vercel.app - my email" },
+        { "triggers": ["my email"], "to": "ck@example.com" }
+      ],
+      "input": "my site",
+      "expected": "openwispr.vercel.app - my email"
+    },
+    {
+      "_why": "a dollar sign in an expansion is literal, not a regex capture reference",
+      "snippets": [{ "triggers": ["my rate"], "to": "$150/hr" }],
+      "input": "my rate applies",
+      "expected": "$150/hr applies"
+    }
+  ],
+  "_protect_comment": "Round-trips through expand/restore. {0}, {1} in `rewritten` stand for the nth sentinel; the test substitutes the real token. `expected: null` means the rewrite is discarded and the caller falls back to `expanded`.",
+  "protect": [
+    {
+      "_why": "a rewrite that keeps the sentinels restores every expansion verbatim",
+      "snippets": [{ "triggers": ["add my email"], "to": "ck@example.com" }],
+      "input": "hey add my email and i will follow up",
+      "expanded": "hey ck@example.com and i will follow up",
+      "rewritten": "Hey, {0}, and I will follow up.",
+      "expected": "Hey, ck@example.com, and I will follow up."
+    },
+    {
+      "_why": "two expansions both survive a rewrite that reorders them",
+      "snippets": [
+        { "triggers": ["add my email"], "to": "ck@example.com" },
+        { "triggers": ["add my site"], "to": "openwispr.vercel.app" }
+      ],
+      "input": "add my email and add my site",
+      "expanded": "ck@example.com and openwispr.vercel.app",
+      "rewritten": "{1} and {0}",
+      "expected": "openwispr.vercel.app and ck@example.com"
+    },
+    {
+      "_why": "a rewrite that eats a sentinel is discarded whole, so the expansion still lands",
+      "snippets": [{ "triggers": ["add my email"], "to": "ck@example.com" }],
+      "input": "hey add my email and i will follow up",
+      "expanded": "hey ck@example.com and i will follow up",
+      "rewritten": "Hey, I will follow up.",
+      "expected": null
+    },
+    {
+      "_why": "no snippet fires: there is nothing to protect and the rewrite is kept as-is",
+      "snippets": [{ "triggers": ["add my email"], "to": "ck@example.com" }],
+      "input": "nothing to expand here",
+      "expanded": "nothing to expand here",
+      "rewritten": "Nothing to expand here.",
+      "expected": "Nothing to expand here."
     }
   ]
 }

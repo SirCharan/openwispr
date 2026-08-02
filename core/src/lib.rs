@@ -22,7 +22,7 @@ pub fn pipeline(
     raw: &str,
     dict: &dictionary::DictionaryData,
     options: text::Options,
-    snips: &[dictionary::Replacement],
+    snips: &[snippets::Snippet],
     is_real_word: dictionary::IsRealWord,
 ) -> String {
     let after_dict = dictionary::apply(raw, dict, is_real_word);
@@ -45,8 +45,8 @@ mod tests {
                 to: "going to".into(),
             }],
         };
-        let snips = vec![dictionary::Replacement {
-            from: "my email".into(),
+        let snips = vec![snippets::Snippet {
+            triggers: vec!["my email".into()],
             to: "ck@example.com".into(),
         }];
         let is_real = |w: &str| ["going", "to", "deploy", "on", "send", "my", "email"].contains(&w);
