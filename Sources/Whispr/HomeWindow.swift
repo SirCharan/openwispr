@@ -26,7 +26,7 @@ enum Brand {
     static let surface = Color(red: 0.925, green: 0.894, blue: 0.839)   // #ECE4D6
     static let line = Color(red: 0.863, green: 0.824, blue: 0.753)      // #DCD2C0
     static let text = Color(red: 0.141, green: 0.122, blue: 0.102)      // #241F1A espresso
-    static let muted = Color(red: 0.541, green: 0.490, blue: 0.420)     // #8A7D6B
+    static let muted = Color(red: 0.420, green: 0.373, blue: 0.306)     // #6B5F4E (5.4:1 on cream)
     /// Follows the user's accent choice (Theme); tape red-coral #E2543E is the default.
     static var coral: Color { Color(nsColor: Theme.nsAccent) }
     static var coralSoft: Color { coral.opacity(0.12) }

@@ -2,8 +2,8 @@ import SwiftUI
 import KeyboardShortcuts
 import AVFoundation
 
-/// First-run wizard, twelve steps: welcome → move → mic → mic-test → accessibility →
-/// hotkey-test → screen recording → model download → setup → try-it → personalize → done.
+/// First-run wizard (v0.15): seven steps, Paper Studio + Wispr Flow patterns.
+/// welcome → move? → permissions+mic VU → model → trigger+press-test → practice → done
 struct OnboardingView: View {
     @ObservedObject var model: OnboardingModel
     @State private var launchAtLogin = false
@@ -11,302 +11,522 @@ struct OnboardingView: View {
     @State private var smartCleanup = Settings.smartCleanup
     @AppStorage("hotkeyMode") private var hotkeyMode = "fn"
 
-    // 4 phases, mapped monotonically by step index.
-    private let phases = ["Permissions", "Set up", "Try it", "Done"]
+    /// 3 phases mapped by step index (0–6).
+    private let phases = ["Permissions", "Model", "Dictate"]
     private func phaseIndex(_ step: Int) -> Int {
-        switch step { case 0...6: 0; case 7...8: 1; case 9...10: 2; default: 3 }
+        switch step {
+        case 0...2: 0
+        case 3: 1
+        default: 2
+        }
     }
 
     var body: some View {
-        VStack(spacing: 18) {
+        VStack(spacing: 0) {
             stepper
-            VStack(spacing: 20) {
+                .padding(.bottom, 20)
+            VStack(spacing: 0) {
                 switch model.step {
                 case 0: welcome
                 case 1: move
-                case 2: mic
-                case 3: MicTestStep(onContinue: { model.step = 4 })
-                case 4: accessibility
-                case 5: HotkeyTestStep(hotkeyMode: $hotkeyMode, onContinue: { model.step = 6 })
-                case 6: screenRecording
-                case 7: download
-                case 8: setup
-                case 9: practice
-                case 10: PersonalizeStep(onContinue: { model.step = 11 })
+                case 2: PermissionsStep(
+                    model: model,
+                    hotkeyMode: hotkeyMode,
+                    onContinue: {
+                        model.step = 3
+                        model.startModelIfNeeded()
+                    }
+                )
+                case 3: download
+                case 4: TriggerStep(
+                    hotkeyMode: $hotkeyMode,
+                    launchAtLogin: $launchAtLogin,
+                    loginItemFailed: $loginItemFailed,
+                    smartCleanup: $smartCleanup,
+                    onContinue: { model.step = 5 }
+                )
+                case 5: practice
                 default: done
                 }
             }
-            .frame(maxHeight: .infinity)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .padding(32)
-        .frame(width: 480, height: 480)
+        .padding(36)
+        .frame(width: 520, height: 560)
         .background(Brand.bg)
         .tint(Brand.coral)
-        .preferredColorScheme(.light) // Paper Studio chrome, consistent with the home window
-        .onAppear { model.refreshAccessibility() }
+        .preferredColorScheme(.light)
+        .onAppear {
+            model.refreshAccessibility()
+            launchAtLogin = LoginItem.isEnabled
+        }
     }
+
+    // MARK: - Stepper
 
     private var stepper: some View {
         let active = phaseIndex(model.step)
-        return VStack(spacing: 8) {
-            HStack(spacing: 6) {
+        return VStack(spacing: 10) {
+            HStack(spacing: 0) {
                 ForEach(Array(phases.enumerated()), id: \.offset) { i, name in
-                    Text(name.uppercased())
-                        .font(.system(size: 10, weight: i == active ? .bold : .medium, design: .monospaced))
-                        .foregroundStyle(i == active ? Brand.coral : (i < active ? Brand.text : Brand.muted))
-                    if i < phases.count - 1 {
-                        Image(systemName: "chevron.right").font(.system(size: 7)).foregroundStyle(Brand.muted)
+                    HStack(spacing: 6) {
+                        Text(name.uppercased())
+                            .font(Brand.mono(10).weight(i == active ? .bold : .medium))
+                            .foregroundStyle(i == active ? Brand.coral : (i < active ? Brand.text : Brand.muted))
+                        if i < phases.count - 1 {
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 7, weight: .semibold))
+                                .foregroundStyle(Brand.muted.opacity(0.7))
+                        }
                     }
+                    if i < phases.count - 1 { Spacer(minLength: 4) }
                 }
             }
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Capsule().fill(Brand.line).frame(height: 3)
                     Capsule().fill(Brand.coral)
-                        .frame(width: geo.size.width * CGFloat(active + 1) / CGFloat(phases.count), height: 3)
+                        .frame(width: max(8, geo.size.width * CGFloat(active + 1) / CGFloat(phases.count)), height: 3)
+                        .animation(.easeOut(duration: 0.25), value: active)
                 }
             }
             .frame(height: 3)
         }
     }
 
+    // MARK: - Steps
+
     private var welcome: some View {
-        step(
+        stepShell(
             icon: "mic.circle.fill",
             title: "Welcome to OpenWispr",
-            body: "Hold a hotkey, speak, and your words paste at the cursor — transcribed on-device with Whisper. No cloud, no account.",
-            button: "Get started",
-            action: { model.step = model.needsMove ? 1 : 2 }
-        )
+            body: "Hold a hotkey, speak, and clean text pastes at the cursor — transcribed on-device with Whisper.",
+            primary: ("Get started", {
+                // Overlap model load with the rest of setup when possible
+                model.startModelIfNeeded()
+                model.step = model.needsMove ? 1 : 2
+            })
+        ) {
+            HStack(spacing: 16) {
+                chip("On-device")
+                chip("No account")
+                chip("No cloud")
+            }
+            .padding(.top, 4)
+        }
     }
 
     private var move: some View {
-        step(
+        stepShell(
             icon: "arrow.down.app.fill",
             title: "Move to Applications",
-            body: "OpenWispr is running from \(Bundle.main.bundlePath.hasPrefix("/Volumes") ? "the disk image" : "outside Applications"). Moving it to the Applications folder keeps macOS permissions stable. OpenWispr will relaunch after the move.",
-            button: "Move to Applications",
-            action: { model.onMoveToApplications() },
-            secondary: ("Skip", { model.step = 2 })
-        )
-    }
-
-    private var mic: some View {
-        step(
-            icon: model.micGranted ? "checkmark.circle.fill" : "waveform",
-            title: "Microphone access",
-            body: model.micGranted ? "Microphone access granted."
-                : model.micDenied ? "Microphone access was denied. Open System Settings → Privacy & Security → Microphone and turn OpenWispr on, then come back."
-                : "OpenWispr needs the microphone to hear you. Audio is processed locally and never leaves your Mac.",
-            button: model.micGranted ? "Continue" : model.micDenied ? "Open System Settings" : "Allow microphone",
-            action: {
-                if model.micGranted { model.step = 3 }
-                else if model.micDenied { model.openMicSettings() }
-                else { model.requestMic() }
-            },
-            secondary: model.micDenied ? ("I've enabled it — re-check", { model.micGranted = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized }) : nil
-        )
-    }
-
-    private var accessibility: some View {
-        step(
-            icon: model.axGranted ? "checkmark.circle.fill" : "hand.raised.fill",
-            title: "Accessibility access",
-            body: model.axGranted ? "Accessibility granted — the fn trigger and auto-paste are enabled."
-                : "OpenWispr needs Accessibility for the fn dictation key AND to paste at your cursor. Without it the app can't hear the trigger.",
-            button: model.axGranted ? "Continue" : "Open Accessibility settings",
-            action: {
-                if model.axGranted { model.step = 5 }
-                else { model.requestAccessibility() }
-            },
-            // fn trigger dies without AX — only allow skipping when a custom shortcut is the trigger
-            secondary: (model.axGranted || hotkeyMode == "fn") ? nil : ("Skip for now", { model.step = 5 })
-        )
-    }
-
-    private var screenRecording: some View {
-        step(
-            icon: (model.screenRecGranted || model.screenRecPrompted) ? "checkmark.circle.fill" : "rectangle.inset.filled.badge.record",
-            title: "Meeting capture (optional)",
-            body: model.screenRecGranted
-                ? "Screen & System Audio Recording granted — meetings are ready."
-                : model.screenRecPrompted
-                ? "Requested. After you enable OpenWispr in System Settings, macOS applies it on the next launch — continue setup now."
-                : "OpenWispr can transcribe calls: your mic plus the other side's audio. macOS exposes system audio through Screen Recording permission. Only audio is used. Skip if you only dictate.",
-            button: (model.screenRecGranted || model.screenRecPrompted) ? "Continue" : "Enable meeting capture",
-            action: {
-                if model.screenRecGranted || model.screenRecPrompted { model.step = 7; model.onStartModel() }
-                else { model.requestScreenRecording() }
-            },
-            secondary: ("Skip — dictation only", { model.step = 7; model.onStartModel() })
+            body: "OpenWispr is running from \(Bundle.main.bundlePath.hasPrefix("/Volumes") ? "the disk image" : "outside Applications"). Moving it keeps macOS permissions stable. It will relaunch after the move.",
+            primary: ("Move to Applications", { model.onMoveToApplications() }),
+            secondary: ("Skip for now", { model.step = 2 })
         )
     }
 
     private var download: some View {
-        VStack(spacing: 20) {
-            Image(systemName: model.modelError == nil ? "arrow.down.circle.fill" : "exclamationmark.triangle.fill")
-                .font(.system(size: 52)).foregroundStyle(model.modelError == nil ? AnyShapeStyle(.tint) : AnyShapeStyle(.orange))
-            Text("Downloading the speech model").font(.title2).bold()
+        VStack(spacing: 22) {
+            iconBadge(model.modelError == nil
+                      ? (model.modelReady ? "checkmark.circle.fill" : "arrow.down.circle.fill")
+                      : "exclamationmark.triangle.fill",
+                      tint: model.modelError == nil ? Brand.coral : .orange)
+            Text(model.modelReady ? "Speech model ready" : "Downloading the speech model")
+                .font(Brand.serif(24))
+                .foregroundStyle(Brand.text)
             if let err = model.modelError {
                 Text("Download failed: \(err)\nCheck your connection and retry.")
-                    .multilineTextAlignment(.center).foregroundStyle(.secondary)
-                Button("Retry") { model.modelError = nil; model.onStartModel() }
-                    .keyboardShortcut(.defaultAction).controlSize(.large)
+                    .font(.system(size: 14))
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(Brand.muted)
+                    .frame(maxWidth: 360)
+                Button("Retry") { model.retryModel() }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .keyboardShortcut(.defaultAction)
             } else {
-                Text("One-time download (~1.5 GB). This can take a few minutes on first launch.")
-                    .multilineTextAlignment(.center).foregroundStyle(.secondary)
-                ProgressView(value: model.modelReady ? 1 : model.downloadProgress)
-                    .frame(maxWidth: 320)
-                Text(model.modelReady ? "Ready" : "\(Int(model.downloadProgress * 100))%")
-                    .font(.caption).foregroundStyle(.secondary)
-                Button("Continue") { model.step = 8 }
+                Text(model.modelReady
+                      ? "Already on this Mac — no download needed."
+                      : "One-time download (~1.5 GB). Usually a few minutes.")
+                    .font(.system(size: 14))
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(Brand.muted)
+                    .frame(maxWidth: 360)
+                VStack(spacing: 8) {
+                    ProgressView(value: model.modelReady ? 1 : model.downloadProgress)
+                        .tint(Brand.coral)
+                        .frame(maxWidth: 300)
+                    Text(model.modelReady ? "Ready" : "\(Int(model.downloadProgress * 100))%")
+                        .font(Brand.mono(12))
+                        .foregroundStyle(Brand.muted)
+                }
+                Button("Continue") { model.step = 4 }
+                    .buttonStyle(PrimaryButtonStyle())
                     .keyboardShortcut(.defaultAction)
                     .disabled(!model.modelReady)
+                    .opacity(model.modelReady ? 1 : 0.45)
             }
+            Spacer(minLength: 0)
         }
-    }
-
-    private var setup: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "slider.horizontal.3").font(.system(size: 52)).foregroundStyle(.tint)
-            Text("Make it yours").font(.title2).bold()
-            Form {
-                Picker("Dictation trigger:", selection: $hotkeyMode) {
-                    ForEach(Triggers.list, id: \.id) { t in Text(t.label).tag(t.id) }
-                    Text("Custom shortcut").tag("custom")
-                }
-                .onChange(of: hotkeyMode) { _, _ in NotificationCenter.default.post(name: .whisprHotkeyModeChanged, object: nil) }
-                if hotkeyMode == "custom" {
-                    KeyboardShortcuts.Recorder("Shortcut:", name: .dictate)
-                }
-                Toggle("Start OpenWispr at login", isOn: $launchAtLogin)
-                    .onChange(of: launchAtLogin) { _, on in
-                        if LoginItem.set(on) { loginItemFailed = false }
-                        else { launchAtLogin = false; loginItemFailed = true }
-                    }
-                if AppleLocalEngine.isAvailable() {
-                    Toggle("Smart cleanup — fix grammar & formatting on-device", isOn: $smartCleanup)
-                        .onChange(of: smartCleanup) { _, on in
-                            Settings.smartCleanup = on
-                            if on, Settings.rewriteStyle == "off" { Settings.rewriteStyle = "clean" }
-                        }
-                }
-            }
-            .formStyle(.columns)
-            .frame(maxWidth: 320)
-            Text(loginItemFailed ? "Couldn't set launch-at-login — move OpenWispr to Applications first."
-                 : hotkeyMode == "fn" ? "Tip: set System Settings → Keyboard → “Press 🌐 key to” = Do Nothing."
-                 : "Everything can be changed later in Settings.")
-                .font(.caption).foregroundStyle(loginItemFailed ? .orange : .secondary)
-            Button("Continue") { model.step = 9 }.keyboardShortcut(.defaultAction).controlSize(.large)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear {
+            // Resume mid-wizard or if welcome didn't start the load
+            model.startModelIfNeeded()
         }
-        .onAppear { launchAtLogin = LoginItem.isEnabled }
     }
 
     private var practice: some View {
         VStack(spacing: 20) {
-            Image(systemName: "waveform.and.mic").font(.system(size: 52)).foregroundStyle(.tint)
-            Text("Try it").font(.title2).bold()
+            iconBadge("waveform.and.mic")
+            Text("Try it").font(Brand.serif(24)).foregroundStyle(Brand.text)
             Text("Press the button, say something like “OpenWispr types what I say”, then stop.")
-                .multilineTextAlignment(.center).foregroundStyle(.secondary)
+                .font(.system(size: 14))
+                .multilineTextAlignment(.center)
+                .foregroundStyle(Brand.muted)
+                .frame(maxWidth: 360)
 
             switch model.practice {
             case .idle:
                 Button("Start recording") { model.onPracticeStart() }
-                    .controlSize(.large).keyboardShortcut(.defaultAction)
+                    .buttonStyle(PrimaryButtonStyle())
+                    .keyboardShortcut(.defaultAction)
             case .recording:
                 Button("Stop") { model.onPracticeStop() }
-                    .controlSize(.large).keyboardShortcut(.defaultAction).tint(.red)
+                    .buttonStyle(PrimaryButtonStyle(fill: Color.red.opacity(0.9)))
+                    .keyboardShortcut(.defaultAction)
+                Text("Listening…")
+                    .font(Brand.mono(11))
+                    .foregroundStyle(Brand.coral)
             case .transcribing:
                 ProgressView("Transcribing…")
+                    .tint(Brand.coral)
             case .result(let text):
-                GroupBox {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("YOU SAID")
+                        .font(Brand.mono(10).weight(.bold))
+                        .foregroundStyle(Brand.muted)
+                        .tracking(1.2)
                     Text(text.isEmpty ? "(heard nothing — try again)" : "“\(text)”")
-                        .font(.body.italic())
+                        .font(.system(size: 15, design: .serif).italic())
+                        .foregroundStyle(text.isEmpty ? Brand.muted : Brand.text)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(4)
                 }
-                HStack {
+                .padding(16)
+                .frame(maxWidth: 380)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Brand.surface)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(Brand.line, lineWidth: 1)
+                        )
+                )
+                HStack(spacing: 14) {
                     Button("Try again") { model.practice = .idle }
-                    Button("Continue") { model.step = 10 }.keyboardShortcut(.defaultAction)
+                        .buttonStyle(.plain)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Brand.muted)
+                    Button("Continue") { model.step = 6 }
+                        .buttonStyle(PrimaryButtonStyle())
+                        .keyboardShortcut(.defaultAction)
                 }
             }
 
             if case .result = model.practice {} else {
-                Button("Skip") { model.step = 10 }
-                    .buttonStyle(.plain).font(.caption).foregroundStyle(.secondary)
+                Button("Skip") { model.step = 6 }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Brand.muted)
+                    .padding(.top, 4)
             }
+            Spacer(minLength: 0)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var done: some View {
-        step(
+        stepShell(
             icon: "checkmark.seal.fill",
             title: "You're all set",
-            body: "Hold \(Self.hotkeyLabel), speak, then release — your words paste where the cursor is. Change the hotkey or model anytime from the menu-bar icon → Settings.",
-            button: "Start using OpenWispr",
-            action: { model.onFinish() }
-        )
+            body: "Hold \(Self.hotkeyLabel), speak, then release — words paste where the cursor is. OpenWispr lives in the menu bar (not the Dock).",
+            primary: ("Start using OpenWispr", { model.onFinish() })
+        ) {
+            Text("Speaking is ~4× faster than typing · change hotkey or model anytime in Settings")
+                .font(.system(size: 12))
+                .foregroundStyle(Brand.muted)
+                .multilineTextAlignment(.center)
+                .padding(.top, 2)
+        }
     }
 
     private static var hotkeyLabel: String { AppController.hotkeyHint }
 
-    // Shared step layout.
-    private func step(icon: String, title: String, body: String, button: String,
-                      action: @escaping () -> Void,
-                      secondary: (String, () -> Void)? = nil) -> some View {
-        VStack(spacing: 20) {
-            Image(systemName: icon).font(.system(size: 52)).foregroundStyle(.tint)
-            Text(title).font(.title2).bold()
-            Text(body).multilineTextAlignment(.center).foregroundStyle(.secondary)
-            Button(button, action: action).keyboardShortcut(.defaultAction).controlSize(.large)
+    // MARK: - Shared chrome
+
+    private func chip(_ text: String) -> some View {
+        Text(text.uppercased())
+            .font(Brand.mono(10).weight(.medium))
+            .tracking(0.8)
+            .foregroundStyle(Brand.muted)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(
+                Capsule().fill(Brand.surface)
+                    .overlay(Capsule().stroke(Brand.line, lineWidth: 1))
+            )
+    }
+
+    private func iconBadge(_ systemName: String, tint: Color = Brand.coral) -> some View {
+        Image(systemName: systemName)
+            .font(.system(size: 28, weight: .semibold))
+            .foregroundStyle(tint)
+            .frame(width: 64, height: 64)
+            .background(
+                Circle()
+                    .fill(Brand.surface)
+                    .overlay(Circle().stroke(Brand.line, lineWidth: 1))
+            )
+    }
+
+    @ViewBuilder
+    private func stepShell(
+        icon: String,
+        title: String,
+        body: String,
+        primary: (String, () -> Void),
+        secondary: (String, () -> Void)? = nil,
+        @ViewBuilder extra: () -> some View = { EmptyView() }
+    ) -> some View {
+        VStack(spacing: 18) {
+            Spacer(minLength: 8)
+            iconBadge(icon)
+            Text(title)
+                .font(Brand.serif(24))
+                .foregroundStyle(Brand.text)
+                .multilineTextAlignment(.center)
+            Text(body)
+                .font(.system(size: 14))
+                .multilineTextAlignment(.center)
+                .foregroundStyle(Brand.muted)
+                .frame(maxWidth: 380)
+            extra()
+            Spacer(minLength: 8)
+            Button(primary.0, action: primary.1)
+                .buttonStyle(PrimaryButtonStyle())
+                .keyboardShortcut(.defaultAction)
             if let secondary {
-                Button(secondary.0, action: secondary.1).buttonStyle(.plain).font(.caption).foregroundStyle(.secondary)
+                Button(secondary.0, action: secondary.1)
+                    .buttonStyle(.plain)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Brand.muted)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
-// MARK: - Live mic test ("do the bars move when you speak?")
+// MARK: - Primary CTA style
 
-private struct MicTestStep: View {
+private struct PrimaryButtonStyle: ButtonStyle {
+    var fill: Color = Brand.coral
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundStyle(Color.white)
+            .padding(.horizontal, 22)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(fill.opacity(configuration.isPressed ? 0.85 : 1))
+            )
+    }
+}
+
+// MARK: - Permissions + live mic (merged mic grant + VU + AX + optional meetings)
+
+private struct PermissionsStep: View {
+    @ObservedObject var model: OnboardingModel
+    let hotkeyMode: String
     let onContinue: () -> Void
     @StateObject private var meter = MicLevelMeter()
 
+    private var canContinue: Bool {
+        model.micGranted && (model.axGranted || hotkeyMode != "fn")
+    }
+
     var body: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "waveform").font(.system(size: 48)).foregroundStyle(.tint)
-            Text("Test your microphone").font(.title2).bold()
-            Text("Say a few words — do the bars move?")
-                .multilineTextAlignment(.center).foregroundStyle(.secondary)
-            HStack(spacing: 5) {
-                ForEach(0..<14, id: \.self) { i in
-                    Capsule()
-                        .fill(Double(i) / 14 < meter.level ? Brand.coral : Brand.line)
-                        .frame(width: 7, height: 34)
+        VStack(spacing: 16) {
+            iconBadge("lock.shield.fill")
+            Text("Permissions")
+                .font(Brand.serif(24))
+                .foregroundStyle(Brand.text)
+            Text("Two grants so OpenWispr can hear you and paste at the cursor. Audio never leaves this Mac.")
+                .font(.system(size: 14))
+                .multilineTextAlignment(.center)
+                .foregroundStyle(Brand.muted)
+                .frame(maxWidth: 380)
+
+            // Mic row + VU
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    statusDot(model.micGranted)
+                    Text("Microphone")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Brand.text)
+                    Spacer()
+                    if model.micGranted {
+                        Text("Granted")
+                            .font(Brand.mono(11))
+                            .foregroundStyle(Brand.coral)
+                    } else if model.micDenied {
+                        Button("Open Settings") { model.openMicSettings() }
+                            .font(.system(size: 12, weight: .medium))
+                    } else {
+                        Button("Allow") { model.requestMic() }
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Brand.coral)
+                    }
+                }
+                if model.micGranted {
+                    HStack(spacing: 4) {
+                        ForEach(0..<16, id: \.self) { i in
+                            Capsule()
+                                .fill(Double(i) / 16 < meter.level ? Brand.coral : Brand.line)
+                                .frame(width: 8, height: 28)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 32)
+                    .animation(.easeOut(duration: 0.08), value: meter.level)
+                    Text("Speak — the bars should move.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Brand.muted)
+                } else if model.micDenied {
+                    Text("Denied. System Settings → Privacy & Security → Microphone → OpenWispr.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.orange)
                 }
             }
-            .frame(height: 40)
-            .padding(.vertical, 6)
-            .animation(.easeOut(duration: 0.08), value: meter.level)
-            HStack(spacing: 12) {
-                Button("Change microphone") {
-                    NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.sound?input")!)
+            .padding(14)
+            .background(card)
+
+            // Accessibility row
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    statusDot(model.axGranted)
+                    Text("Accessibility")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Brand.text)
+                    Spacer()
+                    if model.axGranted {
+                        Text("Granted")
+                            .font(Brand.mono(11))
+                            .foregroundStyle(Brand.coral)
+                    } else {
+                        Button("Open Settings") {
+                            model.requestAccessibility()
+                        }
+                        .font(.system(size: 12, weight: .medium))
+                    }
                 }
-                Button("Yes, looks good") { onContinue() }
-                    .keyboardShortcut(.defaultAction).controlSize(.large)
+                Text(model.axGranted
+                      ? "fn trigger and auto-paste are enabled."
+                      : "Needed for the fn key and to paste at the cursor.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Brand.muted)
+                if !model.axGranted {
+                    Button("I've enabled it — re-check") {
+                        model.refreshAccessibility()
+                    }
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Brand.coral)
+                }
+            }
+            .padding(14)
+            .background(card)
+
+            // Optional meetings
+            HStack(spacing: 8) {
+                Image(systemName: (model.screenRecGranted || model.screenRecPrompted)
+                      ? "checkmark.circle.fill" : "rectangle.inset.filled.badge.record")
+                    .foregroundStyle((model.screenRecGranted || model.screenRecPrompted) ? Brand.coral : Brand.muted)
+                if model.screenRecGranted || model.screenRecPrompted {
+                    Text(model.screenRecGranted ? "Meeting capture enabled" : "Meeting capture requested (applies next launch)")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Brand.muted)
+                } else {
+                    Button("Also enable meeting capture (optional)") {
+                        model.requestScreenRecording()
+                    }
+                    .font(.system(size: 12))
+                    .foregroundStyle(Brand.muted)
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 4)
+
+            Spacer(minLength: 0)
+
+            Button("Continue") { onContinue() }
+                .buttonStyle(PrimaryButtonStyle())
+                .keyboardShortcut(.defaultAction)
+                .disabled(!canContinue)
+                .opacity(canContinue ? 1 : 0.45)
+            if !model.axGranted && hotkeyMode != "fn" {
+                Button("Skip Accessibility for now") { onContinue() }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Brand.muted)
             }
         }
-        .onAppear { meter.start() }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear {
+            model.refreshAccessibility()
+            if model.micGranted { meter.start() }
+        }
+        .onChange(of: model.micGranted) { _, granted in
+            if granted { meter.start() } else { meter.stop() }
+        }
         .onDisappear { meter.stop() }
+    }
+
+    private var card: some View {
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
+            .fill(Brand.surface)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(Brand.line, lineWidth: 1)
+            )
+    }
+
+    private func statusDot(_ ok: Bool) -> some View {
+        Image(systemName: ok ? "checkmark.circle.fill" : "circle")
+            .font(.system(size: 16, weight: .semibold))
+            .foregroundStyle(ok ? Brand.coral : Brand.line)
+    }
+
+    private func iconBadge(_ systemName: String) -> some View {
+        Image(systemName: systemName)
+            .font(.system(size: 28, weight: .semibold))
+            .foregroundStyle(Brand.coral)
+            .frame(width: 64, height: 64)
+            .background(
+                Circle()
+                    .fill(Brand.surface)
+                    .overlay(Circle().stroke(Brand.line, lineWidth: 1))
+            )
     }
 }
 
-// MARK: - Hotkey press-test ("does it light up when you press it?")
+// MARK: - Trigger pick + press-test + toggles (merged setup + hotkey test)
 
-private struct HotkeyTestStep: View {
+private struct TriggerStep: View {
     @Binding var hotkeyMode: String
+    @Binding var launchAtLogin: Bool
+    @Binding var loginItemFailed: Bool
+    @Binding var smartCleanup: Bool
     let onContinue: () -> Void
+
     @State private var monitor: ModifierKeyMonitor?
     @State private var lit = false
     @State private var everFired = false
@@ -315,40 +535,100 @@ private struct HotkeyTestStep: View {
     private var label: String { Triggers.trigger(for: hotkeyMode).label }
 
     var body: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "keyboard").font(.system(size: 48)).foregroundStyle(.tint)
-            Text("Test the dictation key").font(.title2).bold()
+        VStack(spacing: 16) {
+            iconBadge("keyboard")
+            Text("Your dictation key")
+                .font(Brand.serif(24))
+                .foregroundStyle(Brand.text)
+            Text(isModifier
+                  ? "Hold \(label) to talk. Press it once so we know it works."
+                  : "Pick a custom shortcut, then continue. You’ll test it after setup.")
+                .font(.system(size: 14))
+                .multilineTextAlignment(.center)
+                .foregroundStyle(Brand.muted)
+                .frame(maxWidth: 380)
+
+            Picker("Trigger", selection: $hotkeyMode) {
+                ForEach(Triggers.list, id: \.id) { t in
+                    Text(t.label).tag(t.id)
+                }
+                Text("Custom shortcut").tag("custom")
+            }
+            .pickerStyle(.menu)
+            .frame(maxWidth: 220)
+            .onChange(of: hotkeyMode) { _, _ in
+                NotificationCenter.default.post(name: .whisprHotkeyModeChanged, object: nil)
+                everFired = false
+                lit = false
+                attach()
+            }
+
             if isModifier {
-                Text("Press and hold the \(label) key — does it light up?")
-                    .multilineTextAlignment(.center).foregroundStyle(.secondary)
                 Text(label)
                     .font(.system(size: 22, weight: .semibold, design: .monospaced))
-                    .frame(width: 120, height: 76)
-                    .background(RoundedRectangle(cornerRadius: 14).fill(lit ? Brand.coral.opacity(0.25) : Brand.surface))
-                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(lit ? Brand.coral : Brand.line, lineWidth: lit ? 2 : 1))
+                    .frame(width: 140, height: 80)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(lit ? Brand.coral.opacity(0.22) : Brand.surface)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(lit ? Brand.coral : Brand.line, lineWidth: lit ? 2 : 1)
+                    )
                     .animation(.easeOut(duration: 0.1), value: lit)
-                Text(everFired ? "Detected — you're good." : "Nothing yet? Accessibility may be off (previous step).")
-                    .font(.caption).foregroundStyle(everFired ? Brand.coral : .secondary)
-                HStack(spacing: 12) {
-                    Picker("", selection: $hotkeyMode) {
-                        ForEach(Triggers.list, id: \.id) { t in Text(t.label).tag(t.id) }
-                        Text("Custom").tag("custom")
-                    }
-                    .labelsHidden().frame(maxWidth: 130)
-                    .onChange(of: hotkeyMode) { _, _ in
-                        NotificationCenter.default.post(name: .whisprHotkeyModeChanged, object: nil)
-                        everFired = false; lit = false; attach()
-                    }
-                    Button("Continue") { onContinue() }.keyboardShortcut(.defaultAction).controlSize(.large)
-                }
+                Text(everFired ? "Detected — you're good." : "Nothing yet? Check Accessibility on the previous step.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(everFired ? Brand.coral : Brand.muted)
             } else {
-                Text("You've chosen a custom shortcut. Set it below, then test it live once setup finishes.")
-                    .multilineTextAlignment(.center).foregroundStyle(.secondary)
                 KeyboardShortcuts.Recorder("Shortcut:", name: .dictate)
-                Button("Continue") { onContinue() }.keyboardShortcut(.defaultAction).controlSize(.large)
+                    .frame(maxWidth: 260)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Toggle("Start OpenWispr at login", isOn: $launchAtLogin)
+                    .onChange(of: launchAtLogin) { _, on in
+                        if LoginItem.set(on) { loginItemFailed = false }
+                        else { launchAtLogin = false; loginItemFailed = true }
+                    }
+                if AppleLocalEngine.isAvailable() {
+                    Toggle("Smart cleanup — grammar & formatting on-device", isOn: $smartCleanup)
+                        .onChange(of: smartCleanup) { _, on in
+                            Settings.smartCleanup = on
+                            if on, Settings.rewriteStyle == "off" { Settings.rewriteStyle = "clean" }
+                        }
+                }
+                if loginItemFailed {
+                    Text("Couldn't set launch-at-login — move OpenWispr to Applications first.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.orange)
+                } else if hotkeyMode == "fn" {
+                    Text("Tip: System Settings → Keyboard → “Press 🌐 key to” = Do Nothing.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Brand.muted)
+                }
+            }
+            .font(.system(size: 13))
+            .frame(maxWidth: 340)
+            .padding(.top, 4)
+
+            Spacer(minLength: 0)
+
+            Button("Continue") { onContinue() }
+                .buttonStyle(PrimaryButtonStyle())
+                .keyboardShortcut(.defaultAction)
+                // Prefer a successful press-test for modifiers; don't hard-block power users
+                .opacity(isModifier && !everFired ? 0.7 : 1)
+            if isModifier && !everFired {
+                Text("Hold the key once for a confident setup — or continue anyway.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Brand.muted)
             }
         }
-        .onAppear { attach() }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear {
+            launchAtLogin = LoginItem.isEnabled
+            attach()
+        }
         .onDisappear { monitor = nil }
     }
 
@@ -360,37 +640,16 @@ private struct HotkeyTestStep: View {
             onKeyUp: { lit = false }
         )
     }
-}
 
-// MARK: - Personalize (speed + time saved)
-
-private struct PersonalizeStep: View {
-    let onContinue: () -> Void
-    @State private var typingHours = 3.0
-
-    var body: some View {
-        VStack(spacing: 18) {
-            Text("Speaking is ~4× faster").font(.title2).bold()
-            HStack(spacing: 16) {
-                speedBar("Typing", "≈40 wpm", 0.25, Brand.line)
-                speedBar("Your voice", "≈150 wpm", 1.0, Brand.coral)
-            }
-            Divider().frame(maxWidth: 240)
-            Text("If you type about \(Int(typingHours))h a day, OpenWispr could save you")
-                .font(.subheadline).foregroundStyle(.secondary).multilineTextAlignment(.center)
-            Text("\(Int(OnboardingModel.hoursSavedPerWeek(typingHoursPerDay: typingHours).rounded())) hours a week")
-                .font(.system(size: 30, weight: .bold, design: .serif)).foregroundStyle(Brand.coral)
-            Slider(value: $typingHours, in: 1...8, step: 1).frame(maxWidth: 260)
-            Button("Continue") { onContinue() }.keyboardShortcut(.defaultAction).controlSize(.large)
-        }
-    }
-
-    private func speedBar(_ title: String, _ sub: String, _ frac: CGFloat, _ color: Color) -> some View {
-        VStack(spacing: 6) {
-            Text(title).font(.caption.bold())
-            RoundedRectangle(cornerRadius: 6).fill(color).frame(width: 90 * max(0.25, frac), height: 18)
-                .frame(width: 90, alignment: .leading)
-            Text(sub).font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
-        }
+    private func iconBadge(_ systemName: String) -> some View {
+        Image(systemName: systemName)
+            .font(.system(size: 28, weight: .semibold))
+            .foregroundStyle(Brand.coral)
+            .frame(width: 64, height: 64)
+            .background(
+                Circle()
+                    .fill(Brand.surface)
+                    .overlay(Circle().stroke(Brand.line, lineWidth: 1))
+            )
     }
 }

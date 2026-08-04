@@ -38,15 +38,18 @@
   .label { font-family: var(--mono); font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
 
   /* ---------- nav ---------- */
-  nav { display: flex; align-items: center; justify-content: space-between; padding: 26px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; gap: 12px; }
+  nav { display: flex; align-items: center; justify-content: space-between; padding: 22px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; gap: 12px;
+    position: sticky; top: 0; z-index: 40; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
   .brand { font-family: var(--serif); font-size: 25px; letter-spacing: .2px; text-decoration: none; }
   .brand span { color: var(--accent); }
   .nav-links { display: flex; gap: 4px; flex-wrap: wrap; }
-  .nav-link { color: var(--muted); text-decoration: none; font-size: 14px; transition: color .2s; padding: 8px 10px; }
+  .nav-link { color: var(--muted); text-decoration: none; font-size: 14px; transition: color .2s; padding: 8px 10px; border-radius: 8px; }
   .nav-link:hover { color: var(--accent); }
+  .nav-link:focus-visible, .btn:focus-visible, .copy:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px; }
 
   /* ---------- hero ---------- */
-  .hero { padding: 88px 0 64px; text-align: center; }
+  .hero { padding: 72px 0 56px; text-align: center; }
   .eyebrow { display: inline-flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 12px; letter-spacing: .16em; text-transform: uppercase;
     color: var(--muted); border: 1px solid var(--line); border-radius: 100px; padding: 7px 18px; margin-bottom: 36px; background: var(--surface); }
   .eyebrow b { color: var(--accent); font-weight: 700; }
@@ -337,7 +340,7 @@
   </nav>
 
   <header class="hero">
-    <span class="eyebrow">Free · Open Source · <b>On-device</b> <span class="ver">v0.12</span></span>
+    <span class="eyebrow">Free · Open Source · <b>On-device</b> <span class="ver">v0.15</span></span>
     <h1>Talk.<br /><em>It types.</em></h1>
     <p class="lede">The fastest way to write on your Mac. <b>Private, on-device</b> dictation &amp; meeting notes. Talk in any language.</p>
 
@@ -710,9 +713,9 @@
             <svg viewBox="0 0 140 84">
               <path d="M18 72 A58 58 0 0 1 122 72" fill="none" stroke="#241F1A" stroke-width="2"/>
               <path d="M101 31 A58 58 0 0 1 122 72" fill="none" stroke="#E2543E" stroke-width="4"/>
-              <text x="16" y="66" font-size="9" fill="#8A7D6B" font-family="Space Mono, monospace">-20</text>
+              <text x="16" y="66" font-size="9" fill="#6B5F4E" font-family="Space Mono, monospace">-20</text>
               <text x="110" y="66" font-size="9" fill="#E2543E" font-family="Space Mono, monospace">+3</text>
-              <text x="64" y="18" font-size="9" fill="#8A7D6B" font-family="Space Mono, monospace">VU</text>
+              <text x="64" y="18" font-size="9" fill="#6B5F4E" font-family="Space Mono, monospace">VU</text>
               <line class="needle" x1="70" y1="72" x2="70" y2="24" stroke="#E2543E" stroke-width="2"/>
               <circle cx="70" cy="72" r="4" fill="#241F1A"/>
             </svg>
@@ -789,7 +792,7 @@
       <div class="step">
         <span class="n">01</span>
         <h3>Paste one line</h3>
-        <p>Downloads the app and the Whisper model, installs to /Applications.</p>
+        <p>Installs to /Applications and launches. No Gatekeeper dance — the script strips quarantine for you.</p>
         <div class="cmd-row">
           <code id="install-cmd-2">curl -fsSL https://openwispr.vercel.app/install.sh | sh</code>
           <button class="copy" data-copy="install-cmd-2">Copy</button>
@@ -797,13 +800,13 @@
       </div>
       <div class="step">
         <span class="n">02</span>
-        <h3>Grant two permissions</h3>
-        <p>Microphone to hear you, Accessibility to type for you. macOS asks on first run; that's it for dictation.</p>
+        <h3>Walk the short setup</h3>
+        <p>A seven-step wizard: mic + live level meter, Accessibility, speech model (~1.5&nbsp;GB once), press-test your hotkey, then a practice dictation.</p>
       </div>
       <div class="step">
         <span class="n">03</span>
-        <h3>Hold fn. Speak.</h3>
-        <p>Release, and clean text lands at your cursor. Change the key to any modifier in settings.</p>
+        <h3>Hold the key. Speak.</h3>
+        <p>Release — clean text lands at your cursor. OpenWispr lives in the menu bar, not the Dock. Rebind the trigger anytime in Settings.</p>
       </div>
     </div>
     <div class="alt-note">
@@ -814,19 +817,25 @@
   <section id="faq" class="faq">
     <div class="kicker">FAQ</div>
     <h2>Fair questions.</h2>
-        <details><summary>I clicked the app and nothing happened?</summary>
-      <p>OpenWispr lives in your menu bar (microphone icon, top right) — there is no Dock icon. Clicking the app in Applications opens its home window; the menu-bar icon's "Open OpenWispr" does the same.</p></details>
-<details>
+    <details>
+      <summary>I clicked the app and nothing happened?<span class="chev">›</span></summary>
+      <div class="a">OpenWispr lives in your menu bar (microphone icon, top right) — there is no Dock icon. Clicking the app in Applications opens its home window; the menu-bar icon’s “Open OpenWispr” does the same.</div>
+    </details>
+    <details>
       <summary>Why does macOS warn me when I first open it?<span class="chev">›</span></summary>
-      <div class="a">OpenWispr isn't notarized through a paid Apple Developer account, so Gatekeeper flags it like any unsigned open-source app. The install one-liner handles this for you. For the DMG: <b>System Settings → Privacy &amp; Security → Open Anyway</b>, one time only. The code is public on GitHub if you'd rather read it first.</div>
+      <div class="a">OpenWispr isn’t notarized through a paid Apple Developer account, so Gatekeeper flags it like any unsigned open-source app. The install one-liner handles this for you. For the DMG: <b>System Settings → Privacy &amp; Security → Open Anyway</b>, one time only. The code is public on GitHub if you’d rather read it first.</div>
     </details>
     <details>
       <summary>How big is the download?<span class="chev">›</span></summary>
-      <div class="a">The app itself is about <b>2 MB</b>. On first run it downloads the Whisper model, roughly <b>1.5 GB</b>, once. After that everything runs locally with no further downloads.</div>
+      <div class="a">The app itself is a few megabytes. On first setup the wizard downloads the Whisper model, roughly <b>1.5&nbsp;GB</b>, once. After that everything runs locally with no further downloads.</div>
+    </details>
+    <details>
+      <summary>What does first-run setup look like?<span class="chev">›</span></summary>
+      <div class="a">A short wizard: microphone with a live level meter, Accessibility for paste and the <kbd>fn</kbd> key, the speech model, a press-test of your trigger, and an optional practice dictation. Meeting capture is optional and can wait.</div>
     </details>
     <details>
       <summary>Does any audio or text leave my Mac?<span class="chev">›</span></summary>
-      <div class="a"><b>No.</b> Transcription runs on-device via WhisperKit. There's no account, no telemetry, no server. The only network calls are the one-time model download and, if you opt in, your own AI endpoint (local Ollama or a key you bring).</div>
+      <div class="a"><b>No.</b> Transcription runs on-device via WhisperKit. There’s no account, no telemetry, no server. The only network calls are the one-time model download and, if you opt in, your own AI endpoint (local Ollama or a key you bring).</div>
     </details>
     <details>
       <summary>Do I need Ollama?<span class="chev">›</span></summary>

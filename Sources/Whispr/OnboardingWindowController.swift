@@ -15,6 +15,9 @@ final class OnboardingWindowController {
         win.title = "Welcome to OpenWispr"
         win.styleMask = [.titled, .closable]
         win.isReleasedWhenClosed = false
+        // Content is fixed 520×560 in OnboardingView; give the chrome a little headroom.
+        win.setContentSize(NSSize(width: 520, height: 560))
+        win.contentMinSize = NSSize(width: 520, height: 560)
         window = win
         NSApp.activate(ignoringOtherApps: true)
         win.center()

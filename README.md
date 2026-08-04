@@ -28,11 +28,12 @@ curl -fsSL https://openwispr.vercel.app/install.sh | sh
 
 ## First launch
 
-- The menu shows `OpenWispr — downloading …%` while it fetches the default model
-  (`large-v3-v20240930_turbo`, ~1.5 GB), then `loading model…`, then `ready`.
-- Grant **Microphone** access when prompted (needed to record).
-- Grant **Accessibility** access when prompted (needed to auto-paste with Cmd+V).
-  Without it, transcripts are copied to the clipboard and you paste manually.
+- A short setup wizard runs: **Microphone** (with a live level meter) → **Accessibility**
+  (fn trigger + auto-paste) → speech model download (`large-v3-v20240930_turbo`, ~1.5 GB once)
+  → pick and press-test your hotkey → optional practice dictation.
+- Menu bar status shows download/load progress if the model is still fetching.
+- Without Accessibility, transcripts land on the clipboard and you paste manually.
+- OpenWispr lives in the **menu bar** (mic icon), not the Dock.
 
 ## Use
 

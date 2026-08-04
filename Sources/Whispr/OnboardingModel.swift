@@ -2,7 +2,7 @@ import SwiftUI
 import AVFoundation
 import AppKit
 
-/// Drives the first-run wizard: permission grants + model-download progress.
+/// Drives the first-run wizard (v0.15: 7 steps — welcome → move? → permissions → model → trigger → practice → done).
 @MainActor
 final class OnboardingModel: ObservableObject {
     enum PracticeState { case idle, recording, transcribing, result(String) }
@@ -16,6 +16,8 @@ final class OnboardingModel: ObservableObject {
     @Published var modelError: String?
     @Published var screenRecPrompted = false
     @Published var practice: PracticeState = .idle
+    /// Avoid double-kicking model download from welcome + download step.
+    private var modelLoadStarted = false
 
     var micDenied: Bool { AVCaptureDevice.authorizationStatus(for: .audio) == .denied }
 
@@ -31,6 +33,20 @@ final class OnboardingModel: ObservableObject {
     var onPracticeStop: () -> Void = {}
     /// Set by AppController: persist onboarded, attach hotkeys, close the window.
     var onFinish: () -> Void = {}
+
+    /// Idempotent: welcome, permissions Continue, and download onAppear may all fire this.
+    func startModelIfNeeded() {
+        guard !modelLoadStarted, !modelReady else { return }
+        modelLoadStarted = true
+        onStartModel()
+    }
+
+    /// Retry after a failed download.
+    func retryModel() {
+        modelError = nil
+        modelLoadStarted = false
+        startModelIfNeeded()
+    }
 
     func requestScreenRecording() {
         CGRequestScreenCaptureAccess() // prompts + adds Whispr to the pane; grant needs relaunch to take effect
