@@ -7,3 +7,13 @@ Resources
 build_app.sh
 *.md
 LICENSE
+
+# Rust workspace: target/ alone is ~19k files, which blows the 15000-file deploy limit.
+target
+core
+windows
+Cargo.toml
+Cargo.lock
+
+Tools
+.github
