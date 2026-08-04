@@ -38,6 +38,7 @@ curl -fsSL https://openwispr.vercel.app/install.sh | sh
 
 - **Hold the `fn` key** (or your chosen trigger — Right ⌘, Left ⌃, or a custom shortcut), speak, then **release**. A floating pill shows a live preview while recording.
 - On release OpenWispr transcribes and pastes the text where your cursor is.
+- **Snippets** — say a trigger phrase and it expands. "add my email" pastes your address, "add my linkedin" your link. Use a phrase, not a bare word: "email" on its own would fire in every sentence that mentions one. An expansion pastes verbatim even with an AI rewrite style on.
 
 ## Settings (menu bar → Settings…)
 
@@ -45,6 +46,12 @@ curl -fsSL https://openwispr.vercel.app/install.sh | sh
 - **Model** — switch between turbo / small / base / tiny; it downloads and reloads live.
 - **Auto-paste** — turn off for copy-to-clipboard only.
 - **Launch at login**.
+
+## Home window (menu bar → Open OpenWispr)
+
+- **Snippets** — add and edit trigger phrases. Several phrases per snippet, because Whisper writes "add my linkedin" and "add my linked in". **Add my details** seeds starter rows for email, LinkedIn, X, GitHub, phone and signature; fill in the ones you want and leave the rest empty to keep them off. Where two triggers overlap the longer phrase wins, so list order does not matter.
+- **Dictionary** — preferred spellings and exact phrase replacements, fuzzy-matched against what it heard.
+- **Dictations**, **Insights**, **Meetings**, **Transcribe File**, **Models**, **AI**, **Apps**.
 
 ## Build from source
 

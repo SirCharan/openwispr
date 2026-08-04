@@ -40,7 +40,9 @@ struct SnippetsView: View {
             Section("New snippet") {
                 TextField("Trigger phrases, comma separated", text: $triggers,
                           prompt: Text("add my email, add my e-mail"))
+                    .help("Comma-separated. Every phrase here expands to the same text, so add the ways you actually say it.")
                 TextField("Expands to…", text: $expansion, axis: .vertical).lineLimit(1...4)
+                    .help("Pasted exactly as typed, even with an AI rewrite style on. Leave it empty and this snippet stays off.")
                 Button("Add snippet") {
                     model.add(triggers: triggers, expansion: expansion)
                     triggers = ""
@@ -53,6 +55,7 @@ struct SnippetsView: View {
             Section("Snippets") {
                 Button("Add my details") { model.addPresets() }
                     .disabled(model.hasAllPresets)
+                    .help("Adds starter rows for email, LinkedIn, X, GitHub, phone and signature. Fill in the ones you want.")
                 if model.items.isEmpty {
                     Text("No snippets yet. Say a trigger while dictating and it expands.")
                         .foregroundStyle(.secondary).font(.caption)
@@ -84,9 +87,13 @@ private struct SnippetRow: View {
                 set: { item.triggers = SnippetsModel.parse($0) }
             ))
             .font(.body.bold())
+            .help("Comma-separated. Every phrase here expands to the same text.")
             TextField("Expands to…", text: $item.to, axis: .vertical)
                 .lineLimit(1...4)
                 .foregroundStyle(item.to.isEmpty ? .secondary : .primary)
+                .help(item.to.isEmpty
+                      ? "Empty, so this snippet is off. Type what the phrase should paste."
+                      : "Pasted exactly as typed, even with an AI rewrite style on.")
         }
         .padding(.vertical, 2)
     }

@@ -264,6 +264,19 @@
   /* ---------- scroll reveal (JS sets the hidden state via gsap.from; visible without JS) ---------- */
   .reveal { will-change: transform, opacity; }
 
+  /* ---------- snippets (spoken phrase → saved text) ---------- */
+  .snip { display: grid; grid-template-columns: 1fr minmax(220px, 300px); gap: 30px; align-items: start; }
+  .snip .field { max-width: 100%; }
+  .snip-trigger { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 10px; }
+  .snip-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+  .snip-row { display: flex; align-items: baseline; justify-content: space-between; gap: 14px;
+    padding: 10px 2px; border-bottom: 1px solid var(--line); }
+  .snip-say { font-family: var(--mono); font-size: 12.5px; color: var(--text); white-space: nowrap; }
+  .snip-get { font-size: 13px; color: var(--muted); text-align: right; overflow-wrap: anywhere; }
+  .snip-note { color: var(--muted); font-size: 13.5px; line-height: 1.65; margin-top: 14px; }
+  .snip-cap { text-align: left; margin-top: 13px; }
+
   /* ---------- responsive + motion ---------- */
   @media (max-width: 720px) {
     .grid-3, .steps { grid-template-columns: 1fr; }
@@ -277,6 +290,9 @@
     .ba { grid-template-columns: 1fr; }
     .ba-arrow { transform: rotate(90deg); }
     .meet { grid-template-columns: 1fr; gap: 32px; }
+    .snip { grid-template-columns: 1fr; gap: 26px; }
+    .snip-row { gap: 10px; }
+    .snip-say { white-space: normal; }
     .hero { padding: 56px 0 44px; }
     .cmd-row { flex-wrap: wrap; }
     .stats { gap: 14px; flex-direction: column; align-items: stretch; }
@@ -312,6 +328,7 @@
   <nav>
     <a class="brand" href="#"><span>O</span>penWispr</a>
     <div class="nav-links">
+      <a class="nav-link" href="#snippets">Snippets</a>
       <a class="nav-link" href="#meetings">Meetings</a>
       <a class="nav-link" href="#compare">Compare</a>
       <a class="nav-link" href="#faq">FAQ</a>
@@ -623,9 +640,9 @@
           <span class="tl-no">03</span><span class="tl-name">Learns your words</span>
           <p class="tl-body">A custom dictionary plus corrections it remembers. Product names, teammates, jargon: teach it once and it types them right.</p>
         </li>
-        <li class="tl-item" data-i="3" data-title="Snippets &amp; cleanup">
-          <span class="tl-no">04</span><span class="tl-name">Snippets &amp; cleanup</span>
-          <p class="tl-body">Say a trigger phrase, get your saved snippet. Filler removal and punctuation cleanup are built in. Your clipboard is restored after pasting.</p>
+        <li class="tl-item" data-i="3" data-title="Snippets">
+          <span class="tl-no">04</span><span class="tl-name">Snippets</span>
+          <p class="tl-body">Say "add my email" and your address pastes itself. Same for your LinkedIn, your booking link, your sign-off. Phrases you set once, in the words you actually say them.</p>
         </li>
         <li class="tl-item" data-i="4" data-title="13 languages">
           <span class="tl-no">05</span><span class="tl-name">13 languages</span>
@@ -641,6 +658,36 @@
         <span class="tl-badge" id="tlBadge">Track 01</span>
         <h3 id="tlTitle">100% on-device Whisper</h3>
         <p id="tlBody">Runs on the Apple Neural Engine via WhisperKit. Your voice never touches a server. Works fully offline, no account, no bill.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="snippets">
+    <div class="kicker">Snippets</div>
+    <h2>Say it once. Never type it again.</h2>
+    <div class="snip">
+      <div>
+      <div class="field" role="img" aria-label="A spoken phrase expanding into a saved email address">
+        <div class="field-bar">
+          <span class="bar-left">
+            <span class="field-dots"><span></span><span></span><span></span></span>
+            <span class="field-status clean" id="snipStatus">✓ expanded</span>
+          </span>
+          <span class="lang-tag" id="snipTag">add my email</span>
+        </div>
+        <div class="field-body" id="snipWrap"><span id="snipType">Hey, you@example.com and I will follow up.</span><span class="caret"></span></div>
+      </div>
+      <p class="field-cap snip-cap">A phrase fires. A bare word never does — "send me an email tomorrow" stays exactly as you said it.</p>
+      </div>
+      <div>
+        <div class="snip-trigger">You say → it types</div>
+        <ul class="snip-list">
+          <li class="snip-row"><span class="snip-say">add my email</span><span class="snip-get">you@example.com</span></li>
+          <li class="snip-row"><span class="snip-say">add my linkedin</span><span class="snip-get">linkedin.com/in/yourname</span></li>
+          <li class="snip-row"><span class="snip-say">add my calendar</span><span class="snip-get">cal.com/you/30min</span></li>
+          <li class="snip-row"><span class="snip-say">add my signature</span><span class="snip-get">your sign-off, in full</span></li>
+        </ul>
+        <p class="snip-note">Each snippet takes as many phrasings as you need, because "add my linkedin" also comes out "add my linked in". Set your own in the Snippets tab.</p>
       </div>
     </div>
   </section>
@@ -860,6 +907,51 @@
               body.textContent = e.clean;                 // the fix: grammar + spelling tidied
               wrap.classList.remove('flash'); void wrap.offsetWidth; wrap.classList.add('flash');
               setStatus('✓ cleaned', true);
+              setTimeout(function () { p = (p + 1) % ex.length; run(); }, 1900);
+            }, 480);
+          }, 360);
+        }
+      })();
+    }
+    run();
+  })();
+
+  // snippets scene: types the words as SPOKEN, then swaps the trigger phrase for the saved text.
+  // Same shape as the hero above. The last example fires nothing, which is the honest half of the
+  // promise: a phrase expands, a bare word is left alone. Field ships example 1 resolved in HTML.
+  (function () {
+    var body = document.getElementById('snipType');
+    var wrap = document.getElementById('snipWrap');
+    var tag = document.getElementById('snipTag');
+    var status = document.getElementById('snipStatus');
+    var ex = [
+      { spoken: 'hey add my email and i will follow up', out: 'Hey, you@example.com and I will follow up.', trigger: 'add my email' },
+      { spoken: 'my linkedin is add my linkedin', out: 'My LinkedIn is linkedin.com/in/yourname', trigger: 'add my linkedin' },
+      { spoken: 'grab a slot add my calendar', out: 'Grab a slot: cal.com/you/30min', trigger: 'add my calendar' },
+      { spoken: 'i will send you an email tomorrow', out: 'I will send you an email tomorrow.', trigger: null }
+    ];
+    if (REDUCE || !body || !tag || !status) { return; } // HTML already shows example 1 resolved
+    function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    function setStatus(t, done) { status.textContent = t; status.classList.toggle('clean', !!done); }
+    var p = 0;
+    function run() {
+      var e = ex[p], words = e.spoken.split(' '), k = 0;
+      tag.textContent = e.trigger || 'no snippet';
+      setStatus('heard', false);
+      (function addWord() {
+        var head = words.slice(0, k).join(' ');
+        body.innerHTML = esc(head) + (head ? ' ' : '') + '<span class="last">' + esc(words[k]) + '</span>';
+        k++;
+        if (k < words.length) { setTimeout(addWord, 115 + Math.random() * 105); }
+        else {
+          setTimeout(function () {
+            setStatus(e.trigger ? 'expanding…' : 'no trigger', false);
+            setTimeout(function () {
+              body.textContent = e.out;
+              if (e.trigger) {
+                wrap.classList.remove('flash'); void wrap.offsetWidth; wrap.classList.add('flash');
+              }
+              setStatus(e.trigger ? '✓ expanded' : '✓ left alone', true);
               setTimeout(function () { p = (p + 1) % ex.length; run(); }, 1900);
             }, 480);
           }, 360);

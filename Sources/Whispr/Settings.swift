@@ -14,6 +14,13 @@ enum Settings {
         set { UserDefaults.standard.set(newValue, forKey: "onboarded") }
     }
 
+    /// The Snippets coach-mark has been seen. Shown once under the sidebar row, because a user
+    /// who never opens the tab otherwise never learns snippets exist.
+    static var snippetsTipSeen: Bool {
+        get { UserDefaults.standard.bool(forKey: "snippetsTipSeen") }
+        set { UserDefaults.standard.set(newValue, forKey: "snippetsTipSeen") }
+    }
+
     /// Separate remote meeting voices into Speaker A/B via on-device diarization.
     static var diarizationEnabled: Bool {
         get { UserDefaults.standard.object(forKey: "diarizationEnabled") as? Bool ?? true }

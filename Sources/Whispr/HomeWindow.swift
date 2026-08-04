@@ -72,7 +72,14 @@ struct HomeView: View {
     let importModel: FileImportModel
 
     @State private var search = ""
+    /// Held in state so dismissing animates, rather than waiting for a view reload.
+    @State private var showSnippetTip = Settings.onboarded && !Settings.snippetsTipSeen
     private var pane: HomePane { state.pane }
+
+    private func dismissSnippetTip() {
+        Settings.snippetsTipSeen = true
+        withAnimation(.easeOut(duration: 0.18)) { showSnippetTip = false }
+    }
 
     var body: some View {
         HStack(spacing: 0) {
@@ -112,6 +119,14 @@ struct HomeView: View {
                     .background(RoundedRectangle(cornerRadius: 8).fill(pane == p ? Brand.coralSoft : .clear))
                 }
                 .buttonStyle(.plain)
+
+                // Sits directly under the row it points at, so no overlay anchoring is needed.
+                if p == .snippets, showSnippetTip {
+                    SnippetTip(
+                        onOpen: { state.pane = .snippets; dismissSnippetTip() },
+                        onDismiss: dismissSnippetTip
+                    )
+                }
             }
 
             Spacer()
@@ -145,6 +160,42 @@ struct HomeView: View {
         case .settings: SettingsPane()
         case .about: AboutPane()
         }
+    }
+}
+
+// MARK: - Snippets coach-mark
+
+/// Shown once, under the Snippets sidebar row, after onboarding finishes. Snippets are invisible
+/// until you open the tab, and nothing else in the app mentions them.
+private struct SnippetTip: View {
+    let onOpen: () -> Void
+    let onDismiss: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .top, spacing: 6) {
+                Text("Say “add my email” while dictating and your address pastes itself.")
+                    .font(.caption)
+                    .foregroundStyle(Brand.text)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button(action: onDismiss) {
+                    Image(systemName: "xmark").font(.system(size: 9, weight: .semibold))
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Brand.muted)
+                .help("Dismiss")
+            }
+            Button("Show me", action: onOpen)
+                .font(.caption.weight(.semibold))
+                .buttonStyle(.plain)
+                .foregroundStyle(Brand.coral)
+        }
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 8).fill(Brand.coralSoft))
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Brand.line))
+        .padding(.horizontal, 4)
+        .padding(.top, 2)
+        .transition(.opacity)
     }
 }
 
