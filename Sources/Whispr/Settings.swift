@@ -91,11 +91,4 @@ enum Settings {
         get { UserDefaults.standard.string(forKey: "rewriteStyle") ?? "off" }
         set { UserDefaults.standard.set(newValue, forKey: "rewriteStyle") }
     }
-
-    /// Smart cleanup: route rewrite + meeting summaries through Apple's on-device model when available.
-    /// Free, no setup, offline. Overrides the BYOK provider for the local path (see LLMClient).
-    static var smartCleanup: Bool {
-        get { UserDefaults.standard.bool(forKey: "smartCleanup") }
-        set { UserDefaults.standard.set(newValue, forKey: "smartCleanup") }
-    }
 }

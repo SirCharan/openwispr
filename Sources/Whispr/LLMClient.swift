@@ -89,12 +89,8 @@ enum LLMClient {
 
     // MARK: - Chat
 
-    /// One-shot chat completion. Smart cleanup (Apple's on-device model) takes priority when enabled
-    /// and available, without disturbing the user's BYOK provider config.
+    /// One-shot chat completion via the configured BYOK provider.
     static func complete(system: String, user: String) async throws -> String {
-        if Settings.smartCleanup, AppleLocalEngine.isAvailable() {
-            return try await AppleLocalEngine.complete(system: system, user: user)
-        }
         switch provider {
         case .ollama:
             return try await ollamaChat(system: system, user: user)
@@ -105,9 +101,8 @@ enum LLMClient {
         }
     }
 
-    /// True if cleanup can run right now — Apple's on-device model (if smart cleanup is on) or BYOK.
+    /// True if cleanup can run right now via the configured BYOK provider.
     static func available() async -> Bool {
-        if Settings.smartCleanup, AppleLocalEngine.isAvailable() { return true }
         switch provider {
         case .ollama: return await ollamaAlive()
         case .openai, .openrouter: return apiKey(for: provider)?.isEmpty == false

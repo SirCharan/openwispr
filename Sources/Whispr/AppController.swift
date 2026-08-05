@@ -37,6 +37,7 @@ final class AppController {
     private var onboarding: OnboardingWindowController?
 
     func start() {
+        Stats.syncOnLaunch() // restore aggregates from Application Support after a defaults wipe
         Self.migrateFromWhisprIfNeeded()
         NotificationCenter.default.addObserver(forName: .whisprHotkeyModeChanged, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in

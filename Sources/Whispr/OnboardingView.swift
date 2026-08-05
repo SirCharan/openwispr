@@ -2,23 +2,20 @@ import SwiftUI
 import KeyboardShortcuts
 import AVFoundation
 
-/// First-run wizard (v0.15): seven steps, Paper Studio + Wispr Flow patterns.
-/// welcome → move? → permissions+mic VU → model → trigger+press-test → practice → done
+/// First-run wizard (v0.15): Paper Studio + Wispr Flow patterns.
+/// welcome → personalize → move? → permissions+mic VU → model → trigger+press-test → practice → done
+/// A returning install (stats survived in Application Support) gets a "welcome back" greeting instead.
 struct OnboardingView: View {
     @ObservedObject var model: OnboardingModel
     @State private var launchAtLogin = false
     @State private var loginItemFailed = false
-    @State private var smartCleanup = Settings.smartCleanup
+    @State private var typingHours = 2.0
     @AppStorage("hotkeyMode") private var hotkeyMode = "fn"
 
-    /// 3 phases mapped by step index (0–6).
-    private let phases = ["Permissions", "Model", "Dictate"]
-    private func phaseIndex(_ step: Int) -> Int {
-        switch step {
-        case 0...2: 0
-        case 3: 1
-        default: 2
-        }
+    /// 3 phases mapped by step.
+    private let phases = ["Set up", "Model", "Dictate"]
+    private func phaseIndex(_ step: OnboardingModel.Step) -> Int {
+        if step <= .permissions { 0 } else if step == .download { 1 } else { 2 }
     }
 
     var body: some View {
@@ -27,26 +24,26 @@ struct OnboardingView: View {
                 .padding(.bottom, 20)
             VStack(spacing: 0) {
                 switch model.step {
-                case 0: welcome
-                case 1: move
-                case 2: PermissionsStep(
+                case .welcome: welcome
+                case .personalize: personalize
+                case .move: move
+                case .permissions: PermissionsStep(
                     model: model,
                     hotkeyMode: hotkeyMode,
                     onContinue: {
-                        model.step = 3
+                        model.step = .download
                         model.startModelIfNeeded()
                     }
                 )
-                case 3: download
-                case 4: TriggerStep(
+                case .download: download
+                case .trigger: TriggerStep(
                     hotkeyMode: $hotkeyMode,
                     launchAtLogin: $launchAtLogin,
                     loginItemFailed: $loginItemFailed,
-                    smartCleanup: $smartCleanup,
-                    onContinue: { model.step = 5 }
+                    onContinue: { model.step = .practice }
                 )
-                case 5: practice
-                default: done
+                case .practice: PracticeStep(model: model, hotkeyMode: hotkeyMode)
+                case .done: done
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -97,22 +94,70 @@ struct OnboardingView: View {
     // MARK: - Steps
 
     private var welcome: some View {
-        stepShell(
-            icon: "mic.circle.fill",
-            title: "Welcome to OpenWispr",
-            body: "Hold a hotkey, speak, and clean text pastes at the cursor — transcribed on-device with Whisper.",
-            primary: ("Get started", {
-                // Overlap model load with the rest of setup when possible
-                model.startModelIfNeeded()
-                model.step = model.needsMove ? 1 : 2
-            })
-        ) {
-            HStack(spacing: 16) {
-                chip("On-device")
-                chip("No account")
-                chip("No cloud")
+        Group {
+            if model.returning {
+                stepShell(
+                    icon: "arrow.clockwise.heart.fill",
+                    title: "Welcome back",
+                    body: "Your words and streak survived the reinstall. Two quick grants and a fresh model download, and you're dictating again.",
+                    primary: ("Pick up where I left off", {
+                        model.startModelIfNeeded()
+                        model.step = model.needsMove ? .move : .permissions
+                    })
+                ) {
+                    HStack(spacing: 16) {
+                        chip("\(model.restoredWords.formatted()) words")
+                        if model.restoredStreak > 0 { chip("\(model.restoredStreak)-day best streak") }
+                    }
+                    .padding(.top, 4)
+                }
+            } else {
+                stepShell(
+                    icon: "mic.circle.fill",
+                    title: "Welcome to OpenWispr",
+                    body: "Hold a hotkey, speak, and clean text pastes at the cursor — transcribed on-device with Whisper.",
+                    primary: ("Get started", {
+                        // Overlap model load with the rest of setup when possible
+                        model.startModelIfNeeded()
+                        model.step = .personalize
+                    })
+                ) {
+                    HStack(spacing: 16) {
+                        chip("On-device")
+                        chip("No account")
+                        chip("No cloud")
+                    }
+                    .padding(.top, 4)
+                }
             }
-            .padding(.top, 4)
+        }
+    }
+
+    private var personalize: some View {
+        stepShell(
+            icon: "keyboard.badge.ellipsis",
+            title: "How much do you type?",
+            body: "Ballpark hours a day, across email, docs, and chat.",
+            primary: ("Sounds good", { model.step = model.needsMove ? .move : .permissions })
+        ) {
+            VStack(spacing: 14) {
+                Picker("", selection: $typingHours) {
+                    Text("1h").tag(1.0)
+                    Text("2h").tag(2.0)
+                    Text("4h").tag(4.0)
+                    Text("6h").tag(6.0)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .frame(maxWidth: 280)
+                Text("Speaking is ~4× faster — that's ~\(Int(OnboardingModel.hoursSavedPerWeek(typingHoursPerDay: typingHours).rounded())) hours back every week.")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Brand.coral)
+                    .multilineTextAlignment(.center)
+                    .contentTransition(.numericText())
+                    .animation(.easeOut(duration: 0.2), value: typingHours)
+            }
+            .padding(.top, 6)
         }
     }
 
@@ -122,7 +167,7 @@ struct OnboardingView: View {
             title: "Move to Applications",
             body: "OpenWispr is running from \(Bundle.main.bundlePath.hasPrefix("/Volumes") ? "the disk image" : "outside Applications"). Moving it keeps macOS permissions stable. It will relaunch after the move.",
             primary: ("Move to Applications", { model.onMoveToApplications() }),
-            secondary: ("Skip for now", { model.step = 2 })
+            secondary: ("Skip for now", { model.step = .permissions })
         )
     }
 
@@ -160,7 +205,7 @@ struct OnboardingView: View {
                         .font(Brand.mono(12))
                         .foregroundStyle(Brand.muted)
                 }
-                Button("Continue") { model.step = 4 }
+                Button("Continue") { model.step = .trigger }
                     .buttonStyle(PrimaryButtonStyle())
                     .keyboardShortcut(.defaultAction)
                     .disabled(!model.modelReady)
@@ -175,75 +220,6 @@ struct OnboardingView: View {
         }
     }
 
-    private var practice: some View {
-        VStack(spacing: 20) {
-            iconBadge("waveform.and.mic")
-            Text("Try it").font(Brand.serif(24)).foregroundStyle(Brand.text)
-            Text("Press the button, say something like “OpenWispr types what I say”, then stop.")
-                .font(.system(size: 14))
-                .multilineTextAlignment(.center)
-                .foregroundStyle(Brand.muted)
-                .frame(maxWidth: 360)
-
-            switch model.practice {
-            case .idle:
-                Button("Start recording") { model.onPracticeStart() }
-                    .buttonStyle(PrimaryButtonStyle())
-                    .keyboardShortcut(.defaultAction)
-            case .recording:
-                Button("Stop") { model.onPracticeStop() }
-                    .buttonStyle(PrimaryButtonStyle(fill: Color.red.opacity(0.9)))
-                    .keyboardShortcut(.defaultAction)
-                Text("Listening…")
-                    .font(Brand.mono(11))
-                    .foregroundStyle(Brand.coral)
-            case .transcribing:
-                ProgressView("Transcribing…")
-                    .tint(Brand.coral)
-            case .result(let text):
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("YOU SAID")
-                        .font(Brand.mono(10).weight(.bold))
-                        .foregroundStyle(Brand.muted)
-                        .tracking(1.2)
-                    Text(text.isEmpty ? "(heard nothing — try again)" : "“\(text)”")
-                        .font(.system(size: 15, design: .serif).italic())
-                        .foregroundStyle(text.isEmpty ? Brand.muted : Brand.text)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .padding(16)
-                .frame(maxWidth: 380)
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Brand.surface)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .stroke(Brand.line, lineWidth: 1)
-                        )
-                )
-                HStack(spacing: 14) {
-                    Button("Try again") { model.practice = .idle }
-                        .buttonStyle(.plain)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(Brand.muted)
-                    Button("Continue") { model.step = 6 }
-                        .buttonStyle(PrimaryButtonStyle())
-                        .keyboardShortcut(.defaultAction)
-                }
-            }
-
-            if case .result = model.practice {} else {
-                Button("Skip") { model.step = 6 }
-                    .buttonStyle(.plain)
-                    .font(.system(size: 12))
-                    .foregroundStyle(Brand.muted)
-                    .padding(.top, 4)
-            }
-            Spacer(minLength: 0)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
     private var done: some View {
         stepShell(
             icon: "checkmark.seal.fill",
@@ -251,7 +227,7 @@ struct OnboardingView: View {
             body: "Hold \(Self.hotkeyLabel), speak, then release — words paste where the cursor is. OpenWispr lives in the menu bar (not the Dock).",
             primary: ("Start using OpenWispr", { model.onFinish() })
         ) {
-            Text("Speaking is ~4× faster than typing · change hotkey or model anytime in Settings")
+            Text("Change the hotkey or model anytime in Settings")
                 .font(.system(size: 12))
                 .foregroundStyle(Brand.muted)
                 .multilineTextAlignment(.center)
@@ -524,7 +500,6 @@ private struct TriggerStep: View {
     @Binding var hotkeyMode: String
     @Binding var launchAtLogin: Bool
     @Binding var loginItemFailed: Bool
-    @Binding var smartCleanup: Bool
     let onContinue: () -> Void
 
     @State private var monitor: ModifierKeyMonitor?
@@ -590,13 +565,6 @@ private struct TriggerStep: View {
                         if LoginItem.set(on) { loginItemFailed = false }
                         else { launchAtLogin = false; loginItemFailed = true }
                     }
-                if AppleLocalEngine.isAvailable() {
-                    Toggle("Smart cleanup — grammar & formatting on-device", isOn: $smartCleanup)
-                        .onChange(of: smartCleanup) { _, on in
-                            Settings.smartCleanup = on
-                            if on, Settings.rewriteStyle == "off" { Settings.rewriteStyle = "clean" }
-                        }
-                }
                 if loginItemFailed {
                     Text("Couldn't set launch-at-login — move OpenWispr to Applications first.")
                         .font(.system(size: 11))
@@ -639,6 +607,149 @@ private struct TriggerStep: View {
             onKeyDown: { lit = true; everFired = true },
             onKeyUp: { lit = false }
         )
+    }
+
+    private func iconBadge(_ systemName: String) -> some View {
+        Image(systemName: systemName)
+            .font(.system(size: 28, weight: .semibold))
+            .foregroundStyle(Brand.coral)
+            .frame(width: 64, height: 64)
+            .background(
+                Circle()
+                    .fill(Brand.surface)
+                    .overlay(Circle().stroke(Brand.line, lineWidth: 1))
+            )
+    }
+}
+
+// MARK: - Practice with the real gesture (hold the key → speak → release)
+
+private struct PracticeStep: View {
+    @ObservedObject var model: OnboardingModel
+    let hotkeyMode: String
+
+    @State private var monitor: ModifierKeyMonitor?
+
+    private var isModifier: Bool { hotkeyMode != "custom" }
+    private var label: String { Triggers.trigger(for: hotkeyMode).label }
+    private var isRecording: Bool { if case .recording = model.practice { true } else { false } }
+
+    var body: some View {
+        VStack(spacing: 20) {
+            iconBadge("waveform.and.mic")
+            Text("Try it for real").font(Brand.serif(24)).foregroundStyle(Brand.text)
+            Text(isModifier
+                  ? "Hold \(label), say “OpenWispr types what I say”, then release."
+                  : "Press the button, say something like “OpenWispr types what I say”, then stop.")
+                .font(.system(size: 14))
+                .multilineTextAlignment(.center)
+                .foregroundStyle(Brand.muted)
+                .frame(maxWidth: 360)
+
+            switch model.practice {
+            case .idle, .recording:
+                if isModifier {
+                    // Same key-cap as the trigger step — lit while it's actually recording.
+                    Text(label)
+                        .font(.system(size: 22, weight: .semibold, design: .monospaced))
+                        .frame(width: 140, height: 80)
+                        .background(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .fill(isRecording ? Brand.coral.opacity(0.22) : Brand.surface)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(isRecording ? Brand.coral : Brand.line, lineWidth: isRecording ? 2 : 1)
+                        )
+                        .animation(.easeOut(duration: 0.1), value: isRecording)
+                    Text(isRecording ? "Listening — release to finish." : "Holding the key starts the mic.")
+                        .font(Brand.mono(11))
+                        .foregroundStyle(isRecording ? Brand.coral : Brand.muted)
+                } else if isRecording {
+                    Button("Stop") { model.onPracticeStop() }
+                        .buttonStyle(PrimaryButtonStyle(fill: Color.red.opacity(0.9)))
+                        .keyboardShortcut(.defaultAction)
+                    Text("Listening…")
+                        .font(Brand.mono(11))
+                        .foregroundStyle(Brand.coral)
+                } else {
+                    Button("Start recording") { model.onPracticeStart() }
+                        .buttonStyle(PrimaryButtonStyle())
+                        .keyboardShortcut(.defaultAction)
+                }
+            case .transcribing:
+                ProgressView("Transcribing…")
+                    .tint(Brand.coral)
+            case .result(let text):
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("YOU SAID")
+                        .font(Brand.mono(10).weight(.bold))
+                        .foregroundStyle(Brand.muted)
+                        .tracking(1.2)
+                    Text(text.isEmpty ? "(heard nothing — try again)" : "“\(text)”")
+                        .font(.system(size: 15, design: .serif).italic())
+                        .foregroundStyle(text.isEmpty ? Brand.muted : Brand.text)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding(16)
+                .frame(maxWidth: 380)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Brand.surface)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(Brand.line, lineWidth: 1)
+                        )
+                )
+                if wordCount(text) > 0 {
+                    Text("\(wordCount(text)) words — typing that takes ~\(Int((Double(wordCount(text)) * 1.5).rounded()))s at 40 wpm.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Brand.muted)
+                }
+                HStack(spacing: 14) {
+                    Button("Try again") { model.practice = .idle }
+                        .buttonStyle(.plain)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(Brand.muted)
+                    Button("Continue") { model.step = .done }
+                        .buttonStyle(PrimaryButtonStyle())
+                        .keyboardShortcut(.defaultAction)
+                }
+            }
+
+            if case .result = model.practice {} else {
+                Button("Skip") { model.step = .done }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Brand.muted)
+                    .padding(.top, 4)
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear { attach() }
+        .onDisappear {
+            monitor = nil
+            if isRecording { model.onPracticeStop() }
+        }
+    }
+
+    /// Hold-to-talk: key-down starts the practice mic, key-up stops it — the real dictation gesture.
+    private func attach() {
+        guard isModifier else { monitor = nil; return }
+        monitor = ModifierKeyMonitor(
+            trigger: Triggers.trigger(for: hotkeyMode),
+            onKeyDown: {
+                if case .idle = model.practice { model.onPracticeStart() }
+            },
+            onKeyUp: {
+                if case .recording = model.practice { model.onPracticeStop() }
+            }
+        )
+    }
+
+    private func wordCount(_ s: String) -> Int {
+        s.split(whereSeparator: \.isWhitespace).count
     }
 
     private func iconBadge(_ systemName: String) -> some View {

@@ -48,6 +48,7 @@ enum Stats {
 
     static func recordMeeting() {
         UserDefaults.standard.set(UserDefaults.standard.integer(forKey: "meetingsCount") + 1, forKey: "meetingsCount")
+        persist()
     }
 
     // MARK: - Lifetime aggregates (survive the 200-entry history cap + "Clear history")
@@ -99,9 +100,65 @@ enum Stats {
             apps[id, default: 0] += words
             appWords = apps
         }
+        persist()
     }
 
-    static func noteFixAccepted(_ n: Int = 1) { d.set(fixesAccepted + n, forKey: "fixesAccepted") }
+    static func noteFixAccepted(_ n: Int = 1) {
+        d.set(fixesAccepted + n, forKey: "fixesAccepted")
+        persist()
+    }
+
+    // MARK: - Durable mirror (Application Support survives app deletion + a defaults wipe; UserDefaults doesn't)
+
+    struct Snapshot: Codable {
+        var lifetimeWords: Int
+        var lifetimeSeconds: Double
+        var lifetimeDictations: Int
+        var fixesAccepted: Int
+        var meetingsCount: Int
+        var dailyWords: [String: Int]
+        var appWords: [String: Int]
+    }
+
+    static let fileURL: URL = {
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("OpenWispr", isDirectory: true)
+        try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+        return base.appendingPathComponent("stats.json")
+    }()
+
+    static func snapshot() -> Snapshot {
+        Snapshot(lifetimeWords: lifetimeWords, lifetimeSeconds: lifetimeSeconds,
+                 lifetimeDictations: lifetimeDictations, fixesAccepted: fixesAccepted,
+                 meetingsCount: d.integer(forKey: "meetingsCount"),
+                 dailyWords: dailyWords, appWords: appWords)
+    }
+
+    static func apply(_ s: Snapshot) {
+        d.set(s.lifetimeWords, forKey: "lifetimeWords")
+        d.set(s.lifetimeSeconds, forKey: "lifetimeSeconds")
+        d.set(s.lifetimeDictations, forKey: "lifetimeDictations")
+        d.set(s.fixesAccepted, forKey: "fixesAccepted")
+        d.set(s.meetingsCount, forKey: "meetingsCount")
+        dailyWords = s.dailyWords
+        appWords = s.appWords
+    }
+
+    private static func persist() {
+        if let data = try? JSONEncoder().encode(snapshot()) { try? data.write(to: fileURL, options: .atomic) }
+    }
+
+    /// Fresh defaults + a mirror on disk → restore; otherwise export so existing users get a file immediately.
+    /// Never overwrites non-empty defaults from the file.
+    static func syncOnLaunch() {
+        if d.object(forKey: "lifetimeWords") == nil,
+           let data = try? Data(contentsOf: fileURL),
+           let s = try? JSONDecoder().decode(Snapshot.self, from: data) {
+            apply(s)
+        } else if lifetimeWords > 0 {
+            persist()
+        }
+    }
 
     // MARK: - Derived (pure, self-tested)
 
@@ -235,6 +292,24 @@ enum Stats {
             for back in c.daysAgo { map[key(back)] = 5 }
             Fixtures.expectEqual(longestStreak(map: map), c.expected, "longestStreak")
         }
+        // Snapshot round-trip (in-memory only — no file I/O in the selftest)
+        let snap = Snapshot(lifetimeWords: 1234, lifetimeSeconds: 567.8, lifetimeDictations: 42,
+                            fixesAccepted: 7, meetingsCount: 3,
+                            dailyWords: ["2026-01-01": 10, "2026-01-02": 20],
+                            appWords: ["com.apple.Notes": 30])
+        if let data = try? JSONEncoder().encode(snap),
+           let back = try? JSONDecoder().decode(Snapshot.self, from: data) {
+            Fixtures.expectEqual(back.lifetimeWords, snap.lifetimeWords, "snapshot lifetimeWords")
+            Fixtures.expectClose(back.lifetimeSeconds, snap.lifetimeSeconds, "snapshot lifetimeSeconds")
+            Fixtures.expectEqual(back.lifetimeDictations, snap.lifetimeDictations, "snapshot lifetimeDictations")
+            Fixtures.expectEqual(back.fixesAccepted, snap.fixesAccepted, "snapshot fixesAccepted")
+            Fixtures.expectEqual(back.meetingsCount, snap.meetingsCount, "snapshot meetingsCount")
+            Fixtures.expectEqual(back.dailyWords, snap.dailyWords, "snapshot dailyWords")
+            Fixtures.expectEqual(back.appWords, snap.appWords, "snapshot appWords")
+        } else {
+            Fixtures.expectEqual(false, true, "snapshot round-trip encode/decode")
+        }
+
         print("Stats.selfTest PASS (\(f.streak.count + f.avgWpm.count + f.timeSavedMinutes.count) cases)")
     }
 }

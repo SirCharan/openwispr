@@ -2,12 +2,17 @@ import SwiftUI
 import AVFoundation
 import AppKit
 
-/// Drives the first-run wizard (v0.15: 7 steps — welcome → move? → permissions → model → trigger → practice → done).
+/// Drives the first-run wizard (v0.15: welcome → personalize → move? → permissions → model → trigger → practice → done).
 @MainActor
 final class OnboardingModel: ObservableObject {
     enum PracticeState { case idle, recording, transcribing, result(String) }
 
-    @Published var step = 0
+    enum Step: Int, Comparable {
+        case welcome, personalize, move, permissions, download, trigger, practice, done
+        static func < (a: Step, b: Step) -> Bool { a.rawValue < b.rawValue }
+    }
+
+    @Published var step: Step = .welcome
     @Published var micGranted = AVCaptureDevice.authorizationStatus(for: .audio) == .authorized
     @Published var axGranted = Permissions.hasAccessibility
     @Published var screenRecGranted = CGPreflightScreenCaptureAccess()
@@ -18,6 +23,19 @@ final class OnboardingModel: ObservableObject {
     @Published var practice: PracticeState = .idle
     /// Avoid double-kicking model download from welcome + download step.
     private var modelLoadStarted = false
+
+    /// Stats survived a reinstall (restored from Application Support by Stats.syncOnLaunch,
+    /// which AppController.start runs before showing this wizard) — greet, don't re-pitch.
+    let returning: Bool
+    let restoredWords: Int
+    let restoredStreak: Int
+
+    init() {
+        let words = Stats.lifetimeWords
+        returning = words > 0 || !HistoryStore.load().isEmpty
+        restoredWords = words
+        restoredStreak = Stats.longestStreak()
+    }
 
     var micDenied: Bool { AVCaptureDevice.authorizationStatus(for: .audio) == .denied }
 
