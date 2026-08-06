@@ -64,11 +64,6 @@ enum Settings {
         set { UserDefaults.standard.set(newValue, forKey: "hotkeyMode") }
     }
 
-    /// Hands-free: tap the hotkey to start, tap again to stop (instead of hold-to-talk).
-    static var handsFree: Bool {
-        get { UserDefaults.standard.bool(forKey: "handsFree") }
-        set { UserDefaults.standard.set(newValue, forKey: "handsFree") }
-    }
 
     /// Remove filler words (um/uh/er) from transcripts.
     static var removeFillers: Bool {

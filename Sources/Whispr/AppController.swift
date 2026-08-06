@@ -43,7 +43,7 @@ final class AppController {
             Task { @MainActor in
                 guard let self, self.modelReady else { return }
                 self.attachHotkeys()
-                self.setStatus("ready — hold \(Self.hotkeyHint) to dictate")
+                self.setStatus("ready — tap or hold \(Self.hotkeyHint)")
                 if Settings.showIdleWidget { self.idleWidget.show() } else { self.idleWidget.hide() }
             }
         }
@@ -134,7 +134,8 @@ final class AppController {
         vm.onFinish = { [weak self] in
             Settings.onboarded = true
             self?.attachHotkeys()
-            self?.setStatus("ready — hold \(Self.hotkeyHint) to dictate")
+            self?.setStatus("ready — tap or hold \(Self.hotkeyHint)")
+            self?.idleWidget.show() // first-run: pill appears now, not after the first dictation
             self?.onboarding?.close()
             self?.onboarding = nil
             self?.showMainWindow()
@@ -172,7 +173,7 @@ final class AppController {
             modelReady = true
             state.modelReady = true
             state.modelError = nil
-            setStatus("ready — hold \(Self.hotkeyHint) to dictate")
+            setStatus("ready — tap or hold \(Self.hotkeyHint)")
             idleWidget.show()
         } catch {
             modelReady = false
@@ -217,18 +218,27 @@ final class AppController {
         }
     }
 
-    /// Hold-to-talk: key-down starts. Hands-free: key-down toggles start/stop.
+    /// Hybrid trigger (Wispr Flow pattern): a quick tap toggles a session that stays open
+    /// until the next tap; press-and-hold is classic push-to-talk (release transcribes).
+    private static let holdThreshold: TimeInterval = 0.5
+    private var keyDownAt: Date?
+
+    /// Key-down: starts when idle; a tap while a session is open closes it.
     private func handleKeyDown() {
-        if Settings.handsFree {
-            if recorder.isRecording { stopDictation() } else { startDictation() }
+        if recorder.isRecording {
+            stopDictation()
         } else {
+            keyDownAt = Date()
             startDictation()
         }
     }
 
-    /// Hold-to-talk: key-up stops. Hands-free ignores key-up.
+    /// Key-up after a hold (>0.5s) is push-to-talk — stop and transcribe.
+    /// Key-up after a tap keeps the session open.
     private func handleKeyUp() {
-        if !Settings.handsFree { stopDictation() }
+        guard recorder.isRecording, let down = keyDownAt else { return }
+        keyDownAt = nil
+        if Date().timeIntervalSince(down) > Self.holdThreshold { stopDictation() }
     }
 
     // MARK: - Dictation flow (hold hotkey → record → release → transcribe → paste)
@@ -296,7 +306,7 @@ final class AppController {
         menuBar.setRecording(false)
         indicator.hide()
         idleWidget.show()
-        setStatus("ready — hold \(Self.hotkeyHint) to dictate")
+        setStatus("ready — tap or hold \(Self.hotkeyHint)")
     }
 
     /// "custom" with nothing recorded falls back to fn — a trigger must always exist.

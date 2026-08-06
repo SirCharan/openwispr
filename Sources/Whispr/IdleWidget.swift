@@ -1,20 +1,46 @@
 import AppKit
 import SwiftUI
 
+/// The screen the user is working on: the one under the mouse pointer.
+/// NSScreen.main follows the key window, which strands floating pills on the other
+/// display in a multi-monitor setup.
+@MainActor
+enum ScreenPlacer {
+    static var activeScreen: NSScreen? {
+        let mouse = NSEvent.mouseLocation
+        return NSScreen.screens.first { NSMouseInRect(mouse, $0.frame, false) } ?? NSScreen.main
+    }
+}
+
 /// Small persistent floating pill (Wispr Flow-Bar idle state): reminds you OpenWispr is
 /// listening for its trigger, and starts a dictation on click. Hidden while recording
 /// (the recording pill takes its place) and via "Hide 1 hour" / the Settings toggle.
+/// Follows the user across screens and Spaces.
 @MainActor
 final class IdleWidget {
     private var panel: NSPanel?
     private let onTap: () -> Void
+    /// True between show() and hide(): whether the app wants the pill on screen.
+    /// Space/display changes re-run show() only while this is set.
+    private var wantsVisible = false
 
     init(onTap: @escaping () -> Void) {
         self.onTap = onTap
+        let reposition: (Notification) -> Void = { [weak self] _ in
+            Task { @MainActor in
+                guard let self, self.wantsVisible else { return }
+                self.show()
+            }
+        }
+        NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main, using: reposition)
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main, using: reposition)
     }
 
     func show() {
-        guard Settings.showIdleWidget, Date() >= Theme.pillHiddenUntil else { hide(); return }
+        wantsVisible = true
+        guard Settings.showIdleWidget, Date() >= Theme.pillHiddenUntil else { panel?.orderOut(nil); return }
         if panel == nil {
             let host = NSHostingView(rootView: IdlePillView(
                 onTap: { [weak self] in self?.onTap() },
@@ -36,7 +62,7 @@ final class IdleWidget {
             p.contentView = host
             panel = p
         }
-        if let p = panel, let screen = NSScreen.main {
+        if let p = panel, let screen = ScreenPlacer.activeScreen {
             // bottom-left corner: out of the reading line, clear of the (usually centered) Dock
             let f = screen.visibleFrame
             p.setFrameOrigin(NSPoint(x: f.minX + 16, y: f.minY + 16))
@@ -44,7 +70,10 @@ final class IdleWidget {
         panel?.orderFrontRegardless()
     }
 
-    func hide() { panel?.orderOut(nil) }
+    func hide() {
+        wantsVisible = false
+        panel?.orderOut(nil)
+    }
 }
 
 private struct IdlePillView: View {
@@ -79,7 +108,7 @@ private struct IdlePillView: View {
             }
             Button("Hide for 1 hour") { onHide() }
         }
-        .help("Click to dictate — or hold \(AppController.hotkeyHint)")
+        .help("Click to dictate — or tap \(AppController.hotkeyHint) (tap again to stop; hold works too)")
         .padding(4)
     }
 

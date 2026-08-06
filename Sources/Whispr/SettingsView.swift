@@ -11,7 +11,6 @@ struct SettingsView: View {
     @AppStorage("autoPaste") private var autoPaste = true
     @AppStorage("removeFillers") private var removeFillers = true
     @AppStorage("cleanUp") private var cleanUp = true
-    @AppStorage("handsFree") private var handsFree = false
     @AppStorage("soundCues") private var soundCues = true
     @AppStorage("showIdleWidget") private var showIdleWidget = true
     @AppStorage("diarizationEnabled") private var diarizationEnabled = true
@@ -37,9 +36,7 @@ struct SettingsView: View {
                     Text("Tip: set System Settings → Keyboard → “Press 🌐 key to” = Do Nothing, so the emoji picker stays out of the way.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
-                Toggle("Hands-free (tap to start, tap to stop)", isOn: $handsFree)
-                Text(handsFree ? "Tap the trigger to start, tap again to stop."
-                               : "Hold the trigger to talk, release to transcribe.")
+                Text("Tap the trigger to start — it keeps listening until you tap again. Or hold to talk and release to transcribe. Both always work.")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("Behavior") {

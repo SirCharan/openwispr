@@ -39,7 +39,7 @@ final class RecordingIndicator {
     func hide() { panel?.orderOut(nil) }
 
     private func positionBottomCenter() {
-        guard let p = panel, let screen = NSScreen.main else { return }
+        guard let p = panel, let screen = ScreenPlacer.activeScreen else { return }
         let f = screen.visibleFrame
         p.setFrameOrigin(NSPoint(x: f.midX - p.frame.width / 2, y: f.minY + 90))
     }
