@@ -40,6 +40,7 @@ final class AppController {
     private var onboarding: OnboardingWindowController?
 
     func start() {
+        Log.app.notice("launch v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev", privacy: .public) onboarded=\(Settings.onboarded, privacy: .public) model=\(self.modelManager.selectedModel, privacy: .public)")
         Stats.syncOnLaunch() // restore aggregates from Application Support after a defaults wipe
         Self.migrateFromWhisprIfNeeded()
         // A silence that outlived the last run (crash, force-quit) is undone here, before
@@ -82,7 +83,7 @@ final class AppController {
             Task { @MainActor in
                 self?.state.pane = .dictionary
                 self?.showMainWindow()
-                NSApp.activate(ignoringOtherApps: true)
+                NSApp.activate()
             }
         }
         // a second launch attempt (open -n) asks us to surface the home window before it exits
@@ -91,7 +92,7 @@ final class AppController {
         ) { [weak self] _ in
             Task { @MainActor in
                 self?.showMainWindow()
-                NSApp.activate(ignoringOtherApps: true)
+                NSApp.activate()
             }
         }
         if Settings.onboarded {
@@ -173,7 +174,7 @@ final class AppController {
             vm.modelReady = true
         } catch {
             vm.modelError = error.localizedDescription
-            NSLog("[Whispr] onboarding model load failed: \(error)")
+            Log.app.error("onboarding model load failed: \(String(describing: error), privacy: .public)")
         }
     }
 
@@ -199,7 +200,7 @@ final class AppController {
             state.modelReady = false
             state.modelError = error.localizedDescription
             setStatus("model error — open OpenWispr to reload")
-            NSLog("[Whispr] model load failed: \(error)")
+            Log.app.error("model load failed: \(String(describing: error), privacy: .public)")
         }
     }
 

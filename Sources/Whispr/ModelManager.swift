@@ -39,7 +39,10 @@ final class ModelManager {
     private let key = "selectedModel"
 
     var selectedModel: String {
-        get { UserDefaults.standard.string(forKey: key) ?? Self.defaultModel }
+        get {
+            let m = UserDefaults.standard.string(forKey: key)
+            return m.flatMap { Self.available.contains($0) ? $0 : nil } ?? Self.defaultModel
+        }
         set { UserDefaults.standard.set(newValue, forKey: key) }
     }
 

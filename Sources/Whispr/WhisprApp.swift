@@ -289,6 +289,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Finder double-click / `open` on the running instance: show the home window.
     /// Without this, clicking a menu-bar-only app in /Applications appears to do nothing.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        Log.app.notice("reopen hasVisibleWindows=\(flag, privacy: .public)")
         controller?.showMainWindow()
         return true
     }

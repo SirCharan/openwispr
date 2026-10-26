@@ -470,19 +470,33 @@ final class MainWindowController {
             win.styleMask = [.titled, .closable, .miniaturizable, .resizable]
             win.isReleasedWhenClosed = false
             win.setContentSize(NSSize(width: 960, height: 640))
+            // follow the user: .moveToActiveSpace on normal Spaces, .fullScreenAuxiliary over a fullscreen app; didBecomeActive re-order below covers the Space switch macOS does on activation
+            win.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
             window = win
-        }
-        NSApp.activate(ignoringOtherApps: true)
-        window?.center()
-        window?.makeKeyAndOrderFront(nil)
-        DockPolicy.update() // Dock icon while a window is open
-        NotificationCenter.default.addObserver(
-            forName: NSWindow.willCloseNotification, object: window, queue: .main
-        ) { _ in
-            Task { @MainActor in
-                try? await Task.sleep(for: .milliseconds(100)) // let the window finish closing
-                DockPolicy.update()
+            // macOS may switch Spaces when activation lands; re-order so .moveToActiveSpace pulls the window along
+            NotificationCenter.default.addObserver(
+                forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor in
+                    guard let win = self?.window, win.isVisible else { return }
+                    win.orderFrontRegardless()
+                }
+            }
+            NotificationCenter.default.addObserver(
+                forName: NSWindow.willCloseNotification, object: win, queue: .main
+            ) { _ in
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(100)) // let the window finish closing
+                    DockPolicy.update()
+                }
             }
         }
+        // macOS 14+ cooperative activation: LSUIElement apps aren't activated by LaunchServices on open,
+        // and the window must follow the user's Space.
+        window?.center()
+        window?.orderFrontRegardless()
+        window?.makeKey()
+        NSApp.activate()
+        DockPolicy.update() // Dock icon while a window is open
     }
 }

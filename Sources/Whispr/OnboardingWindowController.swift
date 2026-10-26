@@ -10,6 +10,14 @@ final class OnboardingWindowController {
     init(model: OnboardingModel) { self.model = model }
 
     func show() {
+        // Reopen during an unfinished wizard: reuse the window instead of stacking a duplicate.
+        if let window {
+            window.orderFrontRegardless()
+            window.makeKey()
+            NSApp.activate()
+            DockPolicy.update()
+            return
+        }
         let hosting = NSHostingController(rootView: OnboardingView(model: model))
         let win = NSWindow(contentViewController: hosting)
         win.title = "Welcome to OpenWispr"
@@ -18,10 +26,12 @@ final class OnboardingWindowController {
         // Content is fixed 520×560 in OnboardingView; give the chrome a little headroom.
         win.setContentSize(NSSize(width: 520, height: 560))
         win.contentMinSize = NSSize(width: 520, height: 560)
+        win.collectionBehavior = [.moveToActiveSpace]
         window = win
-        NSApp.activate(ignoringOtherApps: true)
         win.center()
-        win.makeKeyAndOrderFront(nil)
+        win.orderFrontRegardless()
+        win.makeKey()
+        NSApp.activate() // macOS 14+ cooperative activation
         DockPolicy.update() // Dock icon while the wizard is open
         NotificationCenter.default.addObserver(
             forName: NSWindow.willCloseNotification, object: win, queue: .main

@@ -2,6 +2,9 @@
 
 Notable changes to OpenWispr (formerly Whispr), newest first.
 
+## [0.17.3] - 2026-10-26
+- fix(mac): home window follows you to the current Space on open/reopen (macOS 14+ activation); persistent launch/reopen/model-error log lines; invalid stored model name falls back to default.
+
 ## [0.17.2] - 2026-08-14
 - Short chunks keep their single words: a two-second "Bye." or "You?" is real speech; lone-word filler is dropped only from chunks longer than 8 seconds.
 - `--selftest` no longer crashes after tuning `meetingSpeechFloor` via `defaults write`.

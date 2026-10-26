@@ -12,7 +12,7 @@ enum DockPolicy {
         let want: NSApplication.ActivationPolicy = hasVisibleWindow ? .regular : .accessory
         if NSApp.activationPolicy() != want {
             NSApp.setActivationPolicy(want)
-            if want == .regular { NSApp.activate(ignoringOtherApps: true) }
+            if want == .regular { NSApp.activate() }
         }
     }
 }
