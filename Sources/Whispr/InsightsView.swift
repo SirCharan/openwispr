@@ -6,6 +6,7 @@ struct InsightsPane: View {
     @State private var entries: [HistoryEntry] = []
     @State private var daily: [String: Int] = [:]
     @State private var apps: [(name: String, words: Int)] = []
+    @State private var meetings: [MeetingStats] = []
 
     private var wpm: Int { Stats.avgWPM(entries: entries) }
     private var words: Int { max(Stats.lifetimeWords, entries.reduce(0) { $0 + $1.words }) }
@@ -20,6 +21,7 @@ struct InsightsPane: View {
                     wordsCard
                 }
                 perDayCard
+                meetingsCard
                 HStack(alignment: .top, spacing: 14) {
                     appsCard
                     heatmapCard
@@ -35,6 +37,7 @@ struct InsightsPane: View {
     private func load() {
         entries = HistoryStore.load()
         daily = Stats.dailyWords
+        meetings = MeetingStatsStore.loadAll()
         apps = Stats.appWords
             .map { (AppMonitor.name(for: $0.key), $0.value) }
             .sorted { $0.1 > $1.1 }
@@ -93,6 +96,34 @@ struct InsightsPane: View {
                 }
             }
             .frame(height: 84, alignment: .bottom)
+        }
+    }
+
+    private var meetingsCard: some View {
+        let week = Calendar.current.dateInterval(of: .weekOfYear, for: Date())
+        let mine = meetings.compactMap { m in m.speakers.first { $0.name == m.you } }
+        let share = mine.isEmpty ? 0 : mine.map(\.sharePct).reduce(0, +) / Double(mine.count)
+        return card {
+            label("meetings")
+            if meetings.isEmpty {
+                Text("No meeting stats yet — they appear after your next recorded meeting.")
+                    .font(.system(size: 12)).foregroundStyle(Brand.muted).padding(.top, 4)
+            } else {
+                HStack(alignment: .top, spacing: 24) {
+                    meetingStat("\(meetings.filter { week?.contains($0.date) ?? false }.count)", "this week")
+                    meetingStat(String(format: "%.1f", meetings.map(\.duration).reduce(0, +) / 3600), "meeting hours")
+                    meetingStat("\(Int(share.rounded()))%", "your avg talk share")
+                    meetingStat(MeetingController.mmss(mine.map(\.longestMonologue).max() ?? 0), "your longest monologue")
+                }
+                .padding(.top, 4)
+            }
+        }
+    }
+
+    private func meetingStat(_ v: String, _ t: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(v).font(.system(size: 22, weight: .bold, design: .monospaced)).foregroundStyle(Brand.text)
+            Text(t).font(.system(size: 11)).foregroundStyle(Brand.muted)
         }
     }
 

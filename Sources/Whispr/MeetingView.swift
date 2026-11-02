@@ -75,6 +75,11 @@ struct MeetingView: View {
                 Divider()
             }
 
+            if let st = controller.stats, !controller.isRunning {
+                statsBlock(st)
+                Divider()
+            }
+
             if controller.lines.isEmpty {
                 Spacer()
                 VStack(spacing: 8) {
@@ -123,6 +128,42 @@ struct MeetingView: View {
         .frame(minWidth: 560, minHeight: 400)
         .onAppear { screenRecOK = CGPreflightScreenCaptureAccess() }
         .sheet(isPresented: $controller.showRenameSheet) { renameSheet }
+    }
+
+    private func statsBlock(_ st: MeetingStats) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(st.speakers.filter { $0.talkSeconds > 0 }, id: \.name) { sp in
+                HStack(spacing: 10) {
+                    Text(sp.name).font(.system(size: 12)).foregroundStyle(Brand.text)
+                        .frame(width: 90, alignment: .leading).lineLimit(1)
+                    GeometryReader { g in
+                        RoundedRectangle(cornerRadius: 4).fill(Brand.coral.opacity(0.85))
+                            .frame(width: max(3, g.size.width * CGFloat(sp.sharePct / 100)), height: 14)
+                    }
+                    .frame(height: 14)
+                    Text("\(Int(sp.sharePct.rounded()))%").font(Brand.mono(11)).foregroundStyle(Brand.muted)
+                        .frame(width: 34, alignment: .trailing)
+                    Text("\(Int(sp.wpm.rounded())) wpm · \(sp.turns) turns · longest \(MeetingController.mmss(sp.longestMonologue))\(sp.longMonologue ? " (long)" : "")")
+                        .font(Brand.mono(10)).foregroundStyle(Brand.muted)
+                }
+            }
+            HStack(spacing: 18) {
+                stat(MeetingController.mmss(st.duration), "duration")
+                stat(String(format: "%.1f", st.questionsPerHour), "questions/hr")
+                stat(String(format: "%.1f", st.fillersPerMinute), "fillers/min")
+                stat("\(st.interruptions)", "interruptions")
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Brand.surface)
+    }
+
+    private func stat(_ v: String, _ t: String) -> some View {
+        HStack(spacing: 5) {
+            Text(v).font(.system(size: 13, weight: .semibold, design: .monospaced)).foregroundStyle(Brand.text)
+            Text(t).font(.system(size: 11)).foregroundStyle(Brand.muted)
+        }
     }
 
     /// Post-meeting labeling: name each detected speaker (ck's flow).
