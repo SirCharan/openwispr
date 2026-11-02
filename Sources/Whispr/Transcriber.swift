@@ -13,7 +13,27 @@ actor Transcriber {
     var isReady: Bool { pipe != nil }
 
     /// Load a model from an already-downloaded folder (no network).
+    /// Load policy: one pipeline per model choice. A repeat call for the already-loaded model
+    /// is a no-op, so foreground, onboarding, dictation and meetings never rebuild it
+    /// (a rebuild can trigger a CoreML/ANE recompile of ~150 s and ~2 GiB of disk writes).
+    private var loading: Task<Void, Error>?
+
     func load(model: String, folder: URL) async throws {
+        if pipe != nil, loadedModel == model { return }
+        if let loading, loadingModel == model { return try await loading.value }
+        loadingModel = model
+        let task = Task { try await self.doLoad(model: model, folder: folder) }
+        loading = task
+        defer { loading = nil; loadingModel = nil }
+        try await task.value
+    }
+    private var loadingModel: String?
+
+    private func doLoad(model: String, folder: URL) async throws {
+        let fm = FileManager.default
+        let compiled = (try? fm.contentsOfDirectory(atPath: folder.path))?.filter { $0.hasSuffix(".mlmodelc") } ?? []
+        Log.app.info("model load start: \(model, privacy: .public) folderExists=\(fm.fileExists(atPath: folder.path)) mlmodelc=\(compiled.count)")
+        let t0 = Date()
         let pipe = try await WhisperKit(
             modelFolder: folder.path,
             verbose: false,
@@ -23,6 +43,7 @@ actor Transcriber {
         )
         self.pipe = pipe
         self.loadedModel = model
+        Log.app.info("model load done: \(model, privacy: .public) in \(String(format: "%.1f", Date().timeIntervalSince(t0)))s")
     }
 
     /// Dictation is a few seconds of one close voice; a meeting chunk is up to 30 s of

@@ -46,10 +46,24 @@ final class ModelManager {
         set { UserDefaults.standard.set(newValue, forKey: key) }
     }
 
+    /// Default HubApi location WhisperKit uses (~/Documents/huggingface/models/...).
+    static func localFolder(_ model: String) -> URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("huggingface/models/argmaxinc/whisperkit-coreml/openai_whisper-\(model)")
+    }
+
     /// Download the model if not already cached. `progress` reports 0.0…1.0 on the main actor.
     /// Returns the local model folder to hand to `Transcriber.load`.
     func ensureDownloaded(_ model: String, progress: @escaping (Double) -> Void) async throws -> URL {
-        try await WhisperKit.download(variant: model, progressCallback: { p in
+        // WhisperKit has no completeness marker; treat the folder as complete when every
+        // compiled component and config.json are present, and skip the network round-trip.
+        let local = Self.localFolder(model)
+        let needed = ["AudioEncoder.mlmodelc", "TextDecoder.mlmodelc", "MelSpectrogram.mlmodelc", "config.json"]
+        if needed.allSatisfy({ FileManager.default.fileExists(atPath: local.appendingPathComponent($0).path) }) {
+            progress(1.0)
+            return local
+        }
+        return try await WhisperKit.download(variant: model, progressCallback: { p in
             Task { @MainActor in progress(p.fractionCompleted) }
         })
     }
