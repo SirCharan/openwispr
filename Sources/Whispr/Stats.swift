@@ -87,6 +87,15 @@ enum Stats {
 
     nonisolated(unsafe) private static var d = UserDefaults.standard
     nonisolated(unsafe) private static var mirrorToDisk = true   // selftest turns this off
+
+    /// `--snap-panes --sample` only: point the counters at a throwaway defaults suite so nothing real is read or written.
+    static func useSampleDefaults(_ values: [String: Any]) {
+        let suite = "openwispr.snapshot.sample"
+        let scratch = UserDefaults(suiteName: suite) ?? .standard
+        scratch.removePersistentDomain(forName: suite)
+        for (k, v) in values { scratch.set(v, forKey: k) }
+        d = scratch; mirrorToDisk = false
+    }
     static var lifetimeWords: Int { d.integer(forKey: "lifetimeWords") }
     /// Words from dictations that have a duration; file imports (no seconds) are excluded so WPM isn't inflated.
     static var lifetimeTimedWords: Int { d.integer(forKey: "lifetimeTimedWords") }

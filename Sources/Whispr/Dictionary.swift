@@ -28,7 +28,11 @@ enum DictionaryStore {
         return base.appendingPathComponent("dictionary.json")
     }()
 
+    /// Set only by `Snapshot` when rendering with `--sample`.
+    nonisolated(unsafe) static var sampleOverride: DictionaryData?
+
     static func load() -> DictionaryData {
+        if let s = sampleOverride { return s }
         guard let data = try? Data(contentsOf: url),
               let d = try? JSONDecoder().decode(DictionaryData.self, from: data) else { return DictionaryData() }
         return d

@@ -17,8 +17,12 @@ enum MeetingArchive {
         var lines: [MeetingLine] = []
     }
 
+    /// Set only by `Snapshot` when rendering with `--sample` (a temp folder, never the real archive).
+    nonisolated(unsafe) static var directoryOverride: URL?
+
     static var directory: URL {
-        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("OpenWispr")
+        if let o = directoryOverride { return o }
+        return FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("OpenWispr")
     }
 
     static func fileURL(stamp: String, in dir: URL = directory) -> URL {

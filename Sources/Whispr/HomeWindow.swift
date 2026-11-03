@@ -95,7 +95,7 @@ struct HomeView: View {
                 Text("O").font(Brand.serif(24)).foregroundStyle(Brand.coral) + Text("penWispr").font(Brand.serif(24)).foregroundStyle(Brand.text)
             }
             .padding(.bottom, 2)
-            Text("Hi, \(NSFullUserName().components(separatedBy: " ").first ?? NSFullUserName())")
+            Text("Hi, \(Snapshot.isRendering && Snapshot.useSample ? "Alex" : (NSFullUserName().components(separatedBy: " ").first ?? NSFullUserName()))")
                 .font(Brand.caption).foregroundStyle(Brand.muted)
                 .padding(.bottom, Brand.s8)
 

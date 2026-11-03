@@ -187,6 +187,14 @@
   .tl-detail h3 { position: relative; font-family: var(--serif); font-weight: 400; font-size: 24px; margin-bottom: 12px; }
   .tl-detail p { position: relative; color: var(--muted); font-size: 15.5px; line-height: 1.7; max-width: 44ch; }
 
+  /* ---------- app screenshots (sample data only) ---------- */
+  .shots { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 28px; }
+  .shots figure { margin: 0; }
+  .shots img { display: block; width: 100%; height: auto; border-radius: var(--radius); border: 1px solid var(--line); box-shadow: var(--shadow); }
+  .shots figcaption { color: var(--muted); font-size: 14px; line-height: 1.6; margin-top: 12px; }
+  .shots figcaption b { color: var(--text); font-weight: 600; }
+  .shots-note { color: var(--muted); font-size: 13px; margin-top: 22px; }
+
   /* ---------- meetings ---------- */
   .meet { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; }
   .meet ul { list-style: none; margin-top: 20px; }
@@ -293,6 +301,7 @@
     .ba { grid-template-columns: 1fr; }
     .ba-arrow { transform: rotate(90deg); }
     .meet { grid-template-columns: 1fr; gap: 32px; }
+    .shots { grid-template-columns: 1fr; }
     .snip { grid-template-columns: 1fr; gap: 26px; }
     .snip-row { gap: 10px; }
     .snip-say { white-space: normal; }
@@ -340,7 +349,7 @@
   </nav>
 
   <header class="hero">
-    <span class="eyebrow">Free · Open Source · <b>On-device</b> <span class="ver">v0.15</span></span>
+    <span class="eyebrow">Free · Open Source · <b>On-device</b> <span class="ver">v0.19.0</span></span>
     <h1>Talk.<br /><em>It types.</em></h1>
     <p class="lede">The fastest way to write on your Mac. <b>Private, on-device</b> dictation &amp; meeting notes. Talk in any language.</p>
 
@@ -368,7 +377,7 @@
         </div>
       </div>
     </div>
-    <p class="field-cap">Filler, grammar and spelling tidied on-device. Optional AI rewrite for deeper polish.</p>
+    <p class="field-cap">Cleanup is opt-in. Turn it on and filler, grammar and spelling are tidied on-device before the text pastes. An AI rewrite for deeper polish is optional too.</p>
 
     <div class="cta">
       <div class="cmd-row">
@@ -653,7 +662,7 @@
         </li>
         <li class="tl-item" data-i="5" data-title="Stats &amp; history">
           <span class="tl-no">06</span><span class="tl-name">Stats &amp; history</span>
-          <p class="tl-body">Every dictation saved and searchable, with your words-per-day stats. Per-app disable and sound cues keep it polite where you want quiet.</p>
+          <p class="tl-body">Every dictation saved and searchable. An Insights page shows your pace, words per day and the apps you dictate into. Light and dark themes, plus per-app disable and sound cues where you want quiet.</p>
         </li>
       </ol>
       <div class="tl-detail" aria-live="polite">
@@ -663,6 +672,30 @@
         <p id="tlBody">Runs on the Apple Neural Engine via WhisperKit. Your voice never touches a server. Works fully offline, no account, no bill.</p>
       </div>
     </div>
+  </section>
+
+  <section id="app">
+    <div class="kicker">The app</div>
+    <h2>Quiet, and easy to read.</h2>
+    <div class="shots">
+      <figure>
+        <img src="shots/app-light-dictations.jpg" width="1600" height="1120" loading="lazy" alt="OpenWispr Dictations page in the light theme, listing recent dictations with timestamps" />
+        <figcaption><b>Dictations.</b> Every dictation is saved and searchable, with your totals along the top.</figcaption>
+      </figure>
+      <figure>
+        <img src="shots/app-dark-dictations.jpg" width="1600" height="1120" loading="lazy" alt="OpenWispr Dictations page in the dark theme" />
+        <figcaption><b>Dark mode.</b> Follows your Mac, or pick light or dark yourself.</figcaption>
+      </figure>
+      <figure>
+        <img src="shots/app-light-insights.jpg" width="1600" height="1120" loading="lazy" alt="OpenWispr Insights page showing words per minute, words per day, meeting stats and where you dictate" />
+        <figcaption><b>Insights.</b> Your pace, words per day, meeting stats and the apps you dictate into.</figcaption>
+      </figure>
+      <figure>
+        <img src="shots/app-light-meetings.jpg" width="1600" height="1120" loading="lazy" alt="OpenWispr Meetings page with a past meetings list, per-meeting stats and a transcript with named speakers" />
+        <figcaption><b>Meetings.</b> Past calls in a list, stats for each one, and a transcript with speaker names.</figcaption>
+      </figure>
+    </div>
+    <p class="shots-note">Screenshots use sample text, not real dictations or meetings.</p>
   </section>
 
   <section id="snippets">
@@ -700,9 +733,11 @@
     <h2>The minutes write themselves.</h2>
     <div class="meet">
       <div>
-        <p class="sub">OpenWispr captures your mic and the call's system audio, labels who said what, and saves the transcript automatically.</p>
+        <p class="sub">OpenWispr captures your mic and the call's system audio, labels who said what, and saves the transcript automatically. No bot joins the call.</p>
         <ul>
-          <li><b>You / Others</b> speaker labels, from mic vs system audio. Works with Zoom, Meet, Teams, anything that makes sound.</li>
+          <li><b>Speaker names</b>, not just labels. Zoom names come through Accessibility, and Google Meet names come from a small Chrome extension. Other calls get Speaker A, B and so on, and you can rename them.</li>
+          <li><b>Per-meeting stats</b>: talk share, pace, longest monologue, questions and interruptions for each call.</li>
+          <li><b>Past meetings</b> in a list beside the transcript, so you can reopen any call.</li>
           <li><b>Autosaves</b> every transcript as Markdown, locally.</li>
           <li><b>Optional AI summary</b>: local via Ollama, or bring your own key. Skip it entirely and nothing ever leaves the Mac.</li>
         </ul>
@@ -729,9 +764,9 @@
           <span class="t-rec"><span class="rec"></span>REC</span>
         </div>
         <div class="t-line you"><span class="who">You</span><p>I can take the migration if someone reviews the schema today.</p></div>
-        <div class="t-line"><span class="who">Others</span><p>I'll review it after lunch. Do we ship Thursday or Friday?</p></div>
+        <div class="t-line"><span class="who">Priya</span><p>I'll review it after lunch. Do we ship Thursday or Friday?</p></div>
         <div class="t-line you"><span class="who">You</span><p>Thursday. The launch email is already drafted.</p></div>
-        <div class="t-line"><span class="who">Others</span><p>Works for me. Let's lock it.</p></div>
+        <div class="t-line"><span class="who">Arjun</span><p>Works for me. Let's lock it.</p></div>
       </div>
     </div>
   </section>

@@ -3,14 +3,17 @@ import SwiftUI
 
 /// Headless UI renders for review: `Whispr --snap-panes <dir>`. Draws every Home pane, every
 /// onboarding step and the floating views in light and dark into PNGs. Panes render the real
-/// local data (history, stats, meetings); only the PNGs are written. The mic and screen capture
+/// local data (history, stats, meetings) unless `--sample` swaps in `SampleData`; only the PNGs are written. The mic and screen capture
 /// are never started (`isRendering` keeps the onboarding level meter off).
 @MainActor
 enum Snapshot {
     nonisolated(unsafe) static var isRendering = false
+    nonisolated(unsafe) static var useSample = false
 
-    static func run(dir: String) {
+    static func run(dir: String, sample: Bool = false) {
         isRendering = true
+        useSample = sample
+        if sample { SampleData.install() }
         let out = URL(fileURLWithPath: dir, isDirectory: true)
         try? FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
         let app = NSApplication.shared
@@ -83,5 +86,65 @@ enum Snapshot {
         host.cacheDisplay(in: bounds, to: rep)
         if let png = rep.representation(using: .png, properties: [:]) { try? png.write(to: url) }
         win.orderOut(nil)
+    }
+}
+
+/// Fictional fixtures for public screenshots (`--snap-panes <dir> --sample`). Installed through
+/// override hooks on the stores; nothing is written to the real history, stats, dictionary or meetings.
+@MainActor
+enum SampleData {
+    static func install() {
+        let now = Date()
+        let cal = Calendar.current
+        let texts = [
+            "Draft the launch note for the Tuesday release and send it to the team.",
+            "Remind me to review the onboarding copy before the design sync on Thursday.",
+            "Thanks for the update, I will look at the pricing page tomorrow morning.",
+            "Let's move the planning call to Friday afternoon and share the agenda beforehand.",
+            "The new export option should keep the original formatting and add a short summary.",
+            "Can you check whether the beta build includes the latest accessibility fixes?",
+            "Add a line to the changelog about faster startup and the improved search results.",
+            "Great progress this week, the checkout flow now feels much simpler for new users."]
+        HistoryStore.sampleOverride = texts.enumerated().map { i, t in
+            HistoryEntry(date: now.addingTimeInterval(-Double(i) * 5400 - 600), text: t, seconds: Double(t.split(separator: " ").count) / 2.4)
+        }
+        let words = [820, 1240, 0, 1510, 980, 1330, 640, 0, 1420, 1180, 1600, 1090, 1350, 1210]
+        var daily: [String: Int] = [:]
+        for (i, w) in words.enumerated() {
+            if let day = cal.date(byAdding: .day, value: i - 13, to: now) { daily[Stats.dayKey(day)] = w }
+        }
+        Stats.useSampleDefaults([
+            "lifetimeWords": 18_400, "lifetimeTimedWords": 18_000, "lifetimeSeconds": 9_900.0,
+            "lifetimeDictations": 410, "fixesAccepted": 12, "meetingsCount": 5,
+            "dailyWords": daily,
+            "appWords": ["com.apple.mail": 6_200, "com.apple.Notes": 4_900, "com.tinyspeck.slackmacgap": 4_100, "com.apple.Safari": 3_200]])
+        DictionaryStore.sampleOverride = DictionaryData(vocab: ["Kestrel", "Northwind", "Figma", "Roadmap"], replacements: [])
+
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("whispr-sample-\(UUID().uuidString)", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        MeetingArchive.directoryOverride = dir
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX"); f.timeZone = TimeZone(identifier: "UTC"); f.dateFormat = "yyyy-MM-dd'T'HH-mm-ss"
+        let stamp = f.string(from: now.addingTimeInterval(-26 * 3600))
+        let md = """
+        Duration: 12:40 \u{00B7} You \u{00B7} Priya \u{00B7} Arjun
+
+        [0:04] **You**: Thanks for joining. Let's start with where the release stands.
+        [0:19] **Priya**: The design review is done and the last two screens are signed off.
+        [1:32] **Arjun**: Engineering is on track, we only need one more pass on the export flow.
+        [3:10] **You**: Good. Can we freeze the scope by Wednesday and test on Thursday?
+        [3:41] **Priya**: That works for me, I will share the final assets tomorrow.
+        [4:25] **Arjun**: Agreed. I will post the test build in the team channel on Thursday morning.
+
+        """
+        let url = dir.appendingPathComponent("meeting-\(stamp).md")
+        try? md.write(to: url, atomically: true, encoding: .utf8)
+        func spk(_ n: String, _ talk: Double, _ pct: Double, _ w: Int, _ wpm: Double, _ turns: Int, _ mono: Double, _ intr: Int) -> MeetingStats.Speaker {
+            .init(name: n, talkSeconds: talk, sharePct: pct, words: w, wpm: wpm, turns: turns, longestMonologue: mono, interruptions: intr)
+        }
+        let stats = MeetingStats(date: now.addingTimeInterval(-26 * 3600), you: "You", duration: 760,
+                                 speakers: [spk("You", 290, 45, 740, 153, 14, 48, 1), spk("Priya", 230, 36, 590, 154, 11, 62, 0), spk("Arjun", 120, 19, 310, 155, 8, 35, 1)],
+                                 questionsPerHour: 14, fillersPerMinute: 1.8)
+        MeetingStatsStore.save(stats, transcript: url)
     }
 }

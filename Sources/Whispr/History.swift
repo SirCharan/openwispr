@@ -22,7 +22,11 @@ enum HistoryStore {
         return base.appendingPathComponent("history.json")
     }()
 
+    /// Set only by `Snapshot` when rendering with `--sample`.
+    nonisolated(unsafe) static var sampleOverride: [HistoryEntry]?
+
     static func load() -> [HistoryEntry] {
+        if let s = sampleOverride { return s }
         guard let data = try? Data(contentsOf: url),
               let h = try? JSONDecoder().decode([HistoryEntry].self, from: data) else { return [] }
         return h
