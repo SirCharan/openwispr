@@ -2,6 +2,14 @@
 
 Notable changes to OpenWispr (formerly Whispr), newest first.
 
+## [0.18.3] - 2026-11-03
+Meeting mic default.
+- A live test on 0.18.2 showed the voice-processing mic silent with Chrome on a Meet call and the restart failing with '!dat'.
+- The meeting mic now uses the plain input path by default; voice processing is opt-in via `defaults write org.openwispr.app meetingMicVoiceProcessing -bool true`.
+- The recorder tears down fully on stop (tap, engine reset, converter) and reads the input format fresh on every start; a failed mic restart retries once after 0.5 s, then shows the banner. OSStatus errors log as 4-char codes.
+- The Meet extension listener logs every request (`meet-ext: ...`), including rejects.
+- Meeting prompt buttons and the Meetings Start/Stop buttons have accessibility labels.
+
 ## [0.18.2] - 2026-11-03
 Meeting mic watchdog.
 - Meet plus voice processing could leave the meeting mic silent; a watchdog now restarts it without voice processing after 10 s of silence (twice at most, then a "Mic audio lost" banner).
