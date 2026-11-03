@@ -55,28 +55,28 @@ private struct RecordingPill: View {
             HStack(spacing: 14) {
                 Button(action: onCancel) { Image(systemName: "xmark") }
                     .buttonStyle(.plain)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Cancel recording")
                 WaveBars()
                 Button(action: onStop) { Image(systemName: "stop.fill") }
                     .buttonStyle(.plain)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Stop recording")
             }
             if !model.preview.isEmpty {
                 Text(model.preview)
-                    .font(.system(size: 11))
+                    .font(Brand.caption)
                     .foregroundStyle(Brand.muted)
                     .lineLimit(1)
                     .truncationMode(.head)
                     .frame(maxWidth: 320)
             }
         }
-        .font(.system(size: 13, weight: .semibold))
+        .font(Brand.heading)
         .foregroundStyle(Brand.text.opacity(0.85))
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
-        .background(
-            Capsule().fill(Brand.bg)
-                .overlay(Capsule().stroke(Brand.line, lineWidth: 1))
-                .shadow(color: Brand.text.opacity(0.18), radius: 10, y: 3)
-        )
+        .panelStyle()
         .fixedSize()
         .contextMenu {
             Button("Paste last transcript") {

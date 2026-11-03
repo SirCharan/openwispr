@@ -90,11 +90,8 @@ private struct IdlePillView: View {
             bar(7, delay: 0.48)
         }
         .frame(width: 56, height: 28)
-        .background(
-            Capsule().fill(Brand.bg)
-                .overlay(Capsule().stroke(hovering ? Brand.coral : Brand.line, lineWidth: 1))
-                .shadow(color: Brand.text.opacity(hovering ? 0.25 : 0.15), radius: hovering ? 8 : 5, y: 2)
-        )
+        .panelStyle()
+        .overlay(RoundedRectangle(cornerRadius: Brand.rLg).strokeBorder(hovering ? Brand.coral : .clear, lineWidth: 1))
         .scaleEffect(hovering ? 1.08 : 1.0)
         .animation(.spring(duration: 0.25), value: hovering)
         .onHover { hovering = $0 }

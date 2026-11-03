@@ -79,11 +79,13 @@ private struct ToastView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("Teach OpenWispr this spelling?")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(Brand.heading)
                     .foregroundStyle(Brand.text)
                 Spacer()
                 Button(action: onClose) { Image(systemName: "xmark").font(.system(size: 10)) }
                     .buttonStyle(.plain).foregroundStyle(Brand.muted)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("Dismiss")
             }
             ForEach(pairs, id: \.to) { p in
                 HStack(spacing: 6) {
@@ -94,20 +96,19 @@ private struct ToastView: View {
             }
             Button(action: onAdd) {
                 Text("Add to dictionary")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(Brand.heading)
                     .foregroundStyle(Brand.onAccent)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 6)
-                    .background(RoundedRectangle(cornerRadius: 8).fill(Brand.coral))
+                    .background(RoundedRectangle(cornerRadius: Brand.rMd).fill(Brand.coral))
             }
             .buttonStyle(.plain)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Add to dictionary")
+            .accessibilityAddTraits(.isButton)
         }
         .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 12).fill(Brand.bg)
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Brand.line))
-                .shadow(color: Brand.text.opacity(0.18), radius: 12, y: 4)
-        )
+        .panelStyle()
     }
 }
 
@@ -125,19 +126,21 @@ private struct PromptView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(message)
-                .font(.system(size: 12, weight: .semibold))
+                .font(Brand.heading)
                 .foregroundStyle(Brand.text)
             HStack(spacing: 6) {
                 ForEach(labels.indices, id: \.self) { i in
                     Button { onPick(i) } label: {
                         Text(labels[i])
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(Brand.body.weight(.semibold))
                             .foregroundStyle(i == 0 ? Brand.onAccent : Brand.text)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 6)
-                            .background(RoundedRectangle(cornerRadius: 8).fill(i == 0 ? Brand.coral : Brand.line))
+                            .background(RoundedRectangle(cornerRadius: Brand.rMd).fill(i == 0 ? Brand.coral : Brand.line))
                     }
                     .buttonStyle(.plain)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityAddTraits(.isButton)
                     .accessibilityLabel(a11yLabel(labels[i], i))
                     .accessibilityIdentifier(a11yLabel(labels[i], i))
                 }
@@ -145,10 +148,6 @@ private struct PromptView: View {
         }
         .accessibilityElement(children: .contain)
         .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 12).fill(Brand.bg)
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Brand.line))
-                .shadow(color: Brand.text.opacity(0.18), radius: 12, y: 4)
-        )
+        .panelStyle()
     }
 }

@@ -12,6 +12,17 @@ struct PaperCard<Content: View>: View {
     }
 }
 
+/// Shared floating-panel chrome: pill, idle widget, toast and prompt.
+extension View {
+    func panelStyle() -> some View {
+        background(
+            RoundedRectangle(cornerRadius: Brand.rLg).fill(Brand.surface)
+                .overlay(RoundedRectangle(cornerRadius: Brand.rLg).strokeBorder(Brand.line, lineWidth: 1))
+                .shadow(color: .black.opacity(0.08), radius: 8, y: 2)
+        )
+    }
+}
+
 /// Serif heading above a card.
 struct PaperSection<Content: View>: View {
     let title: String
