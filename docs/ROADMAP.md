@@ -1,6 +1,6 @@
 # Roadmap
 
-Updated 2026-11-03, after the v0.18.0 release. Ordering reflects user value per unit of work for a solo maintainer. Nothing here is a commitment.
+Updated 2026-11-03, after the v0.19.0 release. Ordering reflects user value per unit of work for a solo maintainer. Nothing here is a commitment.
 
 ## 1. Meeting quality
 
@@ -15,6 +15,16 @@ Shipped in 0.18.0 (meetings you can trust):
 - **Argmax upgrade.** WhisperKit / Argmax 1.1.1 with load-once and download skip.
 
 Still open from this list: audio playback in meeting history, and named speakers that persist across meetings (voice embeddings).
+
+Shipped in 0.19.0 (UI polish):
+
+- [x] Paper Studio tokens and a working dark mode (Theme picker)
+- [x] Grouped sidebar
+- [x] One source of truth for Dictations and Insights (lifetime numbers)
+- [x] Past meetings browsable in the Meetings pane
+- [x] App names and icons in Insights and Apps; per-app disable fixed
+- [x] Honest empty states, one panel style, onboarding on the type scale
+- [x] `--snap-panes` renderer for UI review
 
 ### Next (0.18.x)
 

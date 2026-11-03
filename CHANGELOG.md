@@ -2,6 +2,19 @@
 
 Notable changes to OpenWispr (formerly Whispr), newest first.
 
+## [0.19.0] - 2026-11-03
+UI polish for release.
+- Paper Studio tokens and a real dark mode (the Theme picker now works).
+- Grouped sidebar.
+- Dictations and Insights share one source of truth. History is capped at 200 entries while Insights used lifetime counters; both now show lifetime numbers and the history list is labelled "Last 200".
+- Past meetings are browsable in the Meetings pane.
+- App names and icons in Insights and Apps.
+- Per-app disable fixed (names and IDs were swapped); old choices are migrated.
+- Honest empty states.
+- One panel style for pill, widget, toast and prompt.
+- Onboarding on the type scale.
+- `--snap-panes` renderer for UI review.
+
 ## [0.18.3] - 2026-11-03
 Meeting mic default.
 - A live test on 0.18.2 showed the voice-processing mic silent with Chrome on a Meet call and the restart failing with '!dat'.
