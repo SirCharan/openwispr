@@ -336,6 +336,7 @@ private struct PermissionsStep: View {
                 .foregroundStyle(Brand.text)
             Text("Two grants so OpenWispr can hear you and paste at the cursor. Audio never leaves this Mac.")
                 .font(Brand.body)
+                .fixedSize(horizontal: false, vertical: true)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(Brand.muted)
                 .frame(maxWidth: 380)
@@ -570,6 +571,7 @@ private struct TriggerStep: View {
                 } else if hotkeyMode == "fn" {
                     Text("Tip: set System Settings → Keyboard → “Press globe key to” to Do Nothing.")
                         .font(Brand.caption)
+                        .fixedSize(horizontal: false, vertical: true)
                         .foregroundStyle(Brand.muted)
                 }
             }

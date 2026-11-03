@@ -11,7 +11,7 @@ enum Triggers {
     }
 
     static let list: [Trigger] = [
-        Trigger(id: "fn", label: "fn / 🌐", keyCode: 63, flag: .function),
+        Trigger(id: "fn", label: "fn / globe", keyCode: 63, flag: .function),
         Trigger(id: "rcmd", label: "Right ⌘", keyCode: 54, flag: .command),
         Trigger(id: "lcmd", label: "Left ⌘", keyCode: 55, flag: .command),
         Trigger(id: "ropt", label: "Right ⌥", keyCode: 61, flag: .option),

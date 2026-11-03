@@ -76,7 +76,7 @@ final class IdleWidget {
     }
 }
 
-private struct IdlePillView: View {
+struct IdlePillView: View {
     let onTap: () -> Void
     let onHide: () -> Void
     @State private var hovering = false

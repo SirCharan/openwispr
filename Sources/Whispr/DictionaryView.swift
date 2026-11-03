@@ -68,6 +68,7 @@ struct DictionaryView: View {
                 Text("Spellings the transcriber is nudged toward.").font(Brand.caption).foregroundStyle(Brand.muted)
                 HStack {
                     TextField("Term", text: $newVocab, prompt: Text("e.g. WhisperKit, Kubernetes").foregroundStyle(Brand.muted))
+                        .labelsHidden()
                         .onSubmit { commitNewVocab() }
                     Button("Add") { commitNewVocab() }
                         .disabled(vocabTrimmed.isEmpty)
@@ -94,9 +95,11 @@ struct DictionaryView: View {
                 Text("Exact phrase in, your text out.").font(Brand.caption).foregroundStyle(Brand.muted)
                 HStack {
                     TextField("Heard", text: $newFrom, prompt: Text("Heard").foregroundStyle(Brand.muted))
+                        .labelsHidden()
                         .onSubmit { commitNewReplacement() }
                     Image(systemName: "arrow.right").foregroundStyle(Brand.muted)
                     TextField("Write", text: $newTo, prompt: Text("Write").foregroundStyle(Brand.muted))
+                        .labelsHidden()
                         .onSubmit { commitNewReplacement() }
                     Button("Add") { commitNewReplacement() }
                         .disabled(fromTrimmed.isEmpty)

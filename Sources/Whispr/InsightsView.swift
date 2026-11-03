@@ -115,7 +115,7 @@ struct InsightsPane: View {
                     StatTile(value: "\(meetings.filter { week?.contains($0.date) ?? false }.count)", label: "this week")
                     StatTile(value: String(format: "%.1f", meetings.map(\.duration).reduce(0, +) / 3600), label: "meeting hours")
                     StatTile(value: "\(Int(share.rounded()))%", label: "your avg talk share")
-                    StatTile(value: MeetingController.mmss(mine.map(\.longestMonologue).max() ?? 0), label: "your longest monologue")
+                    StatTile(value: MeetingController.mmss(mine.map(\.longestMonologue).max() ?? 0), label: "longest monologue")
                 }
                 .frame(height: 78)
                 .padding(.top, Brand.s8)

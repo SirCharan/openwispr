@@ -70,7 +70,7 @@ final class CorrectionToast {
     }
 }
 
-private struct ToastView: View {
+struct ToastView: View {
     let pairs: [(from: String, to: String)]
     let onAdd: () -> Void
     let onClose: () -> Void
@@ -112,7 +112,7 @@ private struct ToastView: View {
     }
 }
 
-private struct PromptView: View {
+struct PromptView: View {
     let message: String
     let labels: [String]
     let onPick: (Int) -> Void

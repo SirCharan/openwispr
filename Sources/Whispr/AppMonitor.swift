@@ -14,7 +14,7 @@ enum AppMonitor {
                 guard let id = app.bundleIdentifier, let name = app.localizedName else { return nil }
                 return (name, id)
             }
-        return Array(Dictionary(apps, uniquingKeysWith: { a, _ in a }).map { ($0.value, $0.key) })
+        return Array(Dictionary(apps, uniquingKeysWith: { a, _ in a }).map { ($0.key, $0.value) })
             .sorted { $0.0.localizedCaseInsensitiveCompare($1.0) == .orderedAscending }
     }
 

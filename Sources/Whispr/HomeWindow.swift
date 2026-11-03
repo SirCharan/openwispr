@@ -480,6 +480,7 @@ private struct AboutPane: View {
                 Link("Website", destination: URL(string: "https://whispr-black-chi.vercel.app")!)
                 Link("GitHub", destination: URL(string: "https://github.com/SirCharan/whispr")!)
             }
+            .tint(Brand.coral)
             .padding(.top, 4)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

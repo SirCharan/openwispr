@@ -45,7 +45,7 @@ final class RecordingIndicator {
     }
 }
 
-private struct RecordingPill: View {
+struct RecordingPill: View {
     @ObservedObject var model: PillModel
     let onCancel: () -> Void
     let onStop: () -> Void
