@@ -109,23 +109,33 @@ enum LLMClient {
         }
     }
 
-    private static func ollamaChat(system: String, user: String) async throws -> String {
+    static let cleanupPrompt = "You clean up dictated text. Fix punctuation, capitalisation and obvious filler words (um, uh, repeated words). Keep the language and script exactly as given. Never add, remove or reorder content. Reply with only the text."
+
+    /// On-device cleanup: always Ollama (never the OpenAI-compatible path), temperature 0, hard timeout.
+    static func ollamaCleanup(_ text: String, model: String, timeout: TimeInterval = 2.5) async throws -> String {
+        try await ollamaChat(system: cleanupPrompt, user: text, model: model, timeout: timeout, temperature: 0)
+    }
+
+    private static func ollamaChat(system: String, user: String, model override: String? = nil,
+                                   timeout: TimeInterval = 120, temperature: Double? = nil) async throws -> String {
         guard await ollamaAlive() else { throw LLMError.notConfigured }
-        var name = model
+        var name = override ?? model
         if name.isEmpty { name = await ollamaModels().first ?? "" }
         guard !name.isEmpty else { throw LLMError.notConfigured }
 
         var req = URLRequest(url: URL(string: "http://localhost:11434/api/chat")!)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.timeoutInterval = 120
-        req.httpBody = try JSONSerialization.data(withJSONObject: [
+        req.timeoutInterval = timeout
+        var body: [String: Any] = [
             "model": name, "stream": false,
             "messages": [
                 ["role": "system", "content": system],
                 ["role": "user", "content": user],
             ],
-        ])
+        ]
+        if let temperature { body["options"] = ["temperature": temperature] }
+        req.httpBody = try JSONSerialization.data(withJSONObject: body)
         let (data, resp) = try await URLSession.shared.data(for: req)
         guard (resp as? HTTPURLResponse)?.statusCode == 200,
               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],

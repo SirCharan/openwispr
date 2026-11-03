@@ -5,6 +5,8 @@ struct HistoryEntry: Codable, Identifiable {
     var date = Date()
     var text: String
     var seconds: Double? // recording duration; absent in pre-v0.5 entries
+    var raw: String?     // pre-cleanup text; set only when auto-cleanup changed it
+    var reverted: Bool?  // user chose "Revert to raw"
 
     var words: Int { text.split(separator: " ").count }
 }
@@ -26,9 +28,9 @@ enum HistoryStore {
         return h
     }
 
-    static func add(_ text: String, seconds: Double? = nil) {
+    static func add(_ text: String, seconds: Double? = nil, raw: String? = nil) {
         var h = load()
-        h.insert(HistoryEntry(text: text, seconds: seconds), at: 0)
+        h.insert(HistoryEntry(text: text, seconds: seconds, raw: raw), at: 0)
         if h.count > cap { h = Array(h.prefix(cap)) }
         save(h)
     }
@@ -38,6 +40,15 @@ enum HistoryStore {
     }
 
     static func clear() { save([]) }
+
+    /// Revert a cleaned entry: text becomes the raw text; caller copies it to the clipboard.
+    static func revert(id: UUID) {
+        var h = load()
+        guard let i = h.firstIndex(where: { $0.id == id }), let raw = h[i].raw else { return }
+        h[i].text = raw
+        h[i].reverted = true
+        save(h)
+    }
 
     /// Replace an entry's text (in-app transcript correction).
     static func update(id: UUID, text: String) {

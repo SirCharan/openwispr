@@ -97,6 +97,28 @@ enum Settings {
         set { UserDefaults.standard.set(newValue, forKey: "disabledApps") }
     }
 
+    /// Opt-in on-device (Ollama) cleanup of dictated text. Off by default (ck, 2026-11-03 override of "no silent rewriting").
+    static var cleanupEnabled: Bool {
+        get { UserDefaults.standard.bool(forKey: "cleanupEnabled") }
+        set { UserDefaults.standard.set(newValue, forKey: "cleanupEnabled") }
+    }
+    static var cleanupModel: String {
+        get { UserDefaults.standard.string(forKey: "cleanupModel") ?? "" }
+        set { UserDefaults.standard.set(newValue, forKey: "cleanupModel") }
+    }
+    static var cleanupAllApps: Bool {
+        get { UserDefaults.standard.bool(forKey: "cleanupAllApps") }
+        set { UserDefaults.standard.set(newValue, forKey: "cleanupAllApps") }
+    }
+    /// Bundle IDs where cleanup applies (empty + !cleanupAllApps = nowhere).
+    static var cleanupApps: [String] {
+        get { UserDefaults.standard.stringArray(forKey: "cleanupApps") ?? [] }
+        set { UserDefaults.standard.set(newValue, forKey: "cleanupApps") }
+    }
+    static func cleanupApplies(to bundleID: String?) -> Bool {
+        cleanupEnabled && (cleanupAllApps || (bundleID.map { cleanupApps.contains($0) } ?? false))
+    }
+
     /// Output for non-English speech: "original" script · "roman" letters (Hinglish) · "translate" to English.
     static var outputMode: String {
         get { UserDefaults.standard.string(forKey: "outputMode") ?? "original" }

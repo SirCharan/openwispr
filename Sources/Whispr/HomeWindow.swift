@@ -349,6 +349,22 @@ private struct DictationsPane: View {
                     .onTapGesture(count: 2) { editingID = e.id; editText = e.text }
             }
             Spacer(minLength: 0)
+            if e.raw != nil {
+                if e.reverted == true {
+                    Text("reverted").font(.system(size: 10)).foregroundStyle(Brand.muted)
+                } else {
+                    Text("cleaned").font(.system(size: 10, weight: .medium)).foregroundStyle(Brand.coral)
+                    Button("Revert to raw") {
+                        if let raw = e.raw {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(raw, forType: .string)
+                        }
+                        HistoryStore.revert(id: e.id)
+                        refresh()
+                    }
+                    .buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(Brand.muted)
+                }
+            }
             if editingID != e.id, hoverID == e.id || copiedID == e.id {
                 Button(action: { copy(e) }) {
                     Image(systemName: copiedID == e.id ? "checkmark" : "doc.on.doc")

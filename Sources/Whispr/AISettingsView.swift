@@ -7,6 +7,11 @@ struct AISettingsView: View {
     @State private var apiKey = ""
     @State private var status = "checking…"
     @State private var ollamaModels: [String] = []
+    @State private var cleanupOn = Settings.cleanupEnabled
+    @State private var cleanupModel = Settings.cleanupModel
+    @State private var cleanupAll = Settings.cleanupAllApps
+    @State private var cleanupApps = Set(Settings.cleanupApps)
+    @State private var apps: [(name: String, id: String)] = []
 
     var body: some View {
         Form {
@@ -53,6 +58,34 @@ struct AISettingsView: View {
                 }
             }
 
+            Section("Auto-cleanup") {
+                Toggle("Clean up dictated text", isOn: $cleanupOn)
+                    .onChange(of: cleanupOn) { _, v in Settings.cleanupEnabled = v }
+                Text("Ollama only, so your text never leaves this Mac. Your original is always kept in History with a one-click revert.")
+                    .font(.caption).foregroundStyle(.secondary)
+                if cleanupOn {
+                    Picker("Model", selection: $cleanupModel) {
+                        if !cleanupModel.isEmpty && !ollamaModels.contains(cleanupModel) { Text(cleanupModel).tag(cleanupModel) }
+                        ForEach(ollamaModels, id: \.self) { Text($0).tag($0) }
+                    }
+                    .onChange(of: cleanupModel) { _, new in Settings.cleanupModel = new }
+                    Toggle("All apps", isOn: $cleanupAll)
+                        .onChange(of: cleanupAll) { _, v in Settings.cleanupAllApps = v }
+                    if !cleanupAll {
+                        Text("Apply in").font(.caption).foregroundStyle(.secondary)
+                        ForEach(apps, id: \.id) { app in
+                            Toggle(app.name, isOn: Binding(
+                                get: { cleanupApps.contains(app.id) },
+                                set: { on in
+                                    if on { cleanupApps.insert(app.id) } else { cleanupApps.remove(app.id) }
+                                    Settings.cleanupApps = Array(cleanupApps)
+                                }
+                            ))
+                        }
+                    }
+                }
+            }
+
             Section {
                 Text("AI is optional. Dictation and meetings work fully without it. With Ollama, summaries and rewrites run 100% on your Mac.")
                     .font(.caption).foregroundStyle(.secondary)
@@ -61,7 +94,11 @@ struct AISettingsView: View {
         .formStyle(.grouped)
         .task {
             apiKey = LLMClient.apiKey(for: provider) ?? ""
+            apps = AppMonitor.regularApps()
             await probe()
+            let local = await LLMClient.ollamaModels()
+            if !local.isEmpty { ollamaModels = local }
+            if cleanupModel.isEmpty, let first = ollamaModels.first { cleanupModel = first; Settings.cleanupModel = first }
         }
     }
 

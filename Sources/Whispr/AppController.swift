@@ -409,13 +409,24 @@ final class AppController {
                 // rewrite is dropped whole rather than pasting a half-expanded line.
                 let expansion = SnippetStore.expand(cleaned, SnippetStore.load())
                 let rewritten = await Self.rewriteIfEnabled(expansion.protectedText) { [weak self] in self?.setStatus($0) }
-                let text = SnippetStore.restore(rewritten, tokens: expansion.tokens) ?? expansion.expandedText
+                let rawText = SnippetStore.restore(rewritten, tokens: expansion.tokens) ?? expansion.expandedText
+                // Opt-in on-device cleanup (runs around snippet sentinels like the rewrite). Any failure pastes raw.
+                var text = rawText
+                if Settings.cleanupApplies(to: dictatingInto), !rewritten.isEmpty {
+                    setStatus("cleaning up…")
+                    do {
+                        let out = try await LLMClient.ollamaCleanup(rewritten, model: Settings.cleanupModel)
+                        if !out.isEmpty, let back = SnippetStore.restore(out, tokens: expansion.tokens) { text = back }
+                    } catch {
+                        NSLog("[Whispr] cleanup failed, pasting raw: \(error)")
+                    }
+                }
                 if text.isEmpty {
                     setStatus("ready (no speech)")
                 } else {
                     Paster.deliver(text, autoPaste: Settings.autoPaste)
                     let seconds = Double(samples.count) / 16000
-                    HistoryStore.add(text, seconds: seconds)
+                    HistoryStore.add(text, seconds: seconds, raw: text != rawText ? rawText : nil)
                     Stats.record(words: text.split(separator: " ").count, seconds: seconds, appBundleID: dictatingInto)
                     corrections.notePaste(text)
                     if Settings.autoPaste {
