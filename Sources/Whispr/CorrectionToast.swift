@@ -116,6 +116,12 @@ private struct PromptView: View {
     let labels: [String]
     let onPick: (Int) -> Void
 
+    private func a11yLabel(_ label: String, _ i: Int) -> String {
+        if label == "Start" { return "Meeting prompt: Start" }
+        if label.hasPrefix("Always") { return "Always" }
+        return label
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(message)
@@ -132,9 +138,12 @@ private struct PromptView: View {
                             .background(RoundedRectangle(cornerRadius: 8).fill(i == 0 ? Brand.coral : Brand.line))
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(a11yLabel(labels[i], i))
+                    .accessibilityIdentifier(a11yLabel(labels[i], i))
                 }
             }
         }
+        .accessibilityElement(children: .contain)
         .padding(14)
         .background(
             RoundedRectangle(cornerRadius: 12).fill(Brand.bg)

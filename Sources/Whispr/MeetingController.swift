@@ -96,7 +96,7 @@ final class MeetingController: ObservableObject {
     private var micWatchdogTripped = false
     private var micDeadRestarts = 0
     private var micLost = false
-    private var micVoiceProcessing = true
+    private var micVoiceProcessing = false
     private let maxMicDeadRestarts = 2
 
     // ordered transcription queue
@@ -134,7 +134,7 @@ final class MeetingController: ObservableObject {
         if vadModel == nil { vadModel = await MeetingSegmenter.loadVad() }
         do {
             micVoiceProcessing = Settings.meetingMicVoiceProcessing
-            // AEC (default on): keep speaker playback out of "You"
+            // AEC is opt-in (meetingMicVoiceProcessing): it left the mic silent with Chrome on Meet
             try mic.start(voiceProcessing: micVoiceProcessing)
             try await system.start()
         } catch {
@@ -299,16 +299,26 @@ final class MeetingController: ObservableObject {
         guard isRunning, !isPaused else { return }
         await feed(mic.stop(), stream: .mic)
         micVoiceProcessing = false
-        do {
-            try mic.start(voiceProcessing: false)
-            _ = mic.drain() // discard the first buffer, as start() does
-            micWatchdog = MicDeadWatchdog()
-            lastMicAppends = mic.diagnostics.appends; micQuietTicks = 0
-        } catch {
-            Log.audio.error("meeting mic restart failed: \(error.localizedDescription, privacy: .public)")
-            micHealthy = false
-            status = "your microphone stopped delivering audio"
+        for attempt in 1...2 {
+            do {
+                try mic.start(voiceProcessing: false)
+                _ = mic.drain() // discard the first buffer, as start() does
+                micWatchdog = MicDeadWatchdog()
+                lastMicAppends = mic.diagnostics.appends; micQuietTicks = 0
+                return
+            } catch {
+                Log.audio.error("meeting mic restart failed (try \(attempt)/2): \(describeOSStatus(error), privacy: .public)")
+                if attempt == 1 {
+                    _ = mic.stop()
+                    try? await Task.sleep(for: .milliseconds(500))
+                    guard isRunning, !isPaused else { return }
+                }
+            }
         }
+        micHealthy = false
+        status = "your microphone stopped delivering audio"
+        banner = Self.micLostBanner
+        micLost = true
     }
 
     /// Reconnect the system-audio tap with exponential backoff, keeping buffered audio.
@@ -660,6 +670,22 @@ final class MeetingController: ObservableObject {
         let silentFires = fires(0.0003), speechFires = fires(0.08)
         precondition(silentFires == 1, "mic watchdog fired \(silentFires)x on 12 s of silence, want 1")
         precondition(speechFires == 0, "mic watchdog fired on speech")
+        // Recorder restart: start -> stop -> start (plain path) must deliver buffers both times.
+        // Skipped without an input device / mic permission.
+        let rec = AudioRecorder()
+        do {
+            var counts: [Int] = []
+            for _ in 0..<2 {
+                try rec.start(voiceProcessing: false)
+                Thread.sleep(forTimeInterval: 1.0)
+                counts.append(rec.diagnostics.appends)
+                rec.stop()
+            }
+            precondition(counts.allSatisfy { $0 > 0 }, "AudioRecorder restart delivered no buffers: \(counts)")
+            print("AudioRecorder.restart PASS (appends=\(counts))")
+        } catch {
+            print("AudioRecorder.restart SKIP (\(describeOSStatus(error)))")
+        }
         print("MeetingController.micWatchdog PASS (silence fires=\(silentFires), speech fires=\(speechFires))")
         print("MeetingController.selfTest PASS")
     }

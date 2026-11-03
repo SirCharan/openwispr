@@ -29,6 +29,9 @@ final class ResamplingBuffer {
         return diag
     }
 
+    /// Drop the converter so the next append rebuilds it from that buffer's format.
+    func releaseConverter() { lock.lock(); converter = nil; lock.unlock() }
+
     func reset() {
         lock.lock()
         samples.removeAll(keepingCapacity: true)

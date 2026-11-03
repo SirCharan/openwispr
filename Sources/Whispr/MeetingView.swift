@@ -48,10 +48,14 @@ struct MeetingView: View {
                     }
                     Button("Stop") { Task { await controller.stop() } }
                         .tint(.red)
+                        .accessibilityLabel("Stop recording")
+                        .accessibilityIdentifier("Stop recording")
                 } else {
                     Button("Start recording") { Task { await controller.start() } }
                         .keyboardShortcut(.defaultAction)
                         .disabled(!screenRecOK) // pre-start check: no surprises at meeting time
+                        .accessibilityLabel("Start recording")
+                        .accessibilityIdentifier("Start recording")
                 }
                 Button(controller.summarizing ? "Summarizing…" : "Summarize") {
                     Task { await controller.summarize() }

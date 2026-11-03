@@ -2,6 +2,17 @@ import AVFoundation
 
 enum AudioRecorderError: Error { case converterInitFailed }
 
+/// "560227702 ('!dat')" for an OSStatus-bearing error, else its localized description.
+func describeOSStatus(_ error: Error) -> String {
+    let ns = error as NSError
+    let code = ns.code
+    let u = UInt32(bitPattern: Int32(truncatingIfNeeded: code))
+    let bytes = [UInt8((u >> 24) & 0xFF), UInt8((u >> 16) & 0xFF), UInt8((u >> 8) & 0xFF), UInt8(u & 0xFF)]
+    let printable = bytes.allSatisfy { $0 >= 0x20 && $0 < 0x7F }
+    let cc = printable ? " ('\(String(decoding: bytes, as: UTF8.self))')" : ""
+    return "\(error.localizedDescription) [\(ns.domain) \(code)\(cc)]"
+}
+
 /// Captures microphone audio via AVAudioEngine into a shared ResamplingBuffer
 /// (16 kHz mono Float32 — the format WhisperKit expects).
 final class AudioRecorder {
@@ -19,6 +30,7 @@ final class AudioRecorder {
     func start(voiceProcessing: Bool = false) throws {
         guard !isRecording else { return } // double-start would install a second tap → NSException
         buffer.reset()
+        buffer.releaseConverter() // converter is rebuilt from the first buffer's real format
         let input = engine.inputNode
         if voiceProcessing != input.isVoiceProcessingEnabled {
             do {
@@ -32,10 +44,11 @@ final class AudioRecorder {
             } catch {
                 Log.audio.error("""
                     mic: voice processing (AEC) unavailable, recording without it: \
-                    \(error.localizedDescription, privacy: .public)
+                    \(describeOSStatus(error), privacy: .public)
                     """)
             }
         }
+        // Always the node's CURRENT format (read after the VP toggle), never a cached one.
         let inFormat = input.outputFormat(forBus: 0)
         // A zero sample rate here means the input device is not actually available; the tap
         // would install and never fire, which reads downstream as a silent room.
@@ -56,6 +69,8 @@ final class AudioRecorder {
         } catch {
             input.removeTap(onBus: 0) // don't leak the tap: the next start() would install a second one
             engine.stop()
+            engine.reset()
+            buffer.releaseConverter()
             buffer.reset()
             isRecording = false
             throw error
@@ -69,6 +84,8 @@ final class AudioRecorder {
         guard isRecording else { return [] }
         engine.inputNode.removeTap(onBus: 0)
         engine.stop()
+        engine.reset() // drop cached graph formats so a restart negotiates fresh
+        buffer.releaseConverter()
         isRecording = false
         return buffer.snapshot()
     }

@@ -47,7 +47,7 @@ final class MeetRosterServer {
             }
             l.start(queue: queue)
         }
-        if ok { listener = l; boundPort = l.port?.rawValue } else { l.cancel() }
+        if ok { listener = l; boundPort = l.port?.rawValue; Log.app.info("meet-ext: listening on 127.0.0.1:\(self.boundPort ?? port, privacy: .public)") } else { l.cancel() }
         return ok
     }
 
@@ -99,7 +99,10 @@ final class MeetRosterServer {
     }
 
     private nonisolated func reply(_ c: NWConnection, method: String, path: String, body: Data) {
-        guard path == "/meet" else { return send(c, "HTTP/1.1 404 Not Found\r\n") }
+        guard path == "/meet" else {
+            Log.app.info("meet-ext: rejected path \(path, privacy: .public)")
+            return send(c, "HTTP/1.1 404 Not Found\r\n")
+        }
         let cors = "Access-Control-Allow-Origin: *\r\n"
         switch method {
         case "OPTIONS":
@@ -107,7 +110,9 @@ final class MeetRosterServer {
         case "POST":
             send(c, "HTTP/1.1 204 No Content\r\n" + cors)
             Task { @MainActor in self.handle(body) }
-        default: send(c, "HTTP/1.1 405 Method Not Allowed\r\n")
+        default:
+            Log.app.info("meet-ext: rejected method \(method, privacy: .public)")
+            send(c, "HTTP/1.1 405 Method Not Allowed\r\n")
         }
     }
 
@@ -127,15 +132,19 @@ final class MeetRosterServer {
     }
 
     func handle(_ body: Data) {
-        guard let p = try? JSONDecoder().decode(Payload.self, from: body) else { return }
+        guard let p = try? JSONDecoder().decode(Payload.self, from: body) else {
+            Log.app.info("meet-ext: rejected undecodable body (\(body.count, privacy: .public) bytes)")
+            return
+        }
+        let ps = p.participants ?? []
+        Log.app.info("meet-ext: \(p.event, privacy: .public) meeting=\(p.meeting ?? "-", privacy: .public) participants=\(ps.count, privacy: .public) speaking=\(ps.filter { $0.speaking == true }.count, privacy: .public)")
         switch p.event {
         case "roster":
-            guard let t = clock() else { return }
-            let ps = p.participants ?? []
+            guard let t = clock() else { Log.app.info("meet-ext: rejected roster, no meeting recording"); return }
             timeline.record(t: t, names: ps.map(\.name), speaking: ps.filter { $0.speaking == true }.map(\.name))
         case "joined": lastJoined = Date(); onJoined()
         case "left": lastJoined = nil; onLeft()
-        default: break
+        default: Log.app.info("meet-ext: rejected unknown event \(p.event, privacy: .public)")
         }
     }
 
