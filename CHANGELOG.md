@@ -2,6 +2,13 @@
 
 Notable changes to OpenWispr (formerly Whispr), newest first.
 
+## [0.18.1] - 2026-11-03
+Google Meet speaker names.
+- Meet speaker names via the bundled Chrome extension (load unpacked once, from Settings, "Reveal extension folder").
+- Shared roster timeline for Zoom and Meet.
+- Loopback listener on 127.0.0.1:47891 receives the extension's roster.
+- Known limits: the extension was tested only on a solo call, and Meet class names may rotate (speaking detection keys on the silent class only).
+
 ## [0.18.0] - 2026-11-03
 Meetings you can trust.
 - Speech engine upgraded to WhisperKit / Argmax 1.1.1: the model loads once per launch and skips the download when it is already on disk.

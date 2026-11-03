@@ -24,7 +24,7 @@ Still open from this list: audio playback in meeting history, and named speakers
 - Dictation audio playback
 - Mic-silent warning
 - Language-add nudge
-- Meet/Teams OCR speaker-naming spike
+- Meet done via extension; Teams still open
 - Per-buffer host timestamps
 - Hindi engine bench (Hindi2Hinglish Core ML, IndicConformer)
 
@@ -51,6 +51,7 @@ Informed by what Wispr Flow and Muesli ship. OpenWispr stays fully on-device for
 
 ## Done recently
 
+- v0.18.1 — Meet speaker names via Chrome extension, shared roster timeline.
 - v0.18.0 — VAD + shared clock, stream-failure fixes, echo dedup, meeting stats and detect, Zoom names, Argmax 1.1.1, opt-in Ollama cleanup.
 - v0.17.1 — hallucinated-filler gate, tunable speech floor measured from a real meeting.
 - v0.17.0 — 3-channel mic fix, FIFO transcription, WAV retention, stream health + auto-restart, mute-on-dictate, Indic large-v3, correction learning.
