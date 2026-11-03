@@ -16,6 +16,7 @@ struct SettingsView: View {
     @AppStorage("muteMode") private var muteMode = "mute"
     @AppStorage("showIdleWidget") private var showIdleWidget = true
     @AppStorage("diarizationEnabled") private var diarizationEnabled = true
+    @AppStorage("detectMeetings") private var detectMeetings = true
     @AppStorage("hotkeyMode") private var hotkeyMode = "fn"
     @AppStorage("rewriteStyle") private var rewriteStyle = "off"
     @AppStorage("accentHex") private var accentHex = "FF5D54"
@@ -57,6 +58,7 @@ struct SettingsView: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Toggle("Separate remote meeting speakers (A/B) by voice", isOn: $diarizationEnabled)
+                Toggle("Detect meetings and offer to record", isOn: $detectMeetings)
                 Toggle("Floating mic button (click to dictate)", isOn: $showIdleWidget)
                     .onChange(of: showIdleWidget) { _, _ in NotificationCenter.default.post(name: .whisprHotkeyModeChanged, object: nil) }
                 Toggle("Launch at login", isOn: $launchAtLogin)

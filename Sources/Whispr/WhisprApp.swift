@@ -22,6 +22,7 @@ enum Whispr {
                 CorrectionsWatcher.selfTest()
                 AXEditWatcher.selfTest()
                 Diarizer.selfTest()
+                MeetingWindowDetector.selfTest()
                 MeetingController.selfTest()
                 OnboardingModel.selfTest()
                 exit(0)
