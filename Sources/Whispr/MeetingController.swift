@@ -54,6 +54,11 @@ final class MeetingController: ObservableObject {
     private var micOffset = 0.0
     private var sysOffset = 0.0
     private var fullSysAudio: [Float] = []
+    /// Seconds of system audio handed to the queue; with the live buffer it is the diarization timeline's "now".
+    private var sysQueued = 0.0
+    /// Set by AppController: is the detected meeting app Zoom right now?
+    var isZoomMeeting: () -> Bool = { false }
+    private var roster: ZoomRosterReader?
     // ponytail: full floats in RAM ≈ 230MB/hour — fine for normal meetings; stream-to-disk if ever needed
     private var meetingFile: URL?
 
@@ -119,7 +124,7 @@ final class MeetingController: ObservableObject {
         summary = nil
         savedTo = nil
         lines.removeAll()
-        micOffset = 0; sysOffset = 0
+        micOffset = 0; sysOffset = 0; sysQueued = 0
         fullSysAudio.removeAll()
         pending.removeAll()
         // fix the checkpoint file at start so every save hits the same path
@@ -135,11 +140,22 @@ final class MeetingController: ObservableObject {
         lastMicAppends = 0; lastSysAppends = 0
         micQuietTicks = 0; sysQuietTicks = 0
         sysRestartAttempts = 0; sysRestartCooldown = 0
+
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.checkHealth()
                 self?.checkRotation()
             }
+        }
+        roster?.stop(); roster = nil
+        if isZoomMeeting() {
+            let rr = ZoomRosterReader(isZoom: { [weak self] in self?.isZoomMeeting() ?? false },
+                                      clock: { [weak self] in
+                guard let self, self.isRunning, !self.isPaused else { return nil }
+                return self.sysQueued + self.system.bufferedSeconds
+            })
+            rr.start()
+            roster = rr
         }
     }
 
@@ -295,7 +311,13 @@ final class MeetingController: ObservableObject {
         if !pending.isEmpty { status = "transcribing the last \(pending.count) chunk(s)…" }
         await flushPending()
         closeAudioWriters()
-        await applyDiarization()
+        roster?.stop()
+        let segments = await applyDiarization()
+        if let rr = roster, !segments.isEmpty {
+            let map = ZoomRosterReader.names(segments: segments, timeline: rr.timeline)
+            if !map.isEmpty { renameSpeakers(map) }
+        }
+        roster = nil
         // The floor is calibrated on one room and one mic gain. A high drop count is the signal
         // to loosen `meetingSpeechFloor` — surfaced here so the user doesn't need Console.app.
         if floorDrops > 0 {
@@ -311,20 +333,23 @@ final class MeetingController: ObservableObject {
     }
 
     /// Split "Others" lines into Speaker A/B/… using the full system recording. Falls back silently.
-    private func applyDiarization() async {
-        guard Settings.diarizationEnabled, !fullSysAudio.isEmpty else { return }
+    @discardableResult
+    private func applyDiarization() async -> [Diarizer.Segment] {
+        guard Settings.diarizationEnabled, !fullSysAudio.isEmpty else { return [] }
         status = "separating speakers…"
         let audio = fullSysAudio
         do {
             let segments = try await diarizer.diarize(audio)
-            guard !segments.isEmpty else { return }
+            guard !segments.isEmpty else { return [] }
             for i in lines.indices where lines[i].speaker == "Others" {
                 if let who = Diarizer.assign(start: lines[i].start, end: lines[i].end, segments: segments) {
                     lines[i].speaker = who
                 }
             }
+            return segments
         } catch {
             Log.audio.error("diarization failed, keeping Others: \(error.localizedDescription, privacy: .public)")
+            return []
         }
     }
 
@@ -380,6 +405,7 @@ final class MeetingController: ObservableObject {
     /// consumer instead: ordered, and drained to completion before the transcript is finished.
     private func enqueue(_ samples: [Float], speaker: String, stream: Stream) {
         guard !samples.isEmpty else { return }
+        if stream == .system { sysQueued += Double(samples.count) / 16000 }
         pending.append(PendingChunk(samples: samples, speaker: speaker, stream: stream))
         if pending.count > 8 {
             Log.audio.error("transcription backlog \(self.pending.count) chunks — inference is slower than capture")

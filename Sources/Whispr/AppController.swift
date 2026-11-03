@@ -137,6 +137,7 @@ final class AppController {
         }
         d.start()
         meetingDetector = d
+        meetingCtrl.isZoomMeeting = { [weak d] in d?.current?.id == "us.zoom.xos" }
     }
 
     // MARK: - First-run onboarding
