@@ -24,14 +24,17 @@ Local-first dictation and meeting transcription for macOS. Speech never leaves y
 ### Meetings
 
 - Records your mic and the system's output (via ScreenCaptureKit) at once — no bot joins the call.
-- Chunks audio at natural speech pauses instead of on a fixed timer.
+- Cuts audio at real speech boundaries (Silero VAD) on one shared clock for mic and system audio, so the two sides stay aligned.
+- Auto-detects Zoom, Meet and Teams and offers a Start prompt; Zoom speaker names come from the Accessibility roster.
+- Per-meeting stats: talk share, words per minute, longest monologue, questions, fillers and interruptions, in the meeting view and Insights.
+- When the remote side leaks into your mic, the duplicate mic line is dropped.
 - A tunable speech floor drops near-silent chunks before they reach Whisper, so it can't hallucinate filler ("Thank you.", "Gracias.") out of room tone.
 - Transcription runs through one ordered queue, so a slow chunk can't scramble the line order or get dropped from a busy meeting.
 - At Stop, the full remote-audio recording is split into speakers (on-device diarization via FluidAudio) — rename them afterward.
 - Live per-stream health indicators, and the system-audio stream auto-restarts if it dies mid-meeting.
 - Transcript checkpoints to disk after every line, so a crash loses at most one chunk.
 - Raw audio is kept (mic + system, separately) for 7 days by default, so a bad transcript can be re-run offline.
-- Optional AI summary (Decisions / Action items) once the meeting ends.
+- Optional AI summary (Decisions / Action items) once the meeting ends, and optional on-device auto-cleanup through Ollama (off by default, per app, raw text kept with revert).
 
 ### Personalization
 

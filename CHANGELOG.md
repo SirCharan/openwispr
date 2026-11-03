@@ -2,6 +2,24 @@
 
 Notable changes to OpenWispr (formerly Whispr), newest first.
 
+## [0.18.0] - 2026-11-03
+Meetings you can trust.
+- Speech engine upgraded to WhisperKit / Argmax 1.1.1: the model loads once per launch and skips the download when it is already on disk.
+- Fixed three meeting stream failures: a leaked mic tap when the engine fails to start, a mic left running after a failed resume, and a silent mic-only meeting after repeated restarts.
+- Meetings are now cut at real speech boundaries with Silero VAD, on one shared clock for mic and system audio, with dropouts zero-filled so the timeline stays honest.
+- Echo dedup is back on: when the remote side leaks into your mic, the mic duplicate is dropped (four tokens or more).
+- Per-meeting stats: talk share, words per minute, longest monologue, questions, fillers and interruptions, shown in the meeting view and in Insights.
+- Meeting auto-detect: OpenWispr notices Zoom, Meet or Teams and offers a Start prompt.
+- Zoom speaker names are read from the Accessibility roster.
+- Opt-in on-device auto-cleanup through Ollama: off by default, set per app, keeps your raw text with a revert.
+- Review fixes: pause, resume and stop are serialised, the roster walk runs off the main thread, mic and clock are aligned, and screen-capture permission is checked up front.
+
+Known limits:
+- Zoom speaker names are unverified on a live call.
+- The Silero path is exercised only through the fallback self-test.
+- Auto-cleanup needs a running Ollama.
+- Meetings recorded before 0.18.0 have no stats.
+
 ## [0.17.3] - 2026-10-26
 - fix(mac): home window follows you to the current Space on open/reopen (macOS 14+ activation); persistent launch/reopen/model-error log lines; invalid stored model name falls back to default.
 

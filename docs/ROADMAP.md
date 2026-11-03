@@ -1,18 +1,32 @@
 # Roadmap
 
-Updated 2026-08-14, after the v0.17.x meeting-capture rebuild. Ordering reflects user value per unit of work for a solo maintainer. Nothing here is a commitment.
+Updated 2026-11-03, after the v0.18.0 release. Ordering reflects user value per unit of work for a solo maintainer. Nothing here is a commitment.
 
 ## 1. Meeting quality
 
-The v0.17.x rebuild fixed the capture layer (dead mic, dropped chunks, hallucinated filler). The remaining quality gap is segmentation and timing.
+Shipped in 0.18.0 (meetings you can trust):
 
-1. **Silero VAD segmentation.** Replace the energy-based pause heuristic with FluidAudio `VadManager`. Cuts chunks at real speech boundaries, so quiet remote speech stops competing with room tone. Add per-stream gain normalization (EMA) so one floor fits both streams. Decision and config recorded; fallback is fixed 15 s segments with 1 s overlap.
-2. **One shared clock.** Derive timestamps from `CMSampleBuffer` presentation time instead of sample counts. Today the mic and system streams drift apart over a long meeting, and a dropout compresses out of the timeline.
-3. **Stream-failure hardening.** Fix three known bugs: `AudioRecorder.start` leaks its tap when `engine.start()` throws; `resume()` leaves the mic running when the system stream fails to start; after eight failed restarts a meeting keeps running mic-only with no banner. A dead stream must be loud in the UI, not a quiet room.
-4. **Audio playback in meeting history.** The raw WAVs are already retained. A play button per meeting lets you check whether a bad transcript was a bad recording or a bad model. Cheapest trust feature available.
-5. **Named speakers that persist.** The rename sheet exists per meeting. Store voice embeddings so "Speaker A" becomes "Ravi" in the next meeting too.
-6. **Echo dedup (re-enabled).** Now on the shared meeting clock: an Others line is dropped only for a You line within ±1.5 s with Jaccard ≥ 0.8; both texts are logged at debug. Disable with `defaults write org.openwispr.app meetingEchoDedup -bool false`.
-7. **Live transcript view.** Lines already arrive incrementally; show them during the meeting instead of only at the end.
+- **Silero VAD segmentation and one shared clock.** Chunks cut at real speech boundaries; mic and system streams share a clock and dropouts are zero-filled.
+- **Stream-failure bugs fixed.** The leaked tap, the mic left running after a failed resume, and the silent mic-only meeting.
+- **Echo dedup.** Drops the mic twin of a remote line (four tokens or more). Disable with `defaults write org.openwispr.app meetingEchoDedup -bool false`.
+- **Per-meeting stats.** Talk share, WPM, monologue, questions, fillers, interruptions, in the meeting view and Insights.
+- **Meeting detect.** Zoom, Meet and Teams trigger a Start prompt.
+- **Zoom speaker names.** From the Accessibility roster (untested on a live call).
+- **Argmax upgrade.** WhisperKit / Argmax 1.1.1 with load-once and download skip.
+
+Still open from this list: audio playback in meeting history, and named speakers that persist across meetings (voice embeddings).
+
+### Next (0.18.x)
+
+- FTS5 transcript search
+- Dictation Insights upgrade
+- Live transcript view
+- Dictation audio playback
+- Mic-silent warning
+- Language-add nudge
+- Meet/Teams OCR speaker-naming spike
+- Per-buffer host timestamps
+- Hindi engine bench (Hindi2Hinglish Core ML, IndicConformer)
 
 ## 2. Dictation and app features
 
@@ -37,6 +51,7 @@ Informed by what Wispr Flow and Muesli ship. OpenWispr stays fully on-device for
 
 ## Done recently
 
+- v0.18.0 — VAD + shared clock, stream-failure fixes, echo dedup, meeting stats and detect, Zoom names, Argmax 1.1.1, opt-in Ollama cleanup.
 - v0.17.1 — hallucinated-filler gate, tunable speech floor measured from a real meeting.
 - v0.17.0 — 3-channel mic fix, FIFO transcription, WAV retention, stream health + auto-restart, mute-on-dictate, Indic large-v3, correction learning.
 - v0.16.1 — hybrid tap/hold trigger, pills follow the active screen.
