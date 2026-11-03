@@ -66,12 +66,12 @@ struct OnboardingView: View {
             HStack(spacing: 0) {
                 ForEach(Array(phases.enumerated()), id: \.offset) { i, name in
                     HStack(spacing: 6) {
-                        Text(name.uppercased())
-                            .font(Brand.mono(10).weight(i == active ? .bold : .medium))
+                        Text(name)
+                            .font(Brand.caption.weight(i == active ? .semibold : .medium))
                             .foregroundStyle(i == active ? Brand.coral : (i < active ? Brand.text : Brand.muted))
                         if i < phases.count - 1 {
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 7, weight: .semibold))
+                                .font(Brand.caption.weight(.semibold))
                                 .foregroundStyle(Brand.muted.opacity(0.7))
                         }
                     }
@@ -150,7 +150,7 @@ struct OnboardingView: View {
                 .labelsHidden()
                 .frame(maxWidth: 280)
                 Text("Speaking is ~4× faster — that's ~\(Int(OnboardingModel.hoursSavedPerWeek(typingHoursPerDay: typingHours).rounded())) hours back every week.")
-                    .font(.system(size: 13, weight: .medium))
+                    .font(Brand.body.weight(.medium))
                     .foregroundStyle(Brand.coral)
                     .multilineTextAlignment(.center)
                     .contentTransition(.numericText())
@@ -177,11 +177,11 @@ struct OnboardingView: View {
                       : "exclamationmark.triangle.fill",
                       tint: model.modelError == nil ? Brand.coral : Brand.warn)
             Text(model.modelReady ? "Speech model ready" : "Downloading the speech model")
-                .font(Brand.serif(24))
+                .font(Brand.title)
                 .foregroundStyle(Brand.text)
             if let err = model.modelError {
-                Text("Download failed: \(err)\nCheck your connection and retry.")
-                    .font(.system(size: 14))
+                Text("Download failed: \(err)\nCheck your connection and try again.")
+                    .font(Brand.body)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(Brand.muted)
                     .frame(maxWidth: 360)
@@ -192,7 +192,7 @@ struct OnboardingView: View {
                 Text(model.modelReady
                       ? "Already on this Mac — no download needed."
                       : "One-time download (~1.5 GB). Usually a few minutes.")
-                    .font(.system(size: 14))
+                    .font(Brand.body)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(Brand.muted)
                     .frame(maxWidth: 360)
@@ -201,7 +201,7 @@ struct OnboardingView: View {
                         .tint(Brand.coral)
                         .frame(maxWidth: 300)
                     Text(model.modelReady ? "Ready" : "\(Int(model.downloadProgress * 100))%")
-                        .font(Brand.mono(12))
+                        .font(Brand.caption.monospacedDigit())
                         .foregroundStyle(Brand.muted)
                 }
                 Button("Continue") { model.step = .trigger }
@@ -227,7 +227,7 @@ struct OnboardingView: View {
             primary: ("Start using OpenWispr", { model.onFinish() })
         ) {
             Text("Change the hotkey or model anytime in Settings")
-                .font(.system(size: 12))
+                .font(Brand.caption)
                 .foregroundStyle(Brand.muted)
                 .multilineTextAlignment(.center)
                 .padding(.top, 2)
@@ -239,9 +239,8 @@ struct OnboardingView: View {
     // MARK: - Shared chrome
 
     private func chip(_ text: String) -> some View {
-        Text(text.uppercased())
-            .font(Brand.mono(10).weight(.medium))
-            .tracking(0.8)
+        Text(text)
+            .font(Brand.caption.weight(.medium))
             .foregroundStyle(Brand.muted)
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
@@ -253,7 +252,7 @@ struct OnboardingView: View {
 
     private func iconBadge(_ systemName: String, tint: Color = Brand.coral) -> some View {
         Image(systemName: systemName)
-            .font(.system(size: 28, weight: .semibold))
+            .font(Brand.display)
             .foregroundStyle(tint)
             .frame(width: 64, height: 64)
             .background(
@@ -276,11 +275,11 @@ struct OnboardingView: View {
             Spacer(minLength: 8)
             iconBadge(icon)
             Text(title)
-                .font(Brand.serif(24))
+                .font(Brand.title)
                 .foregroundStyle(Brand.text)
                 .multilineTextAlignment(.center)
             Text(body)
-                .font(.system(size: 14))
+                .font(Brand.body)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(Brand.muted)
                 .frame(maxWidth: 380)
@@ -292,7 +291,7 @@ struct OnboardingView: View {
             if let secondary {
                 Button(secondary.0, action: secondary.1)
                     .buttonStyle(.plain)
-                    .font(.system(size: 12))
+                    .font(Brand.caption)
                     .foregroundStyle(Brand.muted)
             }
         }
@@ -306,12 +305,12 @@ private struct PrimaryButtonStyle: ButtonStyle {
     var fill: Color = Brand.coral
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 14, weight: .semibold))
+            .font(Brand.heading)
             .foregroundStyle(Brand.onAccent)
             .padding(.horizontal, 22)
             .padding(.vertical, 10)
             .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                RoundedRectangle(cornerRadius: Brand.rSm, style: .continuous)
                     .fill(fill.opacity(configuration.isPressed ? 0.85 : 1))
             )
     }
@@ -333,10 +332,10 @@ private struct PermissionsStep: View {
         VStack(spacing: 16) {
             iconBadge("lock.shield.fill")
             Text("Permissions")
-                .font(Brand.serif(24))
+                .font(Brand.title)
                 .foregroundStyle(Brand.text)
             Text("Two grants so OpenWispr can hear you and paste at the cursor. Audio never leaves this Mac.")
-                .font(.system(size: 14))
+                .font(Brand.body)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(Brand.muted)
                 .frame(maxWidth: 380)
@@ -346,19 +345,19 @@ private struct PermissionsStep: View {
                 HStack {
                     statusDot(model.micGranted)
                     Text("Microphone")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(Brand.heading)
                         .foregroundStyle(Brand.text)
                     Spacer()
                     if model.micGranted {
                         Text("Granted")
-                            .font(Brand.mono(11))
-                            .foregroundStyle(Brand.coral)
+                            .font(Brand.caption)
+                            .foregroundStyle(Brand.ok)
                     } else if model.micDenied {
                         Button("Open Settings") { model.openMicSettings() }
-                            .font(.system(size: 12, weight: .medium))
+                            .font(Brand.caption.weight(.medium))
                     } else {
                         Button("Allow") { model.requestMic() }
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(Brand.caption.weight(.semibold))
                             .foregroundStyle(Brand.coral)
                     }
                 }
@@ -374,15 +373,15 @@ private struct PermissionsStep: View {
                     .frame(height: 32)
                     .animation(.easeOut(duration: 0.08), value: meter.level)
                     Text("Speak — the bars should move.")
-                        .font(.system(size: 11))
+                        .font(Brand.caption)
                         .foregroundStyle(Brand.muted)
                 } else if model.micDenied {
                     Text("Denied. System Settings → Privacy & Security → Microphone → OpenWispr.")
-                        .font(.system(size: 11))
+                        .font(Brand.caption)
                         .foregroundStyle(Brand.warn)
                 }
             }
-            .padding(14)
+            .padding(Brand.s12)
             .background(card)
 
             // Accessibility row
@@ -390,50 +389,50 @@ private struct PermissionsStep: View {
                 HStack {
                     statusDot(model.axGranted)
                     Text("Accessibility")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(Brand.heading)
                         .foregroundStyle(Brand.text)
                     Spacer()
                     if model.axGranted {
                         Text("Granted")
-                            .font(Brand.mono(11))
-                            .foregroundStyle(Brand.coral)
+                            .font(Brand.caption)
+                            .foregroundStyle(Brand.ok)
                     } else {
                         Button("Open Settings") {
                             model.requestAccessibility()
                         }
-                        .font(.system(size: 12, weight: .medium))
+                        .font(Brand.caption.weight(.medium))
                     }
                 }
                 Text(model.axGranted
                       ? "fn trigger and auto-paste are enabled."
                       : "Needed for the fn key and to paste at the cursor.")
-                    .font(.system(size: 11))
+                    .font(Brand.caption)
                     .foregroundStyle(Brand.muted)
                 if !model.axGranted {
                     Button("I've enabled it — re-check") {
                         model.refreshAccessibility()
                     }
-                    .font(.system(size: 11, weight: .medium))
+                    .font(Brand.caption.weight(.medium))
                     .foregroundStyle(Brand.coral)
                 }
             }
-            .padding(14)
+            .padding(Brand.s12)
             .background(card)
 
             // Optional meetings
             HStack(spacing: 8) {
                 Image(systemName: (model.screenRecGranted || model.screenRecPrompted)
                       ? "checkmark.circle.fill" : "rectangle.inset.filled.badge.record")
-                    .foregroundStyle((model.screenRecGranted || model.screenRecPrompted) ? Brand.coral : Brand.muted)
+                    .foregroundStyle((model.screenRecGranted || model.screenRecPrompted) ? Brand.ok : Brand.muted)
                 if model.screenRecGranted || model.screenRecPrompted {
                     Text(model.screenRecGranted ? "Meeting capture enabled" : "Meeting capture requested (applies next launch)")
-                        .font(.system(size: 12))
+                        .font(Brand.caption)
                         .foregroundStyle(Brand.muted)
                 } else {
                     Button("Also enable meeting capture (optional)") {
                         model.requestScreenRecording()
                     }
-                    .font(.system(size: 12))
+                    .font(Brand.caption)
                     .foregroundStyle(Brand.muted)
                 }
                 Spacer()
@@ -450,7 +449,7 @@ private struct PermissionsStep: View {
             if !model.axGranted && hotkeyMode != "fn" {
                 Button("Skip Accessibility for now") { onContinue() }
                     .buttonStyle(.plain)
-                    .font(.system(size: 12))
+                    .font(Brand.caption)
                     .foregroundStyle(Brand.muted)
             }
         }
@@ -466,23 +465,23 @@ private struct PermissionsStep: View {
     }
 
     private var card: some View {
-        RoundedRectangle(cornerRadius: 12, style: .continuous)
+        RoundedRectangle(cornerRadius: Brand.rMd, style: .continuous)
             .fill(Brand.surface)
             .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: Brand.rMd, style: .continuous)
                     .stroke(Brand.line, lineWidth: 1)
             )
     }
 
     private func statusDot(_ ok: Bool) -> some View {
         Image(systemName: ok ? "checkmark.circle.fill" : "circle")
-            .font(.system(size: 16, weight: .semibold))
-            .foregroundStyle(ok ? Brand.coral : Brand.line)
+            .font(Brand.heading)
+            .foregroundStyle(ok ? Brand.ok : Brand.line)
     }
 
     private func iconBadge(_ systemName: String) -> some View {
         Image(systemName: systemName)
-            .font(.system(size: 28, weight: .semibold))
+            .font(Brand.display)
             .foregroundStyle(Brand.coral)
             .frame(width: 64, height: 64)
             .background(
@@ -512,12 +511,12 @@ private struct TriggerStep: View {
         VStack(spacing: 16) {
             iconBadge("keyboard")
             Text("Your dictation key")
-                .font(Brand.serif(24))
+                .font(Brand.title)
                 .foregroundStyle(Brand.text)
             Text(isModifier
                   ? "Hold \(label) to talk. Press it once so we know it works."
                   : "Pick a custom shortcut, then continue. You’ll test it after setup.")
-                .font(.system(size: 14))
+                .font(Brand.body)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(Brand.muted)
                 .frame(maxWidth: 380)
@@ -539,20 +538,20 @@ private struct TriggerStep: View {
 
             if isModifier {
                 Text(label)
-                    .font(.system(size: 22, weight: .semibold, design: .monospaced))
+                    .font(Brand.mono(22).weight(.semibold))
                     .frame(width: 140, height: 80)
                     .background(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        RoundedRectangle(cornerRadius: Brand.rLg, style: .continuous)
                             .fill(lit ? Brand.coral.opacity(0.22) : Brand.surface)
                     )
                     .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        RoundedRectangle(cornerRadius: Brand.rLg, style: .continuous)
                             .stroke(lit ? Brand.coral : Brand.line, lineWidth: lit ? 2 : 1)
                     )
                     .animation(.easeOut(duration: 0.1), value: lit)
-                Text(everFired ? "Detected — you're good." : "Nothing yet? Check Accessibility on the previous step.")
-                    .font(.system(size: 12))
-                    .foregroundStyle(everFired ? Brand.coral : Brand.muted)
+                Text(everFired ? "Detected. Your key works." : "Nothing yet? Check Accessibility on the previous step.")
+                    .font(Brand.caption)
+                    .foregroundStyle(everFired ? Brand.ok : Brand.muted)
             } else {
                 KeyboardShortcuts.Recorder("Shortcut:", name: .dictate)
                     .frame(maxWidth: 260)
@@ -565,16 +564,16 @@ private struct TriggerStep: View {
                         else { launchAtLogin = false; loginItemFailed = true }
                     }
                 if loginItemFailed {
-                    Text("Couldn't set launch-at-login — move OpenWispr to Applications first.")
-                        .font(.system(size: 11))
+                    Text("Could not set launch at login. Move OpenWispr to Applications first.")
+                        .font(Brand.caption)
                         .foregroundStyle(Brand.warn)
                 } else if hotkeyMode == "fn" {
-                    Text("Tip: System Settings → Keyboard → “Press 🌐 key to” = Do Nothing.")
-                        .font(.system(size: 11))
+                    Text("Tip: set System Settings → Keyboard → “Press globe key to” to Do Nothing.")
+                        .font(Brand.caption)
                         .foregroundStyle(Brand.muted)
                 }
             }
-            .font(.system(size: 13))
+            .font(Brand.body)
             .frame(maxWidth: 340)
             .padding(.top, 4)
 
@@ -587,7 +586,7 @@ private struct TriggerStep: View {
                 .opacity(isModifier && !everFired ? 0.7 : 1)
             if isModifier && !everFired {
                 Text("Hold the key once for a confident setup — or continue anyway.")
-                    .font(.system(size: 11))
+                    .font(Brand.caption)
                     .foregroundStyle(Brand.muted)
             }
         }
@@ -610,7 +609,7 @@ private struct TriggerStep: View {
 
     private func iconBadge(_ systemName: String) -> some View {
         Image(systemName: systemName)
-            .font(.system(size: 28, weight: .semibold))
+            .font(Brand.display)
             .foregroundStyle(Brand.coral)
             .frame(width: 64, height: 64)
             .background(
@@ -636,11 +635,11 @@ private struct PracticeStep: View {
     var body: some View {
         VStack(spacing: 20) {
             iconBadge("waveform.and.mic")
-            Text("Try it for real").font(Brand.serif(24)).foregroundStyle(Brand.text)
+            Text("Try it for real").font(Brand.title).foregroundStyle(Brand.text)
             Text(isModifier
                   ? "Hold \(label), say “OpenWispr types what I say”, then release."
                   : "Press the button, say something like “OpenWispr types what I say”, then stop.")
-                .font(.system(size: 14))
+                .font(Brand.body)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(Brand.muted)
                 .frame(maxWidth: 360)
@@ -650,27 +649,27 @@ private struct PracticeStep: View {
                 if isModifier {
                     // Same key-cap as the trigger step — lit while it's actually recording.
                     Text(label)
-                        .font(.system(size: 22, weight: .semibold, design: .monospaced))
+                        .font(Brand.mono(22).weight(.semibold))
                         .frame(width: 140, height: 80)
                         .background(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            RoundedRectangle(cornerRadius: Brand.rLg, style: .continuous)
                                 .fill(isRecording ? Brand.coral.opacity(0.22) : Brand.surface)
                         )
                         .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            RoundedRectangle(cornerRadius: Brand.rLg, style: .continuous)
                                 .stroke(isRecording ? Brand.coral : Brand.line, lineWidth: isRecording ? 2 : 1)
                         )
                         .animation(.easeOut(duration: 0.1), value: isRecording)
                     Text(isRecording ? "Listening — release to finish." : "Holding the key starts the mic.")
-                        .font(Brand.mono(11))
+                        .font(Brand.caption)
                         .foregroundStyle(isRecording ? Brand.coral : Brand.muted)
                 } else if isRecording {
                     Button("Stop") { model.onPracticeStop() }
                         .buttonStyle(PrimaryButtonStyle(fill: Brand.danger.opacity(0.9)))
                         .keyboardShortcut(.defaultAction)
                     Text("Listening…")
-                        .font(Brand.mono(11))
-                        .foregroundStyle(Brand.coral)
+                        .font(Brand.caption)
+                        .foregroundStyle(Brand.ok)
                 } else {
                     Button("Start recording") { model.onPracticeStart() }
                         .buttonStyle(PrimaryButtonStyle())
@@ -681,34 +680,33 @@ private struct PracticeStep: View {
                     .tint(Brand.coral)
             case .result(let text):
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("YOU SAID")
-                        .font(Brand.mono(10).weight(.bold))
+                    Text("You said")
+                        .font(Brand.caption.weight(.semibold))
                         .foregroundStyle(Brand.muted)
-                        .tracking(1.2)
                     Text(text.isEmpty ? "(heard nothing — try again)" : "“\(text)”")
-                        .font(.system(size: 15, design: .serif).italic())
+                        .font(Brand.serif(15).italic())
                         .foregroundStyle(text.isEmpty ? Brand.muted : Brand.text)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .padding(16)
                 .frame(maxWidth: 380)
                 .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    RoundedRectangle(cornerRadius: Brand.rMd, style: .continuous)
                         .fill(Brand.surface)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            RoundedRectangle(cornerRadius: Brand.rMd, style: .continuous)
                                 .stroke(Brand.line, lineWidth: 1)
                         )
                 )
                 if wordCount(text) > 0 {
                     Text("\(wordCount(text)) words — typing that takes ~\(Int((Double(wordCount(text)) * 1.5).rounded()))s at 40 wpm.")
-                        .font(.system(size: 12))
+                        .font(Brand.caption)
                         .foregroundStyle(Brand.muted)
                 }
                 HStack(spacing: 14) {
                     Button("Try again") { model.practice = .idle }
                         .buttonStyle(.plain)
-                        .font(.system(size: 13, weight: .medium))
+                        .font(Brand.body.weight(.medium))
                         .foregroundStyle(Brand.muted)
                     Button("Continue") { model.step = .done }
                         .buttonStyle(PrimaryButtonStyle())
@@ -719,7 +717,7 @@ private struct PracticeStep: View {
             if case .result = model.practice {} else {
                 Button("Skip") { model.step = .done }
                     .buttonStyle(.plain)
-                    .font(.system(size: 12))
+                    .font(Brand.caption)
                     .foregroundStyle(Brand.muted)
                     .padding(.top, 4)
             }
@@ -753,7 +751,7 @@ private struct PracticeStep: View {
 
     private func iconBadge(_ systemName: String) -> some View {
         Image(systemName: systemName)
-            .font(.system(size: 28, weight: .semibold))
+            .font(Brand.display)
             .foregroundStyle(Brand.coral)
             .frame(width: 64, height: 64)
             .background(
