@@ -21,6 +21,12 @@ let package = Package(
             ],
             path: "Sources/Whispr",
             swiftSettings: [.swiftLanguageMode(.v5)]
+        ),
+        .testTarget(
+            name: "WhisprTests",
+            dependencies: ["Whispr"],
+            path: "Tests/WhisprTests",
+            swiftSettings: [.swiftLanguageMode(.v5)]
         )
     ]
 )

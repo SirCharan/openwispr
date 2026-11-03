@@ -26,6 +26,7 @@ final class MeetingController: ObservableObject {
     @Published private(set) var needsScreenRec = false
     @Published private(set) var savedTo: String?
     @Published var showRenameSheet = false
+    @Published private(set) var stats: MeetingStats?
     /// Per-stream capture health, shown in MeetingView so a dead stream never reads as a quiet room.
     @Published private(set) var micHealthy = true
     @Published private(set) var systemHealthy = true
@@ -66,6 +67,8 @@ final class MeetingController: ObservableObject {
     private var fullSysAudio: [Float] = []
     // ponytail: full floats in RAM ≈ 230MB/hour — fine for normal meetings; stream-to-disk if ever needed
     private var meetingFile: URL?
+    private var diarSegments: [Diarizer.Segment] = []
+    private var youLabel = "You"
 
     // raw-audio retention
     private var micWav: WavEncoder.Writer?
@@ -133,6 +136,7 @@ final class MeetingController: ObservableObject {
         clock = MeetingClock()
         micSegV = MeetingSegmenter(vad: vadModel); sysSegV = MeetingSegmenter(vad: vadModel)
         micRaw = 0; sysRaw = 0
+        stats = nil; diarSegments = []; youLabel = "You"
         fullSysAudio.removeAll()
         pending.removeAll()
         // fix the checkpoint file at start so every save hits the same path
@@ -306,6 +310,7 @@ final class MeetingController: ObservableObject {
         if !lines.isEmpty {
             Stats.recordMeeting()
             autosave()
+            refreshStats()
             showRenameSheet = true // ck's flow: label speakers right after the transcript is done
         }
     }
@@ -318,6 +323,7 @@ final class MeetingController: ObservableObject {
         do {
             let segments = try await diarizer.diarize(audio)
             guard !segments.isEmpty else { return }
+            diarSegments = segments
             for i in lines.indices where lines[i].speaker == "Others" {
                 if let who = Diarizer.assign(start: lines[i].start, end: lines[i].end, segments: segments) {
                     lines[i].speaker = who
@@ -335,7 +341,20 @@ final class MeetingController: ObservableObject {
                 lines[i].speaker = new.trimmingCharacters(in: .whitespaces)
             }
         }
+        diarSegments = diarSegments.map { Diarizer.Segment(speaker: mapping[$0.speaker]?.trimmingCharacters(in: .whitespaces).nonEmpty ?? $0.speaker, start: $0.start, end: $0.end) }
+        if let me = mapping[youLabel]?.trimmingCharacters(in: .whitespaces), !me.isEmpty { youLabel = me }
         autosave()
+        refreshStats()
+    }
+
+    /// Stats segments: diarized remote speakers plus the mic ("You") lines, which are not diarized.
+    /// Without diarization every line stands in as a segment.
+    private func refreshStats() {
+        let mine = lines.filter { diarSegments.isEmpty || $0.speaker == youLabel }
+            .map { Diarizer.Segment(speaker: $0.speaker, start: $0.start, end: $0.end) }
+        let s = MeetingStats.compute(segments: diarSegments + mine, lines: lines, date: lines.first?.date ?? Date(), you: youLabel)
+        stats = s
+        if let url = meetingFile { MeetingStatsStore.save(s, transcript: url) }
     }
 
     var distinctSpeakers: [String] {
@@ -639,3 +658,5 @@ final class MeetingController: ObservableObject {
         return md
     }
 }
+
+private extension String { var nonEmpty: String? { isEmpty ? nil : self } }
