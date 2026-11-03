@@ -459,25 +459,34 @@ final class MeetingController: ObservableObject {
         }
     }
 
-    /// True when two lines from opposite streams overlap ≥50% of the shorter one and read the same
-    /// (JW > 0.82) — i.e. the mic heard the speaker. Pure; self-tested.
-    nonisolated static func isEchoPair(_ a: MeetingLine, _ b: MeetingLine) -> Bool {
-        let overlap = min(a.end, b.end) - max(a.start, b.start)
-        let shorter = min(a.end - a.start, b.end - b.start)
-        guard shorter > 0, overlap >= shorter * 0.5 else { return false }
-        return DictionaryStore.jaroWinkler(a.text.lowercased(), b.text.lowercased()) > 0.82
+    /// Jaccard similarity of the lowercased word sets (1 = same words, 0 = none shared).
+    nonisolated static func jaccard(_ a: String, _ b: String) -> Double {
+        func tokens(_ t: String) -> Set<String> {
+            Set(t.lowercased().split { !$0.isLetter && !$0.isNumber }.map(String.init))
+        }
+        let x = tokens(a), y = tokens(b)
+        guard !x.isEmpty || !y.isEmpty else { return 0 }
+        return Double(x.intersection(y).count) / Double(x.union(y).count)
+    }
+
+    /// True when `others` is the mic hearing the speaker: a You line that starts within ±1.5 s on
+    /// the shared clock and reads the same (Jaccard ≥ 0.8). Pure; self-tested.
+    nonisolated static func isEchoOf(_ others: MeetingLine, you: MeetingLine) -> Bool {
+        abs(others.start - you.start) <= 1.5 && jaccard(others.text, you.text) >= 0.8
     }
 
     nonisolated static func selfTest() {
         func line(_ s: String, _ t0: Double, _ t1: Double) -> MeetingLine {
             MeetingLine(speaker: "x", text: s, start: t0, end: t1)
         }
-        precondition(isEchoPair(line("we should add a card for delta global", 7, 12),
-                          line("We should add a card for the delta global here", 7, 13)), "echo not caught")
-        precondition(!isEchoPair(line("we should add a card", 7, 12),
-                           line("now we can go to the call", 7, 12)), "different text flagged")
-        precondition(!isEchoPair(line("we should add a card", 0, 5),
-                           line("we should add a card", 40, 45)), "non-overlapping flagged")
+        precondition(isEchoOf(line("we should add a card for delta global", 7, 12),
+                              you: line("We should add a card for delta global.", 8, 13)), "echo not caught")
+        precondition(!isEchoOf(line("we should add a card", 7, 12),
+                               you: line("now we can go to the call", 7, 12)), "different text flagged")
+        precondition(!isEchoOf(line("we should add a card", 0, 5),
+                               you: line("we should add a card", 40, 45)), "far-apart lines flagged")
+        precondition(!isEchoOf(line("we should add a card", 7, 12),
+                               you: line("we should add a card", 9, 14)), "outside 1.5s flagged")
 
         // The speech floor must sit in the empty band between noise and speech. These are real
         // maxWindowRMS values from the 11 Aug 2026 meeting: the four chunks that produced
@@ -554,16 +563,22 @@ final class MeetingController: ObservableObject {
                 return
             }
             let line = MeetingLine(speaker: speaker, text: text, start: start, end: start + duration)
-            // Echo dedup is DISABLED. It deleted a "You" line whenever a system line read the
-            // same — and on speakers-plus-built-in-mic the mic hears every remote voice, so it
-            // erased the entire mic stream (zero "You" lines in every meeting since 27 Jul).
-            // Deleting a real line is unrecoverable; a duplicate is merely untidy. Still logged,
-            // because a hit here means the mic is picking up room playback (an AEC problem).
-            if let twin = lines.first(where: { $0.speaker != speaker && Self.isEchoPair($0, line) }) {
-                Log.audio.info("""
-                    echo overlap kept (was deleted before): \(which, privacy: .public) \
-                    "\(text, privacy: .public)" vs \(twin.speaker, privacy: .public) "\(twin.text, privacy: .public)"
-                    """)
+            // Echo dedup. It was off while start times came from two drifting sample counters (it
+            // deleted the whole mic stream). On the shared clock the test is tight: only an Others
+            // line is ever dropped, and only for a near-identical You line within ±1.5 s.
+            if Settings.meetingEchoDedup {
+                if speaker == "Others" {
+                    if let you = lines.first(where: { $0.speaker == "You" && Self.isEchoOf(line, you: $0) }) {
+                        Log.audio.debug("echo drop others \"\(text, privacy: .public)\" vs you \"\(you.text, privacy: .public)\"")
+                        return
+                    }
+                } else if speaker == "You" {
+                    // The mic line can finish transcribing after its system twin: remove that one.
+                    for twin in lines where twin.speaker == "Others" && Self.isEchoOf(twin, you: line) {
+                        Log.audio.debug("echo drop others \"\(twin.text, privacy: .public)\" vs you \"\(text, privacy: .public)\"")
+                    }
+                    lines.removeAll { $0.speaker == "Others" && Self.isEchoOf($0, you: line) }
+                }
             }
             lines.append(line)
             lines.sort { $0.start < $1.start } // interleave You/Others in spoken order

@@ -67,6 +67,12 @@ enum Settings {
         set { UserDefaults.standard.set(newValue, forKey: "meetingSpeechFloor") }
     }
 
+    /// Drop an Others line that duplicates a You line within ±1.5 s (the mic hearing the speakers). Default on.
+    static var meetingEchoDedup: Bool {
+        get { UserDefaults.standard.object(forKey: "meetingEchoDedup") as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: "meetingEchoDedup") }
+    }
+
     /// Show the small persistent floating mic pill (click to dictate).
     static var showIdleWidget: Bool {
         get { UserDefaults.standard.object(forKey: "showIdleWidget") as? Bool ?? true }
