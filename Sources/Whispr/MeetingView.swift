@@ -61,6 +61,14 @@ struct MeetingView: View {
                     .disabled(controller.lines.isEmpty)
             }
             .padding(12)
+            if let banner = controller.banner {
+                Text(banner)
+                    .font(.caption.bold())
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(6)
+                    .background(Color.red)
+            }
             Divider()
 
             if let summary = controller.summary {

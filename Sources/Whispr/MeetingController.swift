@@ -27,6 +27,8 @@ final class MeetingController: ObservableObject {
     /// Per-stream capture health, shown in MeetingView so a dead stream never reads as a quiet room.
     @Published private(set) var micHealthy = true
     @Published private(set) var systemHealthy = true
+    /// Persistent warning shown by MeetingView (unlike `status`, nothing overwrites it).
+    @Published private(set) var banner: String?
     /// Per-meeting language override ("auto" = follow the global setting). Read per chunk, editable live.
     @Published var meetingLanguage = "auto"
 
@@ -132,6 +134,7 @@ final class MeetingController: ObservableObject {
         openAudioWriters(dir: dir, stamp: stamp)
         micHealthy = true
         systemHealthy = true
+        banner = nil
         lastMicAppends = 0; lastSysAppends = 0
         micQuietTicks = 0; sysQuietTicks = 0
         sysRestartAttempts = 0; sysRestartCooldown = 0
@@ -218,6 +221,7 @@ final class MeetingController: ObservableObject {
                 status = "recording"
             }
             sysQuietTicks = 0; systemHealthy = true; sysRestartAttempts = 0
+            banner = nil
         }
         lastSysAppends = sysAppends
     }
@@ -227,6 +231,7 @@ final class MeetingController: ObservableObject {
         guard isRunning, !isPaused, sysRestartCooldown == 0 else { return }
         guard sysRestartAttempts < maxSysRestarts else {
             status = "the other side's audio is unavailable — this transcript will be mic-only"
+            banner = "System audio lost, recording mic only"
             return
         }
         sysRestartAttempts += 1
@@ -263,6 +268,7 @@ final class MeetingController: ObservableObject {
             try mic.start(voiceProcessing: true)
             try await system.start()
         } catch {
+            _ = mic.stop() // mic may already be running if the system stream was what failed
             status = "resume failed: \(error.localizedDescription)"
             return
         }

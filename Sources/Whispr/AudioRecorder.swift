@@ -51,7 +51,15 @@ final class AudioRecorder {
             buffer.append(pcm)
         }
         engine.prepare()
-        try engine.start()
+        do {
+            try engine.start()
+        } catch {
+            input.removeTap(onBus: 0) // don't leak the tap: the next start() would install a second one
+            engine.stop()
+            buffer.reset()
+            isRecording = false
+            throw error
+        }
         isRecording = true
     }
 
