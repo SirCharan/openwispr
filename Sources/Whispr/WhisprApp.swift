@@ -25,6 +25,8 @@ enum Whispr {
                 MeetingStats.selfTest()
                 MeetingWindowDetector.selfTest()
                 ZoomRosterReader.selfTest()
+                RosterTimeline.selfTest()
+                await MeetRosterServer.selfTest()
                 MeetingController.selfTest()
                 await MeetingSegmenter.selfTest()
                 OnboardingModel.selfTest()

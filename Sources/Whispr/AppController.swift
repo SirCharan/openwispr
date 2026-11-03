@@ -39,6 +39,7 @@ final class AppController {
     private lazy var idleWidget = IdleWidget(onTap: { [weak self] in self?.startDictation() })
     private var onboarding: OnboardingWindowController?
     private var meetingDetector: MeetingWindowDetector?
+    private var meetRosterServer: MeetRosterServer?
 
     func start() {
         Log.app.notice("launch v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev", privacy: .public) onboarded=\(Settings.onboarded, privacy: .public) model=\(self.modelManager.selectedModel, privacy: .public)")
@@ -138,6 +139,21 @@ final class AppController {
         d.start()
         meetingDetector = d
         meetingCtrl.isZoomMeeting = { [weak d] in d?.current?.id == "us.zoom.xos" }
+        meetingCtrl.isMeetWindow = { [weak d] in d?.current?.id == "meet.google.com" }
+        let ms = MeetRosterServer()
+        ms.onJoined = { [weak d] in d?.extensionJoined() }
+        ms.onLeft = { [weak d] in d?.extensionLeft() }
+        meetingCtrl.meetServer = ms
+        meetRosterServer = ms
+        applyMeetExtension()
+        NotificationCenter.default.addObserver(forName: .whisprMeetExtensionChanged, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor in self?.applyMeetExtension() }
+        }
+    }
+
+    private func applyMeetExtension() {
+        guard let ms = meetRosterServer else { return }
+        if Settings.meetExtensionEnabled { Task { await ms.start() } } else { ms.stop() }
     }
 
     // MARK: - First-run onboarding
@@ -243,6 +259,7 @@ final class AppController {
     /// Last chance before the process dies. Quit used to tear down nothing, which is harmless
     /// for a recorder but not for a muted output device — that would survive us.
     func shutdown() {
+        meetRosterServer?.stop()
         silencerWatchdog?.invalidate(); silencerWatchdog = nil
         if recorder.isRecording { _ = recorder.stop() }
         silencer.restore()

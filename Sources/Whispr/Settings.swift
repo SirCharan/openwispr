@@ -33,6 +33,12 @@ enum Settings {
         set { UserDefaults.standard.set(newValue, forKey: "detectMeetings") }
     }
 
+    /// Listen on 127.0.0.1 for roster posts from the Meet Chrome extension.
+    static var meetExtensionEnabled: Bool {
+        get { UserDefaults.standard.object(forKey: "meetExtensionEnabled") as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: "meetExtensionEnabled") }
+    }
+
     /// Silence other audio while dictating, then put it back. Dictation only — meetings never
     /// touch the output, because the remote party's audio IS the system output we capture.
     static var muteWhileDictating: Bool {

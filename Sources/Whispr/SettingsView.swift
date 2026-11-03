@@ -17,6 +17,7 @@ struct SettingsView: View {
     @AppStorage("showIdleWidget") private var showIdleWidget = true
     @AppStorage("diarizationEnabled") private var diarizationEnabled = true
     @AppStorage("detectMeetings") private var detectMeetings = true
+    @AppStorage("meetExtensionEnabled") private var meetExtensionEnabled = true
     @AppStorage("hotkeyMode") private var hotkeyMode = "fn"
     @AppStorage("rewriteStyle") private var rewriteStyle = "off"
     @AppStorage("accentHex") private var accentHex = "FF5D54"
@@ -59,6 +60,14 @@ struct SettingsView: View {
                 }
                 Toggle("Separate remote meeting speakers (A/B) by voice", isOn: $diarizationEnabled)
                 Toggle("Detect meetings and offer to record", isOn: $detectMeetings)
+                Toggle("Google Meet names (Chrome extension)", isOn: $meetExtensionEnabled)
+                    .onChange(of: meetExtensionEnabled) { _, _ in NotificationCenter.default.post(name: .whisprMeetExtensionChanged, object: nil) }
+                Text("Load the extension from <repo>/extensions/meet-names in chrome://extensions")
+                    .font(.caption).foregroundStyle(.secondary)
+                if let dir = Bundle.main.resourceURL?.appendingPathComponent("meet-names"),
+                   FileManager.default.fileExists(atPath: dir.path) {
+                    Button("Reveal extension folder") { NSWorkspace.shared.activateFileViewerSelecting([dir]) }
+                }
                 Toggle("Floating mic button (click to dictate)", isOn: $showIdleWidget)
                     .onChange(of: showIdleWidget) { _, _ in NotificationCenter.default.post(name: .whisprHotkeyModeChanged, object: nil) }
                 Toggle("Launch at login", isOn: $launchAtLogin)

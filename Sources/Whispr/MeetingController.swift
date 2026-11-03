@@ -68,6 +68,10 @@ final class MeetingController: ObservableObject {
     /// Set by AppController: is the detected meeting app Zoom right now?
     var isZoomMeeting: () -> Bool = { false }
     private var roster: ZoomRosterReader?
+    /// Set by AppController: is a browser Meet window detected right now?
+    var isMeetWindow: () -> Bool = { false }
+    var meetServer: MeetRosterServer?
+    private var meetTimeline: RosterTimeline?
     // ponytail: full floats in RAM ≈ 230MB/hour — fine for normal meetings; stream-to-disk if ever needed
     private var meetingFile: URL?
     private var diarSegments: [Diarizer.Segment] = []
@@ -167,6 +171,16 @@ final class MeetingController: ObservableObject {
             })
             rr.start()
             roster = rr
+        }
+        meetServer?.clock = { nil }
+        meetTimeline = nil
+        if let ms = meetServer, isMeetWindow() || ms.joinedRecently {
+            ms.timeline.reset()
+            ms.clock = { [weak self] in
+                guard let self, self.isRunning, !self.isPaused else { return nil }
+                return self.clock.time(forHost: CACurrentMediaTime())
+            }
+            meetTimeline = ms.timeline
         }
     }
 
@@ -327,11 +341,14 @@ final class MeetingController: ObservableObject {
         closeAudioWriters()
         roster?.stop()
         let segments = await applyDiarization()
-        if let rr = roster, !segments.isEmpty {
-            let map = ZoomRosterReader.names(segments: segments, timeline: rr.timeline)
+        meetServer?.clock = { nil }
+        if !segments.isEmpty {
+            // Zoom and Meet never coexist: at most one of these is set.
+            let map = (roster?.timeline.names(forDiarized: segments) ?? [:])
+                .merging(meetTimeline?.names(forDiarized: segments) ?? [:]) { a, _ in a }
             if !map.isEmpty { renameSpeakers(map) }
         }
-        roster = nil
+        roster = nil; meetTimeline = nil
         // The floor is calibrated on one room and one mic gain. A high drop count is the signal
         // to loosen `meetingSpeechFloor` — surfaced here so the user doesn't need Console.app.
         if floorDrops > 0 {

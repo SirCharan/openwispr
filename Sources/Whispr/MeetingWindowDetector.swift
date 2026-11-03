@@ -85,6 +85,28 @@ final class MeetingWindowDetector {
         guard await sample() == m, !isRecording(), handled != m.id else { return }
         current = m
         handled = m.id
+        offer(m)
+    }
+
+    /// The Meet extension reported the call UI: same Start / Not now / Always prompt.
+    func extensionJoined() {
+        guard Settings.detectMeetings, !isRecording(), handled != "meet-extension" else { return }
+        handled = "meet-extension"
+        offer(Meeting(id: "meet-extension", name: "Google Meet"))
+    }
+
+    /// The Meet extension reported the leave page.
+    func extensionLeft() {
+        handled = nil
+        guard isRecording(), !stopAsked else { return }
+        stopAsked = true
+        prompt("Meeting window closed. Stop recording?", [
+            ("Stop", { NotificationCenter.default.post(name: .whisprStopMeeting, object: nil) }),
+            ("Keep recording", {}),
+        ])
+    }
+
+    private func offer(_ m: Meeting) {
         switch UserDefaults.standard.string(forKey: "meetingAutoStart.\(m.id)") ?? "ask" {
         case "always": startRecording()
         case "never": break
@@ -130,4 +152,5 @@ final class MeetingWindowDetector {
 
 extension Notification.Name {
     static let whisprStopMeeting = Notification.Name("whisprStopMeeting")
+    static let whisprMeetExtensionChanged = Notification.Name("whisprMeetExtensionChanged")
 }

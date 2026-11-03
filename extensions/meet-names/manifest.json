@@ -1,0 +1,8 @@
+{
+  "manifest_version": 3,
+  "name": "OpenWispr Meet Names",
+  "version": "0.1.0",
+  "description": "Sends Google Meet participant names and the active speaker to the OpenWispr app on this Mac.",
+  "content_scripts": [{ "matches": ["https://meet.google.com/*"], "js": ["content.js"], "run_at": "document_idle" }],
+  "host_permissions": ["http://127.0.0.1/*"]
+}
