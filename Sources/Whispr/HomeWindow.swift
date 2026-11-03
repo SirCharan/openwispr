@@ -119,6 +119,8 @@ struct HomeView: View {
                     .background(RoundedRectangle(cornerRadius: 8).fill(pane == p ? Brand.coralSoft : .clear))
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(p.rawValue)
+                .accessibilityIdentifier("sidebar: \(p.rawValue)")
 
                 // Sits directly under the row it points at, so no overlay anchoring is needed.
                 if p == .snippets, showSnippetTip {
