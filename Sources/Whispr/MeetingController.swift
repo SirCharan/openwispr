@@ -129,6 +129,7 @@ final class MeetingController: ObservableObject {
             _ = mic.stop()
             return
         }
+        _ = mic.drain() // mic began before system.start(): discard so mic sample 0 == clock 0
         isRunning = true
         isPaused = false
         needsScreenRec = false
@@ -272,18 +273,26 @@ final class MeetingController: ObservableObject {
     }
 
     /// Pause: transcribe what's buffered, stop both engines. Resume restarts them; timeline stays cumulative.
+    private var transitioning = false
+
     func pause() async {
         guard isRunning, !isPaused else { return }
-        isPaused = true
+        guard !transitioning else { Log.audio.info("pause ignored: another transition in flight"); return }
+        transitioning = true
+        defer { transitioning = false }
         status = "pausing…"
         await finishStreams()
         clock.pause()
+        isPaused = true
         await flushPending()
         status = "paused"
     }
 
     func resume() async {
         guard isRunning, isPaused else { return }
+        guard !transitioning else { Log.audio.info("resume ignored: another transition in flight"); return }
+        transitioning = true
+        defer { transitioning = false }
         do {
             try mic.start(voiceProcessing: true)
             try await system.start()
@@ -292,6 +301,7 @@ final class MeetingController: ObservableObject {
             status = "resume failed: \(error.localizedDescription)"
             return
         }
+        _ = mic.drain()
         isPaused = false
         clock.resume()
         status = "recording"
@@ -303,6 +313,9 @@ final class MeetingController: ObservableObject {
 
     func stop() async {
         guard isRunning else { return }
+        guard !transitioning else { Log.audio.info("stop ignored: another transition in flight"); return }
+        transitioning = true
+        defer { transitioning = false }
         isRunning = false // clear before awaits so a double-stop can't re-enter teardown
         timer?.invalidate(); timer = nil
         status = "finishing…"
@@ -500,20 +513,34 @@ final class MeetingController: ObservableObject {
         }
     }
 
+    /// Lowercased word set; grapheme clusters keep Devanagari matras attached to their letters.
+    nonisolated static func tokens(_ t: String) -> Set<String> {
+        Set(t.lowercased().split { !$0.isLetter && !$0.isNumber }.map(String.init))
+    }
+
+    /// Echo handling on the shared clock. System audio never holds ck's voice, so a matching pair
+    /// means the mic leaked a remote speaker: the You line goes, the Others line stays. Returns the
+    /// new line set, or nil when `new` itself is the dropped You line.
+    nonisolated static func applyEcho(_ lines: [MeetingLine], adding new: MeetingLine) -> [MeetingLine]? {
+        if new.speaker == "Others" {
+            return lines.filter { !($0.speaker == "You" && isEchoOf(new, you: $0)) } + [new]
+        }
+        if new.speaker == "You", lines.contains(where: { $0.speaker == "Others" && isEchoOf($0, you: new) }) { return nil }
+        return lines + [new]
+    }
+
     /// Jaccard similarity of the lowercased word sets (1 = same words, 0 = none shared).
     nonisolated static func jaccard(_ a: String, _ b: String) -> Double {
-        func tokens(_ t: String) -> Set<String> {
-            Set(t.lowercased().split { !$0.isLetter && !$0.isNumber }.map(String.init))
-        }
         let x = tokens(a), y = tokens(b)
         guard !x.isEmpty || !y.isEmpty else { return 0 }
         return Double(x.intersection(y).count) / Double(x.union(y).count)
     }
 
-    /// True when `others` is the mic hearing the speaker: a You line that starts within ±1.5 s on
-    /// the shared clock and reads the same (Jaccard ≥ 0.8). Pure; self-tested.
+    /// True when `you` is the mic hearing the speaker: starts within ±1.5 s of `others` on the
+    /// shared clock, ≥4 tokens on both sides (short "yeah/okay" pairs never match), Jaccard ≥ 0.8.
     nonisolated static func isEchoOf(_ others: MeetingLine, you: MeetingLine) -> Bool {
-        abs(others.start - you.start) <= 1.5 && jaccard(others.text, you.text) >= 0.8
+        abs(others.start - you.start) <= 1.5 && tokens(others.text).count >= 4 && tokens(you.text).count >= 4
+            && jaccard(others.text, you.text) >= 0.8
     }
 
     nonisolated static func selfTest() {
@@ -528,6 +555,15 @@ final class MeetingController: ObservableObject {
                                you: line("we should add a card", 40, 45)), "far-apart lines flagged")
         precondition(!isEchoOf(line("we should add a card", 7, 12),
                                you: line("we should add a card", 9, 14)), "outside 1.5s flagged")
+        precondition(!isEchoOf(line("yeah okay right", 7, 9), you: line("yeah okay right", 7, 9)), "3-token pair matched")
+        precondition(isEchoOf(line("हम कल मीटिंग में बात करेंगे", 7, 12), you: line("हम कल मीटिंग में बात करेंगे।", 7, 12)), "hindi not matched")
+        precondition(tokens("हम कल मीटिंग").count == 3, "hindi tokenisation")
+        func spk(_ who: String, _ s: String, _ t: Double) -> MeetingLine { MeetingLine(speaker: who, text: s, start: t, end: t + 5) }
+        let txt = "we should add a card for delta"
+        let oFirst = applyEcho([spk("Others", txt, 7)], adding: spk("You", txt, 8))
+        precondition(oFirst == nil, "You twin not dropped")
+        let yFirst = applyEcho([spk("You", txt, 8)], adding: spk("Others", txt, 7))
+        precondition(yFirst?.count == 1 && yFirst?.first?.speaker == "Others", "Others not kept / enqueued You not removed")
 
         // The speech floor must sit in the empty band between noise and speech. These are real
         // maxWindowRMS values from the 11 Aug 2026 meeting: the four chunks that produced
@@ -605,23 +641,17 @@ final class MeetingController: ObservableObject {
             }
             let line = MeetingLine(speaker: speaker, text: text, start: start, end: start + duration)
             // Echo dedup. It was off while start times came from two drifting sample counters (it
-            // deleted the whole mic stream). On the shared clock the test is tight: only an Others
-            // line is ever dropped, and only for a near-identical You line within ±1.5 s.
+            // deleted the whole mic stream). On the shared clock the test is tight: only the You
+            // line is ever dropped (mic leaking a remote speaker), within ±1.5 s of its Others twin.
             if Settings.meetingEchoDedup {
-                if speaker == "Others" {
-                    if let you = lines.first(where: { $0.speaker == "You" && Self.isEchoOf(line, you: $0) }) {
-                        Log.audio.debug("echo drop others \"\(text, privacy: .public)\" vs you \"\(you.text, privacy: .public)\"")
-                        return
-                    }
-                } else if speaker == "You" {
-                    // The mic line can finish transcribing after its system twin: remove that one.
-                    for twin in lines where twin.speaker == "Others" && Self.isEchoOf(twin, you: line) {
-                        Log.audio.debug("echo drop others \"\(twin.text, privacy: .public)\" vs you \"\(text, privacy: .public)\"")
-                    }
-                    lines.removeAll { $0.speaker == "Others" && Self.isEchoOf($0, you: line) }
+                guard let merged = Self.applyEcho(lines, adding: line) else {
+                    Log.audio.debug("echo drop you \"\(text, privacy: .public)\"")
+                    return
                 }
+                lines = merged
+            } else {
+                lines.append(line)
             }
-            lines.append(line)
             lines.sort { $0.start < $1.start } // interleave You/Others in spoken order
             autosave() // live checkpoint
         } catch {

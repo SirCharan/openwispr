@@ -56,11 +56,15 @@ final class MeetingWindowDetector {
     }
 
     private func sample() async -> Meeting? {
-        // Throws without Screen Recording permission — detection just stays quiet then.
-        guard let content = try? await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: true) else { return nil }
-        let wins = content.windows.compactMap { w -> (bundle: String, title: String)? in
-            guard let b = w.owningApplication?.bundleIdentifier, let t = w.title else { return nil }
-            return (b, t)
+        // Never touch SCShareableContent without permission: it would pop the Screen Recording
+        // prompt for dictation-only users. CptHost (Zoom) needs no permission, so it still runs.
+        var wins: [(bundle: String, title: String)] = []
+        if CGPreflightScreenCaptureAccess(),
+           let content = try? await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: true) {
+            wins = content.windows.compactMap { w -> (bundle: String, title: String)? in
+                guard let b = w.owningApplication?.bundleIdentifier, let t = w.title else { return nil }
+                return (b, t)
+            }
         }
         let cpt = NSWorkspace.shared.runningApplications.contains { $0.executableURL?.lastPathComponent == "CptHost" }
         return Self.classify(wins, cptHostRunning: cpt)

@@ -19,15 +19,14 @@ actor Transcriber {
     private var loading: Task<Void, Error>?
 
     func load(model: String, folder: URL) async throws {
+        // Serialise: wait out any in-flight load (its error is that caller's), then re-check.
+        while let inflight = loading { _ = try? await inflight.value }
         if pipe != nil, loadedModel == model { return }
-        if let loading, loadingModel == model { return try await loading.value }
-        loadingModel = model
         let task = Task { try await self.doLoad(model: model, folder: folder) }
         loading = task
-        defer { loading = nil; loadingModel = nil }
+        defer { loading = nil }
         try await task.value
     }
-    private var loadingModel: String?
 
     private func doLoad(model: String, folder: URL) async throws {
         let fm = FileManager.default
