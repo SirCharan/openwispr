@@ -800,17 +800,21 @@ final class MeetingController: ObservableObject {
         return String(format: "%d:%02d", s / 60, s % 60)
     }
 
-    func exportMarkdown() -> String {
+    func exportMarkdown() -> String { Self.markdown(lines: lines, summary: summary) }
+
+    static func markdown(lines: [MeetingLine], summary: String? = nil) -> String {
         let df = DateFormatter()
         df.dateStyle = .medium; df.timeStyle = .short
         let duration = lines.map(\.end).max() ?? 0
+        var speakers: [String] = []
+        for l in lines where !speakers.contains(l.speaker) { speakers.append(l.speaker) }
         var md = "# Meeting transcript — \(df.string(from: lines.first?.date ?? Date()))\n"
-        md += "Duration: \(Self.mmss(duration)) · \(distinctSpeakers.joined(separator: " · "))\n\n"
+        md += "Duration: \(mmss(duration)) · \(speakers.joined(separator: " · "))\n\n"
         if let summary, !summary.isEmpty {
             md += summary + "\n\n---\n\n"
         }
         for line in lines {
-            md += "[\(Self.mmss(line.start))] **\(line.speaker)**: \(line.text)\n\n"
+            md += "[\(mmss(line.start))] **\(line.speaker)**: \(line.text)\n\n"
         }
         return md
     }

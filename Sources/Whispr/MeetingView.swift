@@ -6,6 +6,10 @@ struct MeetingView: View {
     @ObservedObject var controller: MeetingController
     @State private var screenRecOK = CGPreflightScreenCaptureAccess()
     @State private var renames: [String: String] = [:]
+    @State private var archive: [MeetingArchive.Entry] = []
+    @State private var selected: String?   // nil = the live meeting
+    @State private var pastLines: [MeetingLine] = []
+    @State private var pastStats: MeetingStats?
 
     /// Small labelled dot: green while audio buffers keep arriving on that stream, red once
     /// they stop. Text carries the state too, so it does not rely on colour alone.
@@ -22,49 +26,148 @@ struct MeetingView: View {
         .accessibilityLabel("\(label) audio \(healthy ? "arriving" : "stopped")")
     }
 
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Circle()
-                    .fill(controller.isRunning ? (controller.isPaused ? Brand.warn : Brand.danger) : Brand.muted.opacity(0.4))
-                    .frame(width: 9, height: 9)
-                Text(controller.status).font(Brand.caption).foregroundStyle(Brand.muted)
-                if controller.isRunning {
-                    // Per-stream capture health. Without this a stalled stream is
-                    // indistinguishable from a room where nobody is talking.
-                    streamDot("You", healthy: controller.micHealthy)
-                    streamDot("Others", healthy: controller.systemHealthy)
-                }
-                Spacer()
-                Picker("Language", selection: $controller.meetingLanguage) {
-                    ForEach(Languages.list, id: \.code) { lang in Text(lang.name).tag(lang.code ?? "auto") }
-                }
-                .labelsHidden()
-                .frame(maxWidth: 130)
-                .help("Meeting language — lock to Hindi/English for mixed calls; Auto re-detects per chunk")
-                if controller.isRunning {
-                    Button(controller.isPaused ? "Resume" : "Pause") {
-                        Task { controller.isPaused ? await controller.resume() : await controller.pause() }
+    // MARK: past meetings
+
+    private var showLive: Bool { controller.isRunning || !controller.lines.isEmpty }
+    private var viewingPast: Bool { selected != nil && !controller.isRunning }
+    private var shownLines: [MeetingLine] { viewingPast ? pastLines : controller.lines }
+    private var shownStats: MeetingStats? { viewingPast ? pastStats : controller.stats }
+
+    private func reload() {
+        archive = MeetingArchive.list()
+        if selected == nil && !showLive, let first = archive.first { select(first.stamp) }
+        else if let s = selected, !archive.contains(where: { $0.stamp == s }) { selected = nil }
+    }
+
+    private func select(_ stamp: String?) {
+        selected = stamp
+        guard let stamp, let loaded = MeetingArchive.load(stamp: stamp) else { pastLines = []; pastStats = nil; return }
+        pastLines = loaded.lines
+        pastStats = loaded.stats
+    }
+
+    private static let rowDate: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "d MMM yyyy, h:mm a"; return f
+    }()
+
+    private func row(title: String, detail: String, badge: Bool, active: Bool, dot: Color? = nil, tap: @escaping () -> Void) -> some View {
+        Button(action: tap) {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    if let dot { Circle().fill(dot).frame(width: 7, height: 7) }
+                    Text(title).font(Brand.serif(12)).foregroundStyle(Brand.text).lineLimit(1)
+                    Spacer(minLength: 0)
+                    if badge {
+                        Text("stats").font(.system(size: 10)).foregroundStyle(Brand.muted)
+                            .padding(.horizontal, 5).padding(.vertical, 1)
+                            .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(Brand.line, lineWidth: 1))
                     }
-                    Button("Stop") { Task { await controller.stop() } }
-                        .tint(Brand.danger)
-                        .accessibilityLabel("Stop recording")
-                        .accessibilityIdentifier("Stop recording")
-                } else {
-                    Button("Start recording") { Task { await controller.start() } }
-                        .keyboardShortcut(.defaultAction)
-                        .disabled(!screenRecOK) // pre-start check: no surprises at meeting time
-                        .accessibilityLabel("Start recording")
-                        .accessibilityIdentifier("Start recording")
                 }
-                Button(controller.summarizing ? "Summarizing…" : "Summarize") {
-                    Task { await controller.summarize() }
-                }
-                .disabled(controller.lines.isEmpty || controller.isRunning || controller.summarizing)
-                Button("Export…") { export() }
-                    .disabled(controller.lines.isEmpty)
+                Text(detail).font(Brand.caption).foregroundStyle(Brand.muted).lineLimit(1)
             }
-            .padding(12)
+            .padding(.vertical, 6).padding(.horizontal, Brand.s8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(active ? Brand.surface : .clear, in: RoundedRectangle(cornerRadius: Brand.rSm))
+            .overlay(RoundedRectangle(cornerRadius: Brand.rSm).strokeBorder(active ? Brand.line : .clear, lineWidth: 1))
+            .contentShape(RoundedRectangle(cornerRadius: Brand.rSm))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var pastList: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 2) {
+                if showLive {
+                    row(title: "Live", detail: controller.isRunning ? controller.status : "\(controller.lines.count) lines, unsaved view",
+                        badge: false, active: selected == nil, dot: controller.isRunning ? Brand.danger : Brand.muted) { select(nil) }
+                }
+                ForEach(archive) { e in
+                    row(title: Self.rowDate.string(from: e.date),
+                        detail: [e.duration, "\(e.speakers.count) speaker\(e.speakers.count == 1 ? "" : "s")"].filter { !$0.isEmpty }.joined(separator: " · "),
+                        badge: e.hasStats, active: selected == e.stamp && !controller.isRunning) { select(e.stamp) }
+                }
+            }
+            .padding(Brand.s8)
+        }
+        .frame(width: 220)
+        .background(Brand.bg)
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            if showLive || !archive.isEmpty {
+                pastList
+                Divider()
+            }
+            detail
+        }
+        .frame(minWidth: 680, minHeight: 400)
+        .background(Brand.bg)
+        .onAppear { screenRecOK = CGPreflightScreenCaptureAccess(); reload() }
+        .onChange(of: controller.isRunning) { _, running in
+            if running { selected = nil } else { reload() }
+        }
+        .sheet(isPresented: Binding(
+            get: { controller.showRenameSheet && !controller.isRunning && !viewingPast },
+            set: { controller.showRenameSheet = $0 }
+        )) { renameSheet }
+        .onAppear { controller.showRenameSheet = false } // only a meeting that just ended asks; opening an old one never does
+    }
+
+    private var toolbar: some View {
+        HStack(spacing: Brand.s8) {
+            Circle()
+                .fill(controller.isRunning ? (controller.isPaused ? Brand.warn : Brand.danger) : Brand.ok)
+                .frame(width: 9, height: 9)
+            if controller.isRunning {
+                Text(controller.status).font(Brand.caption).foregroundStyle(Brand.muted).lineLimit(1)
+            }
+            if controller.isRunning {
+                // Per-stream capture health. Without this a stalled stream is
+                // indistinguishable from a room where nobody is talking.
+                streamDot("You", healthy: controller.micHealthy)
+                streamDot("Others", healthy: controller.systemHealthy)
+            }
+            Spacer(minLength: 0)
+            Picker("Language", selection: $controller.meetingLanguage) {
+                ForEach(Languages.list, id: \.code) { lang in Text(lang.name).tag(lang.code ?? "auto") }
+            }
+            .pickerStyle(.menu)
+            .labelsHidden()
+            .tint(Brand.text)
+            .frame(width: 116)
+            .padding(.vertical, 2)
+            .background(Brand.surface, in: RoundedRectangle(cornerRadius: Brand.rSm))
+            .overlay(RoundedRectangle(cornerRadius: Brand.rSm).strokeBorder(Brand.line, lineWidth: 1))
+            .help("Meeting language — lock to Hindi/English for mixed calls; Auto re-detects per chunk")
+            if controller.isRunning {
+                PaperButton(title: controller.isPaused ? "Resume" : "Pause", role: .secondary) {
+                    Task { controller.isPaused ? await controller.resume() : await controller.pause() }
+                }
+                PaperButton(title: "Stop", role: .destructive) { Task { await controller.stop() } }
+                    .accessibilityLabel("Stop recording")
+                    .accessibilityIdentifier("Stop recording")
+            } else {
+                PaperButton(title: "Start recording", role: .primary) { Task { await controller.start() } }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(!screenRecOK) // pre-start check: no surprises at meeting time
+                    .opacity(screenRecOK ? 1 : 0.5)
+                    .accessibilityIdentifier("Start recording")
+            }
+            let noSummary = viewingPast || controller.lines.isEmpty || controller.isRunning || controller.summarizing
+            PaperButton(title: controller.summarizing ? "Summarizing…" : "Summarize", role: .secondary) {
+                Task { await controller.summarize() }
+            }
+            .disabled(noSummary).opacity(noSummary ? 0.5 : 1)
+            PaperButton(title: "Export…", role: .secondary) { export() }
+                .disabled(shownLines.isEmpty).opacity(shownLines.isEmpty ? 0.5 : 1)
+        }
+        .padding(12)
+    }
+
+    private var detail: some View {
+        VStack(spacing: 0) {
+            toolbar
             if let banner = controller.banner {
                 Text(banner)
                     .font(Brand.caption.bold())
@@ -75,7 +178,7 @@ struct MeetingView: View {
             }
             Divider()
 
-            if let summary = controller.summary {
+            if !viewingPast, let summary = controller.summary {
                 ScrollView {
                     Text(LocalizedStringKey(summary))
                         .textSelection(.enabled)
@@ -87,12 +190,12 @@ struct MeetingView: View {
                 Divider()
             }
 
-            if let st = controller.stats, !controller.isRunning {
+            if let st = shownStats, !controller.isRunning || viewingPast {
                 statsBlock(st)
                 Divider()
             }
 
-            if controller.lines.isEmpty {
+            if shownLines.isEmpty {
                 Spacer()
                 VStack(spacing: 8) {
                     Image(systemName: !screenRecOK || controller.needsScreenRec ? "exclamationmark.shield" : "person.2.wave.2")
@@ -100,44 +203,39 @@ struct MeetingView: View {
                     if !screenRecOK || controller.needsScreenRec {
                         Text("Meetings need Screen Recording permission (that's how macOS exposes system audio). Click below — that adds OpenWispr to the list — then switch it ON and relaunch. A leftover \"Whispr\" entry from the old app can be removed.")
                             .foregroundStyle(Brand.muted).multilineTextAlignment(.center)
-                        Button("Request permission + open settings") {
+                        PaperButton(title: "Request permission + open settings", role: .secondary) {
                             CGRequestScreenCaptureAccess() // registers OpenWispr in the pane; without this the row never appears
                             NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!)
                         }
                         Button("I've enabled it — re-check") { screenRecOK = CGPreflightScreenCaptureAccess() }
                             .buttonStyle(.plain).font(Brand.caption).foregroundStyle(Brand.muted)
                     } else {
-                        Text("Start recording to capture your mic (You) and the other side's audio — remote voices are separated into Speaker A/B after you stop.")
-                            .foregroundStyle(Brand.muted).multilineTextAlignment(.center)
-                        Text("Transcript checkpoints to Documents/OpenWispr after every line. First meeting downloads the speaker model (~100 MB) once.")
-                            .font(Brand.caption).foregroundStyle(Brand.muted)
+                        Text("Record a call without a bot. Your mic and the other side are captured and labelled after you stop.")
+                            .font(Brand.body).foregroundStyle(Brand.text).multilineTextAlignment(.center)
+                        Text("Transcripts are saved to Documents/OpenWispr. The first meeting downloads a 100 MB speaker model.")
+                            .font(Brand.caption).foregroundStyle(Brand.muted).multilineTextAlignment(.center)
                     }
                 }
                 .padding()
+                .frame(maxWidth: 460)
                 Spacer()
             } else {
                 ScrollViewReader { proxy in
-                    List(controller.lines) { line in
+                    List(shownLines) { line in
                         TranscriptLine(line: line)
                             .id(line.id)
                             .listRowBackground(Brand.bg)
                     }
+                    .id(selected ?? "live")
                     .scrollContentBackground(.hidden)
                     .background(Brand.bg)
                     .onChange(of: controller.lines.count) { _, _ in
-                        if let last = controller.lines.last { proxy.scrollTo(last.id) }
+                        if !viewingPast, let last = controller.lines.last { proxy.scrollTo(last.id) }
                     }
                 }
             }
         }
-        .frame(minWidth: 560, minHeight: 400)
-        .background(Brand.bg)
-        .onAppear { screenRecOK = CGPreflightScreenCaptureAccess() }
-        .sheet(isPresented: Binding(
-            get: { controller.showRenameSheet && !controller.isRunning },
-            set: { controller.showRenameSheet = $0 }
-        )) { renameSheet }
-        .onAppear { controller.showRenameSheet = false } // only a meeting that just ended asks; opening an old one never does
+        .frame(maxWidth: .infinity)
     }
 
     private func statsBlock(_ st: MeetingStats) -> some View {
@@ -148,7 +246,7 @@ struct MeetingView: View {
                 StatTile(value: String(format: "%.1f", st.fillersPerMinute), label: "fillers/min")
                 StatTile(value: "\(st.interruptions)", label: "interruptions")
             }
-            .frame(height: 78)
+            .fixedSize(horizontal: false, vertical: true)
             ForEach(st.speakers.filter { $0.talkSeconds > 0 }.sorted { $0.talkSeconds > $1.talkSeconds }, id: \.name) { sp in
                 HStack(spacing: 10) {
                     Text(sp.name).font(Brand.body).foregroundStyle(Brand.text)
@@ -206,10 +304,11 @@ struct MeetingView: View {
 
     private func export() {
         let panel = NSSavePanel()
-        panel.nameFieldStringValue = "meeting-\(ISO8601DateFormatter().string(from: Date()).prefix(10)).md"
+        panel.nameFieldStringValue = "meeting-\(selected ?? String(ISO8601DateFormatter().string(from: Date()).prefix(10))).md"
         panel.allowedContentTypes = [.plainText]
         if panel.runModal() == .OK, let url = panel.url {
-            try? controller.exportMarkdown().write(to: url, atomically: true, encoding: .utf8)
+            let md = viewingPast ? MeetingController.markdown(lines: pastLines) : controller.exportMarkdown()
+            try? md.write(to: url, atomically: true, encoding: .utf8)
         }
     }
 }

@@ -285,7 +285,7 @@ private struct DictationsPane: View {
             StatTile(value: s.avgWPM > 0 ? "\(s.avgWPM)" : "—", label: "avg wpm")
             StatTile(value: "\(s.meetingsCount)", label: "meetings")
         }
-        .frame(height: 78)
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private func format(_ n: Int) -> String {
