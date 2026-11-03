@@ -1,10 +1,11 @@
 import SwiftUI
+import AppKit
 
 /// Insights: WPM gauge, fixes, lifetime words + time saved, per-app usage, streak heatmap, words/day.
 /// Everything here is derived from real local data (Stats aggregates) — no invented ranks or percentiles.
 struct InsightsPane: View {
     @State private var daily: [String: Int] = [:]
-    @State private var apps: [(name: String, words: Int)] = []
+    @State private var apps: [AppRow] = []
     @State private var meetings: [MeetingStats] = []
 
     @State private var overview = Stats.overview()
@@ -14,20 +15,17 @@ struct InsightsPane: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                HStack(alignment: .top, spacing: 14) {
-                    gaugeCard
-                    fixesCard
-                    wordsCard
-                }
+            VStack(alignment: .leading, spacing: Brand.s16) {
+                topTiles
                 perDayCard
                 meetingsCard
-                HStack(alignment: .top, spacing: 14) {
+                HStack(alignment: .top, spacing: Brand.s12) {
                     appsCard
                     heatmapCard
                 }
             }
-            .padding(22)
+            .padding(Brand.s24)
+            .padding(.bottom, Brand.s32)
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
         .background(Brand.bg)
@@ -39,45 +37,42 @@ struct InsightsPane: View {
         daily = Stats.dailyWords
         meetings = MeetingStatsStore.loadAll()
         apps = Stats.appWords
-            .map { (AppMonitor.name(for: $0.key), $0.value) }
-            .sorted { $0.1 > $1.1 }
+            .map { AppRow.resolve(bundleID: $0.key, words: $0.value) }
+            .sorted { $0.words > $1.words }
             .prefix(6).map { $0 }
+    }
+
+    struct AppRow {
+        let id: String
+        let name: String
+        let icon: NSImage?
+        let words: Int
+
+        /// Installed app name and icon via LaunchServices; falls back to the last path component.
+        static func resolve(bundleID: String, words: Int) -> AppRow {
+            if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
+                let name = FileManager.default.displayName(atPath: url.path)
+                    .replacingOccurrences(of: ".app", with: "")
+                return AppRow(id: bundleID, name: name, icon: NSWorkspace.shared.icon(forFile: url.path), words: words)
+            }
+            let last = bundleID.split(separator: ".").last.map(String.init) ?? bundleID
+            return AppRow(id: bundleID, name: last, icon: nil, words: words)
+        }
     }
 
     // MARK: cards
 
-    private var gaugeCard: some View {
-        card {
-            Text("\(wpm)").font(.system(size: 34, weight: .bold, design: .monospaced)).foregroundStyle(Brand.text)
-            label("words per minute")
-            Gauge(value: Double(wpm), max: 200)
-                .frame(height: 74).padding(.top, 6)
-            Text(wpm > 0 ? "your speaking pace" : "dictate once to measure")
-                .font(.system(size: 11)).foregroundStyle(Brand.muted)
-        }
-    }
-
-    private var fixesCard: some View {
+    private var topTiles: some View {
         let d = DictionaryStore.load()
-        return card {
-            Text("\(Stats.fixesAccepted)").font(.system(size: 34, weight: .bold, design: .monospaced)).foregroundStyle(Brand.text)
-            label("fixes you taught it")
-            Divider().overlay(Brand.line).padding(.vertical, 4)
-            row("\(d.vocab.count)", "dictionary terms")
-            row("\(d.replacements.count)", "replacements")
+        return HStack(spacing: Brand.s12) {
+            StatTile(value: "\(wpm)", label: "words per minute",
+                     hint: wpm > 0 ? "your speaking pace" : "dictate once to measure")
+            StatTile(value: "\(Stats.fixesAccepted)", label: "fixes you taught it",
+                     hint: "\(d.vocab.count) terms, \(d.replacements.count) replacements")
+            StatTile(value: format(words), label: "words dictated",
+                     hint: savedHours >= 0.1 ? String(format: "about %.1f hours saved vs typing at 40 wpm", savedHours) : "keep going")
         }
-    }
-
-    private var wordsCard: some View {
-        card {
-            Text(format(words)).font(.system(size: 34, weight: .bold, design: .monospaced)).foregroundStyle(Brand.text)
-            label("total words dictated")
-            Divider().overlay(Brand.line).padding(.vertical, 4)
-            Text(savedHours >= 0.1 ? String(format: "~%.1f hours saved", savedHours) : "keep going")
-                .font(.system(size: 15, weight: .semibold)).foregroundStyle(Brand.coral)
-            Text("vs typing the same words at 40 wpm")
-                .font(.system(size: 11)).foregroundStyle(Brand.muted)
-        }
+        .frame(height: 118)
     }
 
     private var perDayCard: some View {
@@ -91,7 +86,7 @@ struct InsightsPane: View {
                         RoundedRectangle(cornerRadius: 3)
                             .fill(d.words > 0 ? Brand.coral.opacity(0.25 + 0.75 * Double(d.words) / Double(peak)) : Brand.line)
                             .frame(height: max(3, 64 * CGFloat(d.words) / CGFloat(peak)))
-                        Text(dayLetter(d.date)).font(.system(size: 9, design: .monospaced)).foregroundStyle(Brand.muted)
+                        Text(dayLetter(d.date)).font(Brand.mono(9)).foregroundStyle(Brand.muted)
                     }
                 }
             }
@@ -104,33 +99,27 @@ struct InsightsPane: View {
         let mine = meetings.compactMap { m in m.speakers.first { $0.name == m.you } }
         let share = mine.isEmpty ? 0 : mine.map(\.sharePct).reduce(0, +) / Double(mine.count)
         return card {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text("\(overview.meetingsCount)").font(.system(size: 34, weight: .bold, design: .monospaced)).foregroundStyle(Brand.text)
+            HStack(alignment: .firstTextBaseline, spacing: Brand.s8) {
+                Text("\(overview.meetingsCount)").font(Brand.serif(26)).monospacedDigit().foregroundStyle(Brand.text)
                 label("meetings")
             }
             if overview.meetingsWithStats < overview.meetingsCount {
                 Text("stats for \(overview.meetingsWithStats) of \(overview.meetingsCount)")
-                    .font(.system(size: 11)).foregroundStyle(Brand.muted)
+                    .font(Brand.caption).foregroundStyle(Brand.muted)
             }
             if meetings.isEmpty {
-                Text("No meeting stats yet — they appear after your next recorded meeting.")
-                    .font(.system(size: 12)).foregroundStyle(Brand.muted).padding(.top, 4)
+                Text("No meeting stats yet. They appear after your next recorded meeting.")
+                    .font(Brand.body).foregroundStyle(Brand.muted).padding(.top, Brand.s4)
             } else {
-                HStack(alignment: .top, spacing: 24) {
-                    meetingStat("\(meetings.filter { week?.contains($0.date) ?? false }.count)", "this week")
-                    meetingStat(String(format: "%.1f", meetings.map(\.duration).reduce(0, +) / 3600), "meeting hours")
-                    meetingStat("\(Int(share.rounded()))%", "your avg talk share")
-                    meetingStat(MeetingController.mmss(mine.map(\.longestMonologue).max() ?? 0), "your longest monologue")
+                HStack(spacing: Brand.s12) {
+                    StatTile(value: "\(meetings.filter { week?.contains($0.date) ?? false }.count)", label: "this week")
+                    StatTile(value: String(format: "%.1f", meetings.map(\.duration).reduce(0, +) / 3600), label: "meeting hours")
+                    StatTile(value: "\(Int(share.rounded()))%", label: "your avg talk share")
+                    StatTile(value: MeetingController.mmss(mine.map(\.longestMonologue).max() ?? 0), label: "your longest monologue")
                 }
-                .padding(.top, 4)
+                .frame(height: 78)
+                .padding(.top, Brand.s8)
             }
-        }
-    }
-
-    private func meetingStat(_ v: String, _ t: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(v).font(.system(size: 22, weight: .bold, design: .monospaced)).foregroundStyle(Brand.text)
-            Text(t).font(.system(size: 11)).foregroundStyle(Brand.muted)
         }
     }
 
@@ -139,20 +128,25 @@ struct InsightsPane: View {
         return card {
             label("where you dictate")
             if apps.isEmpty {
-                Text("No app data yet — this starts counting from v0.14.")
-                    .font(.system(size: 12)).foregroundStyle(Brand.muted).padding(.top, 4)
+                Text("No app data yet. It fills in as you dictate.")
+                    .font(Brand.body).foregroundStyle(Brand.muted).padding(.top, Brand.s4)
             } else {
-                ForEach(apps, id: \.name) { a in
+                ForEach(apps, id: \.id) { a in
                     let pct = Int((Double(a.words) / Double(total) * 100).rounded())
-                    HStack(spacing: 10) {
-                        Text(a.name).font(.system(size: 12)).foregroundStyle(Brand.text)
+                    HStack(spacing: Brand.s8) {
+                        if let icon = a.icon {
+                            Image(nsImage: icon).resizable().frame(width: 16, height: 16)
+                        } else {
+                            Image(systemName: "app").frame(width: 16, height: 16).foregroundStyle(Brand.muted)
+                        }
+                        Text(a.name).font(Brand.body).foregroundStyle(Brand.text)
                             .frame(width: 96, alignment: .leading).lineLimit(1)
                         GeometryReader { g in
                             RoundedRectangle(cornerRadius: 4).fill(Brand.coral.opacity(0.85))
                                 .frame(width: max(3, g.size.width * CGFloat(a.words) / CGFloat(total)), height: 16)
                         }
                         .frame(height: 16)
-                        Text("\(pct)%").font(.system(size: 11, design: .monospaced)).foregroundStyle(Brand.muted)
+                        Text("\(pct)%").font(Brand.mono(11)).foregroundStyle(Brand.muted)
                             .frame(width: 34, alignment: .trailing)
                     }
                     .padding(.vertical, 3)
@@ -163,7 +157,7 @@ struct InsightsPane: View {
 
     private var heatmapCard: some View {
         let cal = Calendar.current
-        let weeks = 18
+        let weeks = 10
         let peak = max(daily.values.max() ?? 0, 1)
         // column = week (oldest → newest), row = weekday; anchor on the most recent Saturday
         let today = cal.startOfDay(for: Date())
@@ -173,8 +167,8 @@ struct InsightsPane: View {
             HStack {
                 label("\(overview.streakDays) day streak")
                 Spacer()
-                Text("longest \(Stats.longestStreak(map: daily))")
-                    .font(.system(size: 10, design: .monospaced)).foregroundStyle(Brand.muted)
+                Text("longest streak \(Stats.longestStreak(map: daily)) days, all time")
+                    .font(Brand.mono(10)).foregroundStyle(Brand.muted)
             }
             HStack(spacing: 3) {
                 ForEach(0..<weeks, id: \.self) { w in
@@ -194,7 +188,7 @@ struct InsightsPane: View {
                 }
             }
             .padding(.top, 6)
-            Text("darker = more words that day").font(.system(size: 10)).foregroundStyle(Brand.muted).padding(.top, 4)
+            Text("Last 10 weeks. Darker means more words that day.").font(Brand.caption).foregroundStyle(Brand.muted).padding(.top, Brand.s4)
         }
     }
 
@@ -202,22 +196,14 @@ struct InsightsPane: View {
 
     private func card<C: View>(@ViewBuilder _ content: () -> C) -> some View {
         VStack(alignment: .leading, spacing: 4) { content() }
-            .padding(16)
+            .padding(Brand.s16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(RoundedRectangle(cornerRadius: 12).fill(Brand.surface))
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Brand.line))
+            .background(RoundedRectangle(cornerRadius: Brand.rMd).fill(Brand.surface))
+            .overlay(RoundedRectangle(cornerRadius: Brand.rMd).stroke(Brand.line))
     }
 
     private func label(_ t: String) -> some View {
-        Text(t.uppercased()).font(.system(size: 10, weight: .medium, design: .monospaced))
-            .tracking(1.2).foregroundStyle(Brand.muted)
-    }
-
-    private func row(_ v: String, _ t: String) -> some View {
-        HStack(spacing: 6) {
-            Text(v).font(.system(size: 13, weight: .semibold, design: .monospaced)).foregroundStyle(Brand.text)
-            Text(t).font(.system(size: 12)).foregroundStyle(Brand.muted)
-        }
+        Text(t).font(Brand.heading).foregroundStyle(Brand.text)
     }
 
     private func format(_ n: Int) -> String {
@@ -226,32 +212,5 @@ struct InsightsPane: View {
 
     private func dayLetter(_ d: Date) -> String {
         ["S", "M", "T", "W", "T", "F", "S"][Calendar.current.component(.weekday, from: d) - 1]
-    }
-}
-
-/// Semicircular pace dial (no percentile — we have no population data to rank against).
-private struct Gauge: View {
-    let value: Double
-    let max: Double
-
-    var body: some View {
-        GeometryReader { g in
-            let w = g.size.width, r = Swift.min(w / 2, g.size.height) - 8
-            let c = CGPoint(x: w / 2, y: r + 8)
-            let frac = Swift.max(0, Swift.min(1, value / max))
-            ZStack {
-                arc(center: c, radius: r, to: 1).stroke(Brand.line, style: .init(lineWidth: 12, lineCap: .round))
-                arc(center: c, radius: r, to: frac).stroke(Brand.coral, style: .init(lineWidth: 12, lineCap: .round))
-            }
-        }
-    }
-
-    private func arc(center: CGPoint, radius: CGFloat, to frac: Double) -> Path {
-        Path { p in
-            p.addArc(center: center, radius: radius,
-                     startAngle: .degrees(180),
-                     endAngle: .degrees(180 + 180 * frac),
-                     clockwise: false)
-        }
     }
 }

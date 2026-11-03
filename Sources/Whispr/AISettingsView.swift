@@ -15,7 +15,7 @@ struct AISettingsView: View {
 
     var body: some View {
         Form {
-            Section("Provider") {
+            PSection("Provider") {
                 Picker("AI provider", selection: $provider) {
                     ForEach(LLMProvider.allCases, id: \.self) { Text($0.label).tag($0) }
                 }
@@ -25,18 +25,18 @@ struct AISettingsView: View {
                     Task { await probe() }
                 }
                 HStack {
-                    Text("Status:")
+                    Text("Status:").foregroundStyle(Brand.muted)
                     Text(status).foregroundStyle(status.hasPrefix("ready") ? Brand.ok : Brand.muted)
                     Spacer()
                     Button("Check") { Task { await probe() } }
-                }.font(.caption)
+                }.font(Brand.caption)
             }
 
             if provider == .ollama {
-                Section("Ollama") {
+                PSection("Ollama") {
                     if ollamaModels.isEmpty {
                         Text("Ollama not detected on localhost:11434. Install from ollama.com and `ollama pull llama3.2`.")
-                            .font(.caption).foregroundStyle(Brand.muted)
+                            .font(Brand.caption).foregroundStyle(Brand.muted)
                     } else {
                         Picker("Model", selection: $model) {
                             ForEach(ollamaModels, id: \.self) { Text($0).tag($0) }
@@ -45,8 +45,8 @@ struct AISettingsView: View {
                     }
                 }
             } else {
-                Section("API key (stored in Keychain)") {
-                    SecureField("sk-…", text: $apiKey)
+                PSection("API key (stored in Keychain)") {
+                    SecureField("API key", text: $apiKey, prompt: Text("sk-…").foregroundStyle(Brand.muted))
                         .onSubmit { LLMClient.setAPIKey(apiKey, for: provider) }
                     TextField("Model (blank = gpt-4o-mini · OpenRouter: openai/gpt-4o-mini)", text: $model)
                         .onSubmit { LLMClient.model = model }
@@ -58,11 +58,11 @@ struct AISettingsView: View {
                 }
             }
 
-            Section("Auto-cleanup") {
+            PSection("Auto-cleanup") {
                 Toggle("Clean up dictated text", isOn: $cleanupOn)
                     .onChange(of: cleanupOn) { _, v in Settings.cleanupEnabled = v }
                 Text("Ollama only, so your text never leaves this Mac. Your original is always kept in History with a one-click revert.")
-                    .font(.caption).foregroundStyle(Brand.muted)
+                    .font(Brand.caption).foregroundStyle(Brand.muted)
                 if cleanupOn {
                     Picker("Model", selection: $cleanupModel) {
                         if !cleanupModel.isEmpty && !ollamaModels.contains(cleanupModel) { Text(cleanupModel).tag(cleanupModel) }
@@ -72,7 +72,7 @@ struct AISettingsView: View {
                     Toggle("All apps", isOn: $cleanupAll)
                         .onChange(of: cleanupAll) { _, v in Settings.cleanupAllApps = v }
                     if !cleanupAll {
-                        Text("Apply in").font(.caption).foregroundStyle(Brand.muted)
+                        Text("Apply in").font(Brand.caption).foregroundStyle(Brand.muted)
                         ForEach(apps, id: \.id) { app in
                             Toggle(app.name, isOn: Binding(
                                 get: { cleanupApps.contains(app.id) },
@@ -88,10 +88,11 @@ struct AISettingsView: View {
 
             Section {
                 Text("AI is optional. Dictation and meetings work fully without it. With Ollama, summaries and rewrites run 100% on your Mac.")
-                    .font(.caption).foregroundStyle(Brand.muted)
+                    .font(Brand.caption).foregroundStyle(Brand.muted)
+                    .listRowBackground(Color.clear)
             }
         }
-        .formStyle(.grouped)
+        .paperForm()
         .task {
             apiKey = LLMClient.apiKey(for: provider) ?? ""
             apps = AppMonitor.regularApps()

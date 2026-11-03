@@ -20,25 +20,36 @@ struct PerAppView: View {
     @StateObject private var model = PerAppModel()
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Text("Turn dictation off in specific apps.").font(.caption).foregroundStyle(Brand.muted)
-                Spacer()
-                Button("Refresh") { model.refresh() }
-            }.padding(12)
-            Divider()
-            List(model.apps, id: \.id) { app in
-                Toggle(isOn: Binding(
-                    get: { !model.disabled.contains(app.id) },
-                    set: { model.setEnabled($0, id: app.id) }
-                )) {
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(app.name)
-                        Text(app.id).font(.caption2).foregroundStyle(Brand.muted)
+        ScrollView {
+            VStack(alignment: .leading, spacing: Brand.s16) {
+                HStack {
+                    Text("Turn dictation off in specific apps.").font(Brand.body).foregroundStyle(Brand.muted)
+                    Spacer()
+                    PaperButton(title: "Refresh", role: .secondary) { model.refresh() }
+                }
+                PaperSection(title: "Running apps") {
+                    if model.apps.isEmpty {
+                        Text("No apps found. Open an app and refresh.").font(Brand.body).foregroundStyle(Brand.muted)
+                    } else {
+                        VStack(alignment: .leading, spacing: Brand.s12) {
+                            ForEach(model.apps, id: \.id) { app in
+                                Toggle(isOn: Binding(
+                                    get: { !model.disabled.contains(app.id) },
+                                    set: { model.setEnabled($0, id: app.id) }
+                                )) {
+                                    VStack(alignment: .leading, spacing: 1) {
+                                        Text(app.name).font(Brand.body).foregroundStyle(Brand.text)
+                                        Text(app.id).font(Brand.caption).foregroundStyle(Brand.muted)
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
+            .padding(Brand.s24)
         }
+        .background(Brand.bg)
         .onAppear { model.refresh() }
     }
 }

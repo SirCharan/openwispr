@@ -64,51 +64,54 @@ struct DictionaryView: View {
 
     var body: some View {
         Form {
-            Section("Vocabulary — fuzzy-corrected toward these spellings") {
+            PSection("Vocabulary") {
+                Text("Spellings the transcriber is nudged toward.").font(Brand.caption).foregroundStyle(Brand.muted)
                 HStack {
-                    TextField("e.g. WhisperKit, Kubernetes", text: $newVocab)
+                    TextField("Term", text: $newVocab, prompt: Text("e.g. WhisperKit, Kubernetes").foregroundStyle(Brand.muted))
                         .onSubmit { commitNewVocab() }
                     Button("Add") { commitNewVocab() }
                         .disabled(vocabTrimmed.isEmpty)
                 }
                 if let vocabNote {
-                    Text(vocabNote).foregroundStyle(Brand.muted).font(.caption)
+                    Text(vocabNote).foregroundStyle(Brand.muted).font(Brand.caption)
                 }
                 if model.data.vocab.isEmpty {
-                    Text("No terms yet.").foregroundStyle(Brand.muted).font(.caption)
+                    Text("No terms yet. Add one above.").foregroundStyle(Brand.muted).font(Brand.caption)
                 } else {
                     ScrollViewReader { proxy in
                         List {
                             ForEach(model.data.vocab, id: \.self) { term in vocabRow(term).id(term) }
                         }
                         .frame(minHeight: 160)
+                        .scrollContentBackground(.hidden)
                         .onChange(of: model.data.vocab) { _, list in
                             if let last = list.last { proxy.scrollTo(last, anchor: .bottom) }
                         }
                     }
                 }
             }
-            Section("Replacements — exact phrase → text") {
+            PSection("Replacements") {
+                Text("Exact phrase in, your text out.").font(Brand.caption).foregroundStyle(Brand.muted)
                 HStack {
-                    TextField("from", text: $newFrom)
+                    TextField("Heard", text: $newFrom, prompt: Text("Heard").foregroundStyle(Brand.muted))
                         .onSubmit { commitNewReplacement() }
                     Image(systemName: "arrow.right").foregroundStyle(Brand.muted)
-                    TextField("to", text: $newTo)
+                    TextField("Write", text: $newTo, prompt: Text("Write").foregroundStyle(Brand.muted))
                         .onSubmit { commitNewReplacement() }
                     Button("Add") { commitNewReplacement() }
                         .disabled(fromTrimmed.isEmpty)
                 }
                 if let replacementNote {
-                    Text(replacementNote).foregroundStyle(Brand.muted).font(.caption)
+                    Text(replacementNote).foregroundStyle(Brand.muted).font(Brand.caption)
                 }
                 if !model.data.replacements.isEmpty {
                     List {
                         ForEach(model.data.replacements) { r in replacementRow(r) }
-                    }.frame(minHeight: 160)
+                    }.frame(minHeight: 160).scrollContentBackground(.hidden)
                 }
             }
         }
-        .formStyle(.grouped)
+        .paperForm()
         .onReceive(NotificationCenter.default.publisher(for: .whisprStageVocab)) { note in
             let terms = (note.userInfo?["terms"] as? [String]) ?? []
             guard !terms.isEmpty else { return }
@@ -166,7 +169,7 @@ struct DictionaryView: View {
                         if DictionaryStore.defaultIsRealWord(term), term == term.lowercased() {
                             Image(systemName: "exclamationmark.triangle")
                                 .foregroundStyle(Brand.muted)
-                                .help("Common English word — it can capture similar words in your dictations. Consider removing it.")
+                                .help("Looks like a real word; the guard will not auto-learn it. It can also capture similar words in your dictations, so consider removing it.")
                         }
                     }
                 },
@@ -180,11 +183,11 @@ struct DictionaryView: View {
     private func replacementRow(_ r: Replacement) -> some View {
         if editingReplacement == r.id {
             HStack {
-                TextField("from", text: $editText)
+                TextField("Heard", text: $editText)
                     .textFieldStyle(.roundedBorder)
                     .focused($editFocused)
                 Image(systemName: "arrow.right").foregroundStyle(Brand.muted)
-                TextField("to", text: $editTo)
+                TextField("Write", text: $editTo)
                     .textFieldStyle(.roundedBorder)
                 Button("Save") { commitReplacement(r.id) }
                     .keyboardShortcut(.defaultAction)

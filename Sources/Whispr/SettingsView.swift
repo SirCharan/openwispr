@@ -28,7 +28,7 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
-            Section("Dictation trigger") {
+            PSection("Dictation trigger") {
                 Picker("Trigger", selection: $hotkeyMode) {
                     ForEach(Triggers.list, id: \.id) { t in Text(t.label).tag(t.id) }
                     Text("Custom shortcut").tag("custom")
@@ -37,13 +37,13 @@ struct SettingsView: View {
                 if hotkeyMode == "custom" {
                     KeyboardShortcuts.Recorder("Shortcut:", name: .dictate)
                 } else {
-                    Text("Tip: set System Settings → Keyboard → “Press 🌐 key to” = Do Nothing, so the emoji picker stays out of the way.")
-                        .font(.caption).foregroundStyle(Brand.muted)
+                    Text("Tip: set System Settings → Keyboard → “Press the globe key to” = Do Nothing, so the emoji picker stays out of the way.")
+                        .font(Brand.caption).foregroundStyle(Brand.muted)
                 }
                 Text("Tap the trigger to start — it keeps listening until you tap again. Or hold to talk and release to transcribe. Both always work.")
-                    .font(.caption).foregroundStyle(Brand.muted)
+                    .font(Brand.caption).foregroundStyle(Brand.muted)
             }
-            Section("Behavior") {
+            PSection("Behavior") {
                 Toggle("Auto-paste at cursor (off = copy to clipboard only)", isOn: $autoPaste)
                 Toggle("Sound cues on record start/stop", isOn: $soundCues)
                 Toggle("Silence other audio while dictating", isOn: $muteWhileDictating)
@@ -56,14 +56,14 @@ struct SettingsView: View {
                     Text(muteMode == "pause"
                          ? "Sends the play/pause key, so you keep your place. It can't read what's playing, so it may occasionally toggle the wrong way."
                          : "Mutes your output device and unmutes it when dictation ends. Only acts if audio is already playing; if you muted it yourself it stays muted.")
-                        .font(.caption).foregroundStyle(Brand.muted)
+                        .font(Brand.caption).foregroundStyle(Brand.muted)
                 }
                 Toggle("Separate remote meeting speakers (A/B) by voice", isOn: $diarizationEnabled)
                 Toggle("Detect meetings and offer to record", isOn: $detectMeetings)
                 Toggle("Google Meet names (Chrome extension)", isOn: $meetExtensionEnabled)
                     .onChange(of: meetExtensionEnabled) { _, _ in NotificationCenter.default.post(name: .whisprMeetExtensionChanged, object: nil) }
                 Text("Load the extension from <repo>/extensions/meet-names in chrome://extensions")
-                    .font(.caption).foregroundStyle(Brand.muted)
+                    .font(Brand.caption).foregroundStyle(Brand.muted)
                 if let dir = Bundle.main.resourceURL?.appendingPathComponent("meet-names"),
                    FileManager.default.fileExists(atPath: dir.path) {
                     Button("Reveal extension folder") { NSWorkspace.shared.activateFileViewerSelecting([dir]) }
@@ -77,10 +77,10 @@ struct SettingsView: View {
                     }
                 if loginItemFailed {
                     Text("Couldn't set launch-at-login. Move OpenWispr to your Applications folder first.")
-                        .font(.caption).foregroundStyle(Brand.warn)
+                        .font(Brand.caption).foregroundStyle(Brand.warn)
                 }
             }
-            Section("Transcript cleanup") {
+            PSection("Transcript cleanup") {
                 Toggle("Remove filler words (um, uh, er)", isOn: $removeFillers)
                 Toggle("Capitalize sentences & tidy spacing", isOn: $cleanUp)
                 Picker("AI rewrite (needs AI provider)", selection: $rewriteStyle) {
@@ -90,7 +90,7 @@ struct SettingsView: View {
                     Text("Concise").tag("concise")
                 }
             }
-            Section("Appearance") {
+            PSection("Appearance") {
                 Picker("Accent", selection: $accentHex) {
                     ForEach(Theme.accents, id: \.hex) { a in Text(a.name).tag(a.hex) }
                 }
@@ -99,10 +99,10 @@ struct SettingsView: View {
                 }
                 .onChange(of: appearance) { _, _ in Theme.apply() }
             }
-            Section("Permissions") {
+            PSection("Permissions") {
                 HStack {
                     Text(accessibilityOK
-                         ? "Accessibility: granted ✓"
+                         ? "Accessibility: granted"
                          : "Accessibility needed for auto-paste")
                     Spacer()
                     if !accessibilityOK {
@@ -114,6 +114,6 @@ struct SettingsView: View {
                 }
             }
         }
-        .formStyle(.grouped)
+        .paperForm()
     }
 }

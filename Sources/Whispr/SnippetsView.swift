@@ -37,11 +37,11 @@ struct SnippetsView: View {
 
     var body: some View {
         Form {
-            Section("New snippet") {
+            PSection("New snippet") {
                 TextField("Trigger phrases, comma separated", text: $triggers,
-                          prompt: Text("add my email, add my e-mail"))
+                          prompt: Text("add my email, add my e-mail").foregroundStyle(Brand.muted))
                     .help("Comma-separated. Every phrase here expands to the same text, so add the ways you actually say it.")
-                TextField("Expands to…", text: $expansion, axis: .vertical).lineLimit(1...4)
+                TextField("Expands to", text: $expansion, prompt: Text("Text to paste").foregroundStyle(Brand.muted), axis: .vertical).lineLimit(1...4)
                     .help("Pasted exactly as typed, even with an AI rewrite style on. Leave it empty and this snippet stays off.")
                 Button("Add snippet") {
                     model.add(triggers: triggers, expansion: expansion)
@@ -50,28 +50,28 @@ struct SnippetsView: View {
                 }
                 .disabled(SnippetsModel.parse(triggers).isEmpty)
                 Text("Use a phrase, not a bare word: \"add my email\" expands, while \"email\" on its own would fire in every sentence that mentions one.")
-                    .foregroundStyle(Brand.muted).font(.caption)
+                    .foregroundStyle(Brand.muted).font(Brand.caption)
             }
-            Section("Snippets") {
+            PSection("Snippets") {
                 Button("Add my details") { model.addPresets() }
                     .disabled(model.hasAllPresets)
                     .help("Adds starter rows for email, LinkedIn, X, GitHub, phone and signature. Fill in the ones you want.")
                 if model.items.isEmpty {
                     Text("No snippets yet. Say a trigger while dictating and it expands.")
-                        .foregroundStyle(Brand.muted).font(.caption)
+                        .foregroundStyle(Brand.muted).font(Brand.caption)
                 } else {
                     List {
                         ForEach($model.items) { $item in
                             SnippetRow(item: $item)
                         }
                         .onDelete { model.remove($0) }
-                    }.frame(minHeight: 160)
+                    }.frame(minHeight: 160).scrollContentBackground(.hidden)
                 }
                 Text("Where two triggers overlap, the longer phrase wins, so the order of this list does not matter. A snippet with no expansion is ignored.")
-                    .foregroundStyle(Brand.muted).font(.caption)
+                    .foregroundStyle(Brand.muted).font(Brand.caption)
             }
         }
-        .formStyle(.grouped)
+        .paperForm()
     }
 }
 
@@ -86,11 +86,11 @@ private struct SnippetRow: View {
                 get: { SnippetsModel.join(item.triggers) },
                 set: { item.triggers = SnippetsModel.parse($0) }
             ))
-            .font(.body.bold())
+            .font(Brand.body.bold())
             .help("Comma-separated. Every phrase here expands to the same text.")
-            TextField("Expands to…", text: $item.to, axis: .vertical)
+            TextField("Expands to", text: $item.to, prompt: Text("Text to paste").foregroundStyle(Brand.muted), axis: .vertical)
                 .lineLimit(1...4)
-                .foregroundStyle(item.to.isEmpty ? Brand.muted : .primary)
+                .foregroundStyle(item.to.isEmpty ? Brand.muted : Brand.text)
                 .help(item.to.isEmpty
                       ? "Empty, so this snippet is off. Type what the phrase should paste."
                       : "Pasted exactly as typed, even with an AI rewrite style on.")

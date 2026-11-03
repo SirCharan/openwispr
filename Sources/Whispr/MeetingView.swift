@@ -15,7 +15,7 @@ struct MeetingView: View {
                 .fill(healthy ? Brand.ok : Brand.danger)
                 .frame(width: 6, height: 6)
             Text(label)
-                .font(.caption2)
+                .font(Brand.caption)
                 .foregroundStyle(healthy ? Brand.muted : Brand.danger)
         }
         .help(healthy ? "\(label): audio arriving" : "\(label): no audio arriving")
@@ -28,7 +28,7 @@ struct MeetingView: View {
                 Circle()
                     .fill(controller.isRunning ? (controller.isPaused ? Brand.warn : Brand.danger) : Brand.muted.opacity(0.4))
                     .frame(width: 9, height: 9)
-                Text(controller.status).font(.caption).foregroundStyle(Brand.muted)
+                Text(controller.status).font(Brand.caption).foregroundStyle(Brand.muted)
                 if controller.isRunning {
                     // Per-stream capture health. Without this a stalled stream is
                     // indistinguishable from a room where nobody is talking.
@@ -67,7 +67,7 @@ struct MeetingView: View {
             .padding(12)
             if let banner = controller.banner {
                 Text(banner)
-                    .font(.caption.bold())
+                    .font(Brand.caption.bold())
                     .foregroundStyle(Brand.onAccent)
                     .frame(maxWidth: .infinity)
                     .padding(6)
@@ -96,7 +96,7 @@ struct MeetingView: View {
                 Spacer()
                 VStack(spacing: 8) {
                     Image(systemName: !screenRecOK || controller.needsScreenRec ? "exclamationmark.shield" : "person.2.wave.2")
-                        .font(.system(size: 36)).foregroundStyle(!screenRecOK || controller.needsScreenRec ? Brand.warn : Brand.muted)
+                        .font(Brand.serif(36)).foregroundStyle(!screenRecOK || controller.needsScreenRec ? Brand.warn : Brand.muted)
                     if !screenRecOK || controller.needsScreenRec {
                         Text("Meetings need Screen Recording permission (that's how macOS exposes system audio). Click below — that adds OpenWispr to the list — then switch it ON and relaunch. A leftover \"Whispr\" entry from the old app can be removed.")
                             .foregroundStyle(Brand.muted).multilineTextAlignment(.center)
@@ -105,12 +105,12 @@ struct MeetingView: View {
                             NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!)
                         }
                         Button("I've enabled it — re-check") { screenRecOK = CGPreflightScreenCaptureAccess() }
-                            .buttonStyle(.plain).font(.caption).foregroundStyle(Brand.muted)
+                            .buttonStyle(.plain).font(Brand.caption).foregroundStyle(Brand.muted)
                     } else {
                         Text("Start recording to capture your mic (You) and the other side's audio — remote voices are separated into Speaker A/B after you stop.")
                             .foregroundStyle(Brand.muted).multilineTextAlignment(.center)
                         Text("Transcript checkpoints to Documents/OpenWispr after every line. First meeting downloads the speaker model (~100 MB) once.")
-                            .font(.caption).foregroundStyle(.tertiary)
+                            .font(Brand.caption).foregroundStyle(Brand.muted)
                     }
                 }
                 .padding()
@@ -118,19 +118,12 @@ struct MeetingView: View {
             } else {
                 ScrollViewReader { proxy in
                     List(controller.lines) { line in
-                        HStack(alignment: .top, spacing: 8) {
-                            Text(MeetingController.mmss(line.start))
-                                .font(.system(size: 11, design: .monospaced)).foregroundStyle(.tertiary)
-                                .frame(width: 38, alignment: .trailing)
-                            Text(line.speaker)
-                                .font(.caption.bold())
-                                .foregroundStyle(line.speaker == "You" ? Brand.coral : Brand.warn)
-                                .frame(width: 70, alignment: .trailing)
-                            Text(line.text)
-                        }
-                        .id(line.id)
-                        .padding(.vertical, 2)
+                        TranscriptLine(line: line)
+                            .id(line.id)
+                            .listRowBackground(Brand.bg)
                     }
+                    .scrollContentBackground(.hidden)
+                    .background(Brand.bg)
                     .onChange(of: controller.lines.count) { _, _ in
                         if let last = controller.lines.last { proxy.scrollTo(last.id) }
                     }
@@ -138,15 +131,27 @@ struct MeetingView: View {
             }
         }
         .frame(minWidth: 560, minHeight: 400)
+        .background(Brand.bg)
         .onAppear { screenRecOK = CGPreflightScreenCaptureAccess() }
-        .sheet(isPresented: $controller.showRenameSheet) { renameSheet }
+        .sheet(isPresented: Binding(
+            get: { controller.showRenameSheet && !controller.isRunning },
+            set: { controller.showRenameSheet = $0 }
+        )) { renameSheet }
+        .onAppear { controller.showRenameSheet = false } // only a meeting that just ended asks; opening an old one never does
     }
 
     private func statsBlock(_ st: MeetingStats) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ForEach(st.speakers.filter { $0.talkSeconds > 0 }, id: \.name) { sp in
+        VStack(alignment: .leading, spacing: Brand.s12) {
+            HStack(spacing: Brand.s12) {
+                StatTile(value: MeetingController.mmss(st.duration), label: "duration")
+                StatTile(value: String(format: "%.1f", st.questionsPerHour), label: "questions/hr")
+                StatTile(value: String(format: "%.1f", st.fillersPerMinute), label: "fillers/min")
+                StatTile(value: "\(st.interruptions)", label: "interruptions")
+            }
+            .frame(height: 78)
+            ForEach(st.speakers.filter { $0.talkSeconds > 0 }.sorted { $0.talkSeconds > $1.talkSeconds }, id: \.name) { sp in
                 HStack(spacing: 10) {
-                    Text(sp.name).font(.system(size: 12)).foregroundStyle(Brand.text)
+                    Text(sp.name).font(Brand.body).foregroundStyle(Brand.text)
                         .frame(width: 90, alignment: .leading).lineLimit(1)
                     GeometryReader { g in
                         RoundedRectangle(cornerRadius: 4).fill(Brand.coral.opacity(0.85))
@@ -159,34 +164,21 @@ struct MeetingView: View {
                         .font(Brand.mono(10)).foregroundStyle(Brand.muted)
                 }
             }
-            HStack(spacing: 18) {
-                stat(MeetingController.mmss(st.duration), "duration")
-                stat(String(format: "%.1f", st.questionsPerHour), "questions/hr")
-                stat(String(format: "%.1f", st.fillersPerMinute), "fillers/min")
-                stat("\(st.interruptions)", "interruptions")
-            }
         }
-        .padding(12)
+        .padding(Brand.s12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Brand.surface)
-    }
-
-    private func stat(_ v: String, _ t: String) -> some View {
-        HStack(spacing: 5) {
-            Text(v).font(.system(size: 13, weight: .semibold, design: .monospaced)).foregroundStyle(Brand.text)
-            Text(t).font(.system(size: 11)).foregroundStyle(Brand.muted)
-        }
+        .background(Brand.bg)
     }
 
     /// Post-meeting labeling: name each detected speaker (ck's flow).
     private var renameSheet: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Label the speakers").font(.title3.bold())
+            Text("Label the speakers").font(Brand.title).foregroundStyle(Brand.text)
             Text("Type real names — the transcript and the saved file update everywhere.")
-                .font(.caption).foregroundStyle(Brand.muted)
+                .font(Brand.caption).foregroundStyle(Brand.muted)
             ForEach(controller.distinctSpeakers, id: \.self) { s in
                 HStack {
-                    Text(s).font(.system(size: 12, design: .monospaced))
+                    Text(s).font(Brand.body)
                         .frame(width: 90, alignment: .trailing).foregroundStyle(Brand.muted)
                     TextField(s == "You" ? "your name (optional)" : "e.g. Priya", text: Binding(
                         get: { renames[s] ?? "" },
@@ -207,8 +199,9 @@ struct MeetingView: View {
                 .disabled(renames.values.allSatisfy { $0.trimmingCharacters(in: .whitespaces).isEmpty })
             }
         }
-        .padding(22)
+        .padding(Brand.s24)
         .frame(width: 380)
+        .background(Brand.bg)
     }
 
     private func export() {
@@ -221,3 +214,19 @@ struct MeetingView: View {
     }
 }
 
+/// One transcript line: mono timestamp at muted, speaker in body weight with the accent, then text.
+private struct TranscriptLine: View {
+    let line: MeetingLine
+    var body: some View {
+        HStack(alignment: .top, spacing: Brand.s8) {
+            Text(MeetingController.mmss(line.start))
+                .font(Brand.mono(11)).foregroundStyle(Brand.muted)
+                .frame(width: 44, alignment: .trailing)
+            Text(line.speaker)
+                .font(Brand.body).foregroundStyle(line.speaker == "You" ? Brand.coral : Brand.info)
+                .frame(width: 70, alignment: .trailing)
+            Text(line.text).font(Brand.body).foregroundStyle(Brand.text)
+        }
+        .padding(.vertical, 2)
+    }
+}

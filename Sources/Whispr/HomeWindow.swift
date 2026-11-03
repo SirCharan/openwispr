@@ -78,55 +78,79 @@ struct HomeView: View {
 
     // MARK: - Sidebar
 
+    private static let groups: [(String, [HomePane])] = [
+        ("Capture", [.dictations, .meetings, .importFile]),
+        ("Learn", [.insights]),
+        ("Personalize", [.dictionary, .snippets, .apps]),
+        ("System", [.models, .ai, .settings, .about]),
+    ]
+
+    private var statusColor: Color {
+        state.isRecording ? Brand.danger : (state.status.hasPrefix("ready") ? Brand.ok : Brand.muted)
+    }
+
     private var sidebar: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: Brand.s4) {
             HStack(spacing: 0) {
                 Text("O").font(Brand.serif(24)).foregroundStyle(Brand.coral) + Text("penWispr").font(Brand.serif(24)).foregroundStyle(Brand.text)
             }
             .padding(.bottom, 2)
             Text("Hi, \(NSFullUserName().components(separatedBy: " ").first ?? NSFullUserName())")
-                .font(.caption).foregroundStyle(Brand.muted)
-                .padding(.bottom, 14)
+                .font(Brand.caption).foregroundStyle(Brand.muted)
+                .padding(.bottom, Brand.s8)
 
-            ForEach(HomePane.allCases) { p in
-                Button {
-                    state.pane = p
-                } label: {
-                    HStack(spacing: 10) {
-                        Image(systemName: p.icon).frame(width: 18)
-                        Text(p.rawValue)
-                        Spacer()
+            ScrollView {
+                VStack(alignment: .leading, spacing: Brand.s4) {
+                    ForEach(Self.groups, id: \.0) { title, panes in
+                        Text(title).font(Brand.serif(13)).foregroundStyle(Brand.muted)
+                            .padding(.top, Brand.s12).padding(.horizontal, 10)
+                        ForEach(panes) { p in
+                            sidebarRow(p)
+                            // Sits directly under the row it points at, so no overlay anchoring is needed.
+                            if p == .snippets, showSnippetTip {
+                                SnippetTip(
+                                    onOpen: { state.pane = .snippets; dismissSnippetTip() },
+                                    onDismiss: dismissSnippetTip
+                                )
+                            }
+                        }
                     }
-                    .font(.system(size: 13.5, weight: pane == p ? .semibold : .regular))
-                    .foregroundStyle(pane == p ? Brand.text : Brand.muted)
-                    .padding(.vertical, 8).padding(.horizontal, 10)
-                    .background(RoundedRectangle(cornerRadius: 8).fill(pane == p ? Brand.coralSoft : .clear))
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(p.rawValue)
-                .accessibilityIdentifier("sidebar: \(p.rawValue)")
-
-                // Sits directly under the row it points at, so no overlay anchoring is needed.
-                if p == .snippets, showSnippetTip {
-                    SnippetTip(
-                        onOpen: { state.pane = .snippets; dismissSnippetTip() },
-                        onDismiss: dismissSnippetTip
-                    )
                 }
             }
+            .scrollIndicators(.hidden)
 
-            Spacer()
-
-            HStack(spacing: 8) {
-                Circle()
-                    .fill(state.isRecording ? Brand.danger : (state.status.hasPrefix("ready") ? Brand.ok : Brand.muted))
-                    .frame(width: 8, height: 8)
-                Text(state.status).font(.caption2).foregroundStyle(Brand.muted).lineLimit(2)
+            HStack(spacing: Brand.s8) {
+                Circle().fill(statusColor).frame(width: 8, height: 8)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(ModelManager().selectedModel).font(Brand.caption).foregroundStyle(Brand.text).lineLimit(1)
+                    Text(state.status).font(Brand.caption).foregroundStyle(Brand.muted).lineLimit(2)
+                }
             }
-            .padding(.top, 10)
+            .padding(.top, Brand.s8)
+            .accessibilityElement(children: .combine)
         }
-        .padding(16)
+        .padding(Brand.s16)
         .frame(width: 230)
+    }
+
+    private func sidebarRow(_ p: HomePane) -> some View {
+        Button {
+            state.pane = p
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: p.icon).frame(width: 18)
+                Text(p.rawValue)
+                Spacer()
+            }
+            .font(.system(size: 13.5, weight: pane == p ? .semibold : .regular))
+            .foregroundStyle(pane == p ? Brand.text : Brand.muted)
+            .padding(.vertical, 7).padding(.horizontal, 10)
+            .background(RoundedRectangle(cornerRadius: Brand.rMd - 2).fill(pane == p ? Brand.coralSoft : .clear))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(p.rawValue)
+        .accessibilityIdentifier("sidebar: \(p.rawValue)")
     }
 
     // MARK: - Detail
@@ -161,7 +185,7 @@ private struct SnippetTip: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .top, spacing: 6) {
                 Text("Say “add my email” while dictating and your address pastes itself.")
-                    .font(.caption)
+                    .font(Brand.caption)
                     .foregroundStyle(Brand.text)
                     .fixedSize(horizontal: false, vertical: true)
                 Button(action: onDismiss) {
@@ -191,15 +215,16 @@ private struct DictationsPane: View {
     @ObservedObject var state: AppState
     @Binding var search: String
     @State private var entries: [HistoryEntry] = []
+    @State private var confirmClear = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: Brand.s16) {
             if let err = state.modelError {
                 HStack(spacing: 10) {
                     Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Brand.coral)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Speech model didn't load").font(.system(size: 13, weight: .semibold)).foregroundStyle(Brand.text)
-                        Text(err).font(.caption).foregroundStyle(Brand.muted).lineLimit(2)
+                        Text(err).font(Brand.caption).foregroundStyle(Brand.muted).lineLimit(2)
                     }
                     Spacer()
                     Button("Reload") { NotificationCenter.default.post(name: .whisprReloadModel, object: nil) }
@@ -210,32 +235,39 @@ private struct DictationsPane: View {
                 .overlay(RoundedRectangle(cornerRadius: 10).stroke(Brand.coral.opacity(0.4)))
             }
             statsRow
-            HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass").foregroundStyle(Brand.muted).font(.system(size: 12))
-                TextField("Search transcripts…", text: $search).textFieldStyle(.plain).font(.system(size: 13))
+            HStack(spacing: Brand.s8) {
+                Image(systemName: "magnifyingglass").foregroundStyle(Brand.muted).font(Brand.body)
+                TextField("Search transcripts", text: $search).textFieldStyle(.plain).font(Brand.body)
             }
-            .padding(8)
-            .background(RoundedRectangle(cornerRadius: 8).fill(Brand.surface))
-            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Brand.line))
-            HStack(spacing: 8) {
-                Text("Hold").foregroundStyle(Brand.muted)
-                Text(AppController.hotkeyHint).bold().foregroundStyle(Brand.coral)
-                Text("anywhere · speak · release — your words paste at the cursor.").foregroundStyle(Brand.muted)
+            .padding(Brand.s8)
+            .background(RoundedRectangle(cornerRadius: Brand.rSm + 2).fill(Brand.surface))
+            .overlay(RoundedRectangle(cornerRadius: Brand.rSm + 2).stroke(Brand.line))
+            HStack(spacing: Brand.s8) {
+                Text("Hold \(AppController.hotkeyHint) anywhere, speak, release. Your words paste at the cursor.")
+                    .font(Brand.caption).foregroundStyle(Brand.muted)
                 Spacer()
                 if !entries.isEmpty {
-                    Button("Clear history") { HistoryStore.clear(); refresh() }
-                        .buttonStyle(.plain).font(.caption).foregroundStyle(Brand.muted)
+                    Text(entries.count >= HistoryStore.cap ? "Last \(HistoryStore.cap)" : "Last \(entries.count)")
+                        .font(Brand.caption).foregroundStyle(Brand.muted)
+                    Menu {
+                        Button("Clear history…", role: .destructive) { confirmClear = true }
+                    } label: {
+                        Image(systemName: "ellipsis.circle").foregroundStyle(Brand.muted)
+                    }
+                    .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                    .accessibilityLabel("More")
                 }
             }
-            .font(.system(size: 13))
-            Text(entries.count >= HistoryStore.cap ? "Last \(HistoryStore.cap) dictations" : "Last \(entries.count) dictations")
-                .font(.caption.bold()).foregroundStyle(Brand.muted)
             feed
         }
         .padding(22)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .onAppear { refresh() }
         .onChange(of: state.status) { _, _ in refresh() }
+        .confirmationDialog("Clear all dictation history?", isPresented: $confirmClear) {
+            Button("Clear history", role: .destructive) { HistoryStore.clear(); refresh() }
+            Button("Cancel", role: .cancel) {}
+        } message: { Text("This removes every saved transcript. Your stats stay.") }
     }
 
     private func refresh() { entries = HistoryStore.load() }
@@ -246,44 +278,39 @@ private struct DictationsPane: View {
 
     private var statsRow: some View {
         let s = Stats.overview()
-        return HStack(spacing: 12) {
-            statCard("flame.fill", "\(s.streakDays)", "day streak")
-            statCard("textformat", format(s.lifetimeWords), "words, all time")
-            statCard("mic.fill", "\(s.lifetimeDictations)", "dictations")
-            statCard("speedometer", s.avgWPM > 0 ? "\(s.avgWPM)" : "—", "avg wpm")
-            statCard("person.2.fill", "\(s.meetingsCount)", "meetings")
+        return HStack(spacing: Brand.s12) {
+            StatTile(value: "\(s.streakDays)", label: "day streak")
+            StatTile(value: format(s.lifetimeWords), label: "words, all time")
+            StatTile(value: "\(s.lifetimeDictations)", label: "dictations")
+            StatTile(value: s.avgWPM > 0 ? "\(s.avgWPM)" : "—", label: "avg wpm")
+            StatTile(value: "\(s.meetingsCount)", label: "meetings")
         }
+        .frame(height: 78)
     }
 
     private func format(_ n: Int) -> String {
         n >= 1000 ? String(format: "%.1fk", Double(n) / 1000) : "\(n)"
     }
 
-    private func statCard(_ icon: String, _ value: String, _ label: String) -> some View {
-        VStack(spacing: 6) {
-            Image(systemName: icon).foregroundStyle(Brand.coral).font(.system(size: 15))
-            Text(value).font(Brand.serif(26)).foregroundStyle(Brand.text)
-            Text(label).font(.caption).foregroundStyle(Brand.muted)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 16)
-        .background(RoundedRectangle(cornerRadius: 12).fill(Brand.surface))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Brand.line))
-    }
-
     private var feed: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 8, pinnedViews: []) {
                 if filtered.isEmpty {
-                    Text(search.isEmpty ? "Nothing yet — hold \(AppController.hotkeyHint) and say something."
-                                        : "No transcripts match “\(search)”.")
-                        .font(.callout).foregroundStyle(Brand.muted).padding(.top, 30)
-                        .frame(maxWidth: .infinity)
+                    VStack(spacing: Brand.s4) {
+                        Text(search.isEmpty ? "Nothing dictated yet. Tap \(AppController.hotkeyHint) and talk."
+                                            : "No dictations match \u{2018}\(search)\u{2019}")
+                            .font(Brand.title).foregroundStyle(Brand.text)
+                        if search.isEmpty {
+                            Text("Your transcripts show up here, newest first.")
+                                .font(Brand.body).foregroundStyle(Brand.muted)
+                        }
+                    }
+                    .padding(.top, Brand.s32).frame(maxWidth: .infinity)
                 } else {
                     ForEach(groups, id: \.0) { title, items in
                         Text(title.uppercased())
-                            .font(.caption.bold()).foregroundStyle(Brand.muted)
-                            .padding(.top, 10)
+                            .font(Brand.caption).foregroundStyle(Brand.muted)
+                            .padding(.top, Brand.s8)
                         ForEach(items) { e in row(e) }
                     }
                 }
@@ -400,7 +427,7 @@ private struct ModelsPane: View {
 
     var body: some View {
         Form {
-            Section("Whisper model") {
+            PSection("Whisper model") {
                 Picker("Model", selection: $model) {
                     ForEach(ModelManager.available, id: \.self) { Text($0).tag($0) }
                 }
@@ -408,11 +435,11 @@ private struct ModelsPane: View {
                     NotificationCenter.default.post(name: .whisprModelChanged, object: new)
                 }
                 Text("Switching downloads the model if needed, then reloads. Turbo = best accuracy; tiny/base = fastest.")
-                    .font(.caption).foregroundStyle(Brand.muted)
+                    .font(Brand.caption).foregroundStyle(Brand.muted)
                 Text("large-v3 is the full model turbo was distilled from. It is slower and a bigger download; whether it transcribes your language better is worth testing rather than assuming.")
-                    .font(.caption).foregroundStyle(Brand.muted)
+                    .font(Brand.caption).foregroundStyle(Brand.muted)
             }
-            Section("Language") {
+            PSection("Language") {
                 Picker("Spoken language", selection: $language) {
                     ForEach(Languages.list, id: \.code) { lang in Text(lang.name).tag(lang.code ?? "auto") }
                 }
@@ -422,12 +449,10 @@ private struct ModelsPane: View {
                     Text("English translation").tag("translate")
                 }
                 Text("Speak Hindi (or any language) and type it in Roman letters, or let Whisper translate to English. Applies to dictation and meetings. Note: English translation needs a non-turbo model — pick \"medium\" for the best Hindi→English quality; the turbo model transcribes only.")
-                    .font(.caption).foregroundStyle(Brand.muted)
+                    .font(Brand.caption).foregroundStyle(Brand.muted)
             }
         }
-        .formStyle(.grouped)
-        .scrollContentBackground(.hidden)
-        .background(Brand.bg)
+        .paperForm()
     }
 }
 
@@ -450,7 +475,7 @@ private struct AboutPane: View {
             Text("OpenWispr").font(Brand.serif(34)).foregroundStyle(Brand.text)
             Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev") — local voice dictation & meeting transcription")
                 .foregroundStyle(Brand.muted)
-            Text("100% on-device via WhisperKit · MIT licensed").font(.caption).foregroundStyle(Brand.muted)
+            Text("100% on-device via WhisperKit · MIT licensed").font(Brand.caption).foregroundStyle(Brand.muted)
             HStack(spacing: 16) {
                 Link("Website", destination: URL(string: "https://whispr-black-chi.vercel.app")!)
                 Link("GitHub", destination: URL(string: "https://github.com/SirCharan/whispr")!)

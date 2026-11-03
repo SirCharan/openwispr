@@ -46,36 +46,37 @@ struct FileImportView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             case .done(let text):
                 ScrollView {
-                    Text(text).textSelection(.enabled)
+                    Text(text).font(Brand.body).foregroundStyle(Brand.text).textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading).padding(4)
                 }
                 HStack {
-                    Button("Copy") {
+                    PaperButton(title: "Copy", role: .primary) {
                         NSPasteboard.general.clearContents()
                         NSPasteboard.general.setString(text, forType: .string)
                     }
-                    Button("Transcribe another…") { model.state = .idle }
+                    PaperButton(title: "Transcribe another", role: .secondary) { model.state = .idle }
                 }
             case .failed(let msg):
                 VStack(spacing: 8) {
-                    Image(systemName: "exclamationmark.triangle").font(.system(size: 30)).foregroundStyle(Brand.warn)
+                    Image(systemName: "exclamationmark.triangle").font(Brand.serif(30)).foregroundStyle(Brand.warn)
                     Text(msg).foregroundStyle(Brand.muted).multilineTextAlignment(.center)
-                    Button("Try again") { model.state = .idle }
+                    PaperButton(title: "Try again", role: .secondary) { model.state = .idle }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .padding(16)
         .frame(minWidth: 460, minHeight: 320)
+        .background(Brand.bg)
     }
 
     private var dropZone: some View {
         VStack(spacing: 12) {
-            Image(systemName: "waveform.badge.plus").font(.system(size: 40)).foregroundStyle(.tint)
-            Text("Drop an audio file here").font(.title3)
-            Text("mp3 · m4a · wav · mp4 · flac — transcribed on-device, saved to History")
-                .font(.caption).foregroundStyle(Brand.muted)
-            Button("Choose file…") { openPanel() }.keyboardShortcut(.defaultAction)
+            Image(systemName: "waveform.badge.plus").font(Brand.serif(40)).foregroundStyle(Brand.coral)
+            Text("Drop an audio file here").font(Brand.title).foregroundStyle(Brand.text)
+            Text("mp3, m4a, wav, mp4 or flac. Transcribed on-device and saved to History.")
+                .font(Brand.caption).foregroundStyle(Brand.muted)
+            PaperButton(title: "Choose file", role: .primary) { openPanel() }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(

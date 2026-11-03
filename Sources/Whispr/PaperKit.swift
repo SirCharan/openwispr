@@ -73,3 +73,24 @@ struct PaperButton: View {
         }
     }
 }
+
+/// Form section on Paper Studio: serif heading, surface rows.
+struct PSection<Content: View>: View {
+    let title: String
+    @ViewBuilder var content: Content
+    init(_ title: String, @ViewBuilder content: () -> Content) { self.title = title; self.content = content() }
+    var body: some View {
+        Section {
+            Group { content }.listRowBackground(Brand.surface)
+        } header: {
+            Text(title).font(Brand.title).foregroundStyle(Brand.text).textCase(nil)
+        }
+    }
+}
+
+extension View {
+    /// Grouped form with no system grey/white surfaces.
+    func paperForm() -> some View {
+        self.formStyle(.grouped).scrollContentBackground(.hidden).background(Brand.bg)
+    }
+}
