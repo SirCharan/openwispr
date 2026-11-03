@@ -3,14 +3,14 @@ import SwiftUI
 /// Insights: WPM gauge, fixes, lifetime words + time saved, per-app usage, streak heatmap, words/day.
 /// Everything here is derived from real local data (Stats aggregates) — no invented ranks or percentiles.
 struct InsightsPane: View {
-    @State private var entries: [HistoryEntry] = []
     @State private var daily: [String: Int] = [:]
     @State private var apps: [(name: String, words: Int)] = []
     @State private var meetings: [MeetingStats] = []
 
-    private var wpm: Int { Stats.avgWPM(entries: entries) }
-    private var words: Int { max(Stats.lifetimeWords, entries.reduce(0) { $0 + $1.words }) }
-    private var savedHours: Double { Stats.timeSavedMinutes(words: words, wpm: wpm) / 60 }
+    @State private var overview = Stats.overview()
+    private var wpm: Int { overview.avgWPM }
+    private var words: Int { overview.lifetimeWords }
+    private var savedHours: Double { overview.hoursSaved }
 
     var body: some View {
         ScrollView {
@@ -35,7 +35,7 @@ struct InsightsPane: View {
     }
 
     private func load() {
-        entries = HistoryStore.load()
+        overview = Stats.overview()
         daily = Stats.dailyWords
         meetings = MeetingStatsStore.loadAll()
         apps = Stats.appWords
@@ -104,7 +104,14 @@ struct InsightsPane: View {
         let mine = meetings.compactMap { m in m.speakers.first { $0.name == m.you } }
         let share = mine.isEmpty ? 0 : mine.map(\.sharePct).reduce(0, +) / Double(mine.count)
         return card {
-            label("meetings")
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("\(overview.meetingsCount)").font(.system(size: 34, weight: .bold, design: .monospaced)).foregroundStyle(Brand.text)
+                label("meetings")
+            }
+            if overview.meetingsWithStats < overview.meetingsCount {
+                Text("stats for \(overview.meetingsWithStats) of \(overview.meetingsCount)")
+                    .font(.system(size: 11)).foregroundStyle(Brand.muted)
+            }
             if meetings.isEmpty {
                 Text("No meeting stats yet — they appear after your next recorded meeting.")
                     .font(.system(size: 12)).foregroundStyle(Brand.muted).padding(.top, 4)
@@ -164,7 +171,7 @@ struct InsightsPane: View {
         let end = cal.date(byAdding: .day, value: endOffset, to: today) ?? today
         return card {
             HStack {
-                label("\(Stats.streak(entries: entries)) day streak")
+                label("\(overview.streakDays) day streak")
                 Spacer()
                 Text("longest \(Stats.longestStreak(map: daily))")
                     .font(.system(size: 10, design: .monospaced)).foregroundStyle(Brand.muted)

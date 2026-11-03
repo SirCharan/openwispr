@@ -228,6 +228,8 @@ private struct DictationsPane: View {
                 }
             }
             .font(.system(size: 13))
+            Text(entries.count >= HistoryStore.cap ? "Last \(HistoryStore.cap) dictations" : "Last \(entries.count) dictations")
+                .font(.caption.bold()).foregroundStyle(Brand.muted)
             feed
         }
         .padding(22)
@@ -243,12 +245,13 @@ private struct DictationsPane: View {
     }
 
     private var statsRow: some View {
-        let s = Stats.summary(entries: entries)
+        let s = Stats.overview()
         return HStack(spacing: 12) {
             statCard("flame.fill", "\(s.streakDays)", "day streak")
-            statCard("textformat", format(s.totalWords), "words dictated")
-            statCard("speedometer", s.avgWPM > 0 ? "\(s.avgWPM)" : "—", "avg WPM")
-            statCard("person.2.fill", "\(s.meetings)", "meetings")
+            statCard("textformat", format(s.lifetimeWords), "words, all time")
+            statCard("mic.fill", "\(s.lifetimeDictations)", "dictations")
+            statCard("speedometer", s.avgWPM > 0 ? "\(s.avgWPM)" : "—", "avg wpm")
+            statCard("person.2.fill", "\(s.meetingsCount)", "meetings")
         }
     }
 

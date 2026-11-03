@@ -93,6 +93,13 @@ enum MeetingStatsStore {
         try? enc.encode(s).write(to: url(for: transcript), options: .atomic)
     }
 
+    /// Number of `*.stats.json` files (meetings that have stats, vs `meetingsCount`).
+    static func fileCount() -> Int {
+        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("OpenWispr")
+        let files = (try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil)) ?? []
+        return files.filter { $0.lastPathComponent.hasSuffix(".stats.json") }.count
+    }
+
     static func loadAll() -> [MeetingStats] {
         let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("OpenWispr")
         let dec = JSONDecoder()

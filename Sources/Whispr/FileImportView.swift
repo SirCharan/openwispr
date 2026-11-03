@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import AVFoundation
 import UniformTypeIdentifiers
 
 @MainActor
@@ -16,7 +17,12 @@ final class FileImportModel: ObservableObject {
             do {
                 let raw = try await transcriber.transcribeFile(url.path, language: Settings.languageCode)
                 let text = TextProcessor.process(raw, options: Settings.textOptions)
-                if !text.isEmpty { HistoryStore.add(text) }
+                if !text.isEmpty {
+                    HistoryStore.add(text)
+                    let secs = AVURLAsset(url: url).duration.seconds
+                    Stats.record(words: text.split(separator: " ").count,
+                                 seconds: secs.isFinite && secs > 0 ? secs : 0, appBundleID: nil)
+                }
                 state = .done(text.isEmpty ? "(no speech found)" : text)
             } catch {
                 state = .failed(error.localizedDescription)

@@ -2,20 +2,52 @@ import Foundation
 
 /// Home-window stats derived from history (Muesli-style: streak · words · avg WPM · meetings).
 enum Stats {
-    struct Summary {
-        var streakDays: Int
-        var totalWords: Int
+    /// The one set of numbers both Dictations and Insights show. Everything is lifetime
+    /// (stats.json mirror); the 200-entry history list is never a source for a number.
+    struct Overview: Equatable {
+        var lifetimeWords: Int
+        var lifetimeDictations: Int
+        var lifetimeSeconds: Double
         var avgWPM: Int
-        var meetings: Int
+        var hoursSaved: Double
+        var streakDays: Int
+        var todayWords: Int
+        var meetingsCount: Int
+        var meetingsWithStats: Int
     }
 
-    static func summary(entries: [HistoryEntry] = HistoryStore.load(), now: Date = Date()) -> Summary {
-        Summary(
-            streakDays: streak(entries: entries, now: now),
-            totalWords: entries.reduce(0) { $0 + $1.words },
-            avgWPM: avgWPM(entries: entries),
-            meetings: UserDefaults.standard.integer(forKey: "meetingsCount")
-        )
+    static func overview(now: Date = Date(), statsFiles: Int = MeetingStatsStore.fileCount()) -> Overview {
+        let words = lifetimeWords, secs = lifetimeSeconds
+        let wpm = secs > 1 ? Int((Double(words) / (secs / 60)).rounded()) : 0
+        let day = dailyWords
+        return Overview(
+            lifetimeWords: words,
+            lifetimeDictations: lifetimeDictations,
+            lifetimeSeconds: secs,
+            avgWPM: wpm,
+            hoursSaved: timeSavedMinutes(words: words, wpm: wpm) / 60,
+            streakDays: streak(dailyMap: day, now: now),
+            todayWords: day[dayKey(now)] ?? 0,
+            meetingsCount: d.integer(forKey: "meetingsCount"),
+            meetingsWithStats: statsFiles)
+    }
+
+    /// Streak over the per-day word map (same rule as the entries version).
+    static func streak(dailyMap: [String: Int], now: Date = Date()) -> Int {
+        let cal = Calendar.current
+        let active = { (day: Date) in (dailyMap[dayKey(day)] ?? 0) > 0 }
+        var cursor = cal.startOfDay(for: now)
+        if !active(cursor) {
+            guard let y = cal.date(byAdding: .day, value: -1, to: cursor), active(y) else { return 0 }
+            cursor = y
+        }
+        var count = 0
+        while active(cursor) {
+            count += 1
+            guard let prev = cal.date(byAdding: .day, value: -1, to: cursor) else { break }
+            cursor = prev
+        }
+        return count
     }
 
     /// Consecutive days ending today (or yesterday, so an unused morning doesn't zero it) with ≥1 entry.
@@ -47,13 +79,14 @@ enum Stats {
     }
 
     static func recordMeeting() {
-        UserDefaults.standard.set(UserDefaults.standard.integer(forKey: "meetingsCount") + 1, forKey: "meetingsCount")
+        d.set(d.integer(forKey: "meetingsCount") + 1, forKey: "meetingsCount")
         persist()
     }
 
     // MARK: - Lifetime aggregates (survive the 200-entry history cap + "Clear history")
 
-    private static let d = UserDefaults.standard
+    nonisolated(unsafe) private static var d = UserDefaults.standard
+    nonisolated(unsafe) private static var mirrorToDisk = true   // selftest turns this off
     static var lifetimeWords: Int { d.integer(forKey: "lifetimeWords") }
     static var lifetimeSeconds: Double { d.double(forKey: "lifetimeSeconds") }
     static var lifetimeDictations: Int { d.integer(forKey: "lifetimeDictations") }
@@ -145,6 +178,7 @@ enum Stats {
     }
 
     private static func persist() {
+        guard mirrorToDisk else { return }
         if let data = try? JSONEncoder().encode(snapshot()) { try? data.write(to: fileURL, options: .atomic) }
     }
 
@@ -310,6 +344,37 @@ enum Stats {
             Fixtures.expectEqual(false, true, "snapshot round-trip encode/decode")
         }
 
+        overviewSelfTest(now: now)
+
         print("Stats.selfTest PASS (\(f.streak.count + f.avgWpm.count + f.timeSavedMinutes.count) cases)")
+    }
+
+    /// Three dictations + one meeting on a scratch suite; both panes read `overview()`.
+    private static func overviewSelfTest(now: Date) {
+        let suite = "openwispr.selftest.stats"
+        guard let scratch = UserDefaults(suiteName: suite) else {
+            Fixtures.expectEqual(false, true, "scratch defaults suite"); return
+        }
+        scratch.removePersistentDomain(forName: suite)
+        let (savedD, savedMirror) = (d, mirrorToDisk)
+        d = scratch; mirrorToDisk = false
+        defer { scratch.removePersistentDomain(forName: suite); d = savedD; mirrorToDisk = savedMirror }
+
+        record(words: 60, seconds: 30, appBundleID: nil, now: now)
+        record(words: 90, seconds: 30, appBundleID: "com.apple.Notes", now: now)
+        record(words: 30, seconds: 0, appBundleID: nil, now: now)   // file import: no duration
+        recordMeeting()
+        let o = overview(now: now, statsFiles: 0)
+        Fixtures.expectEqual(o.lifetimeWords, 180, "overview words")
+        Fixtures.expectEqual(o.lifetimeDictations, 3, "overview dictations")
+        Fixtures.expectClose(o.lifetimeSeconds, 60, "overview seconds")
+        Fixtures.expectEqual(o.avgWPM, 180, "overview avgWPM")   // 180 words / 1 min
+        Fixtures.expectClose(o.hoursSaved, timeSavedMinutes(words: 180, wpm: 180) / 60, "overview hoursSaved")
+        Fixtures.expectEqual(o.streakDays, 1, "overview streak")
+        Fixtures.expectEqual(o.todayWords, 180, "overview todayWords")
+        Fixtures.expectEqual(o.meetingsCount, 1, "overview meetingsCount")
+        Fixtures.expectEqual(o.meetingsWithStats, 0, "overview meetingsWithStats")
+        // Dictations cards and Insights both call overview(): identical struct, not two derivations.
+        Fixtures.expectEqual(overview(now: now, statsFiles: 0) == o, true, "panes share one overview")
     }
 }
