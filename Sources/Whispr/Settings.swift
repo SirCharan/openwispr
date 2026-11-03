@@ -106,6 +106,29 @@ enum Settings {
     }
 
     /// Bundle IDs of apps where Whispr dictation is disabled.
+    /// One-time (0.19): per-app lists used to hold display names; swap them for bundle IDs.
+    static func migratePerAppLists() {
+        let key = "perAppMigratedV19"
+        guard !UserDefaults.standard.bool(forKey: key) else { return }
+        defer { UserDefaults.standard.set(true, forKey: key) }
+        func needs(_ l: [String]) -> Bool { l.contains { !$0.contains(".") } }
+        guard needs(disabledApps) || needs(cleanupApps) else { return }
+        var byName: [String: String] = [:]
+        let fm = FileManager.default
+        for dir in ["/Applications", "/Applications/Utilities", "/System/Applications", NSHomeDirectory() + "/Applications"] {
+            for f in (try? fm.contentsOfDirectory(atPath: dir)) ?? [] where f.hasSuffix(".app") {
+                guard let info = NSDictionary(contentsOfFile: "\(dir)/\(f)/Contents/Info.plist"),
+                      let id = info["CFBundleIdentifier"] as? String else { continue }
+                byName[String(f.dropLast(4))] = id
+                if let n = info["CFBundleName"] as? String { byName[n] = id }
+            }
+        }
+        for a in AppMonitor.regularApps() { byName[a.name] = a.id }   // running apps win
+        func fix(_ l: [String]) -> [String] { l.map { $0.contains(".") ? $0 : (byName[$0] ?? $0) } }
+        disabledApps = fix(disabledApps)
+        cleanupApps = fix(cleanupApps)
+    }
+
     static var disabledApps: [String] {
         get { UserDefaults.standard.stringArray(forKey: "disabledApps") ?? [] }
         set { UserDefaults.standard.set(newValue, forKey: "disabledApps") }

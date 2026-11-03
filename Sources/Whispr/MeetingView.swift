@@ -111,7 +111,6 @@ struct MeetingView: View {
             get: { controller.showRenameSheet && !controller.isRunning && !viewingPast },
             set: { controller.showRenameSheet = $0 }
         )) { renameSheet }
-        .onAppear { controller.showRenameSheet = false } // only a meeting that just ended asks; opening an old one never does
     }
 
     private var toolbar: some View {
@@ -307,8 +306,12 @@ struct MeetingView: View {
         panel.nameFieldStringValue = "meeting-\(selected ?? String(ISO8601DateFormatter().string(from: Date()).prefix(10))).md"
         panel.allowedContentTypes = [.plainText]
         if panel.runModal() == .OK, let url = panel.url {
-            let md = viewingPast ? MeetingController.markdown(lines: pastLines) : controller.exportMarkdown()
-            try? md.write(to: url, atomically: true, encoding: .utf8)
+            if viewingPast, let stamp = selected {
+                try? FileManager.default.removeItem(at: url)   // NSSavePanel already confirmed overwrite
+                try? FileManager.default.copyItem(at: MeetingArchive.fileURL(stamp: stamp), to: url)
+            } else {
+                try? controller.exportMarkdown().write(to: url, atomically: true, encoding: .utf8)
+            }
         }
     }
 }

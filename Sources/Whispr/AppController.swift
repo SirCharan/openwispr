@@ -45,6 +45,7 @@ final class AppController {
         Log.app.notice("launch v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev", privacy: .public) onboarded=\(Settings.onboarded, privacy: .public) model=\(self.modelManager.selectedModel, privacy: .public)")
         Stats.syncOnLaunch() // restore aggregates from Application Support after a defaults wipe
         Self.migrateFromWhisprIfNeeded()
+        Settings.migratePerAppLists() // before any UI reads the per-app lists
         // A silence that outlived the last run (crash, force-quit) is undone here, before
         // anything else can decide the device was "already muted" and leave it that way.
         silencer.recoverAfterCrash()

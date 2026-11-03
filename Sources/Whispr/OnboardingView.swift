@@ -457,10 +457,10 @@ private struct PermissionsStep: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
             model.refreshAccessibility()
-            if model.micGranted { meter.start() }
+            if model.micGranted && !Snapshot.isRendering { meter.start() }
         }
         .onChange(of: model.micGranted) { _, granted in
-            if granted { meter.start() } else { meter.stop() }
+            if granted && !Snapshot.isRendering { meter.start() } else { meter.stop() }
         }
         .onDisappear { meter.stop() }
     }

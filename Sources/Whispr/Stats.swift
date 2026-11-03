@@ -18,7 +18,7 @@ enum Stats {
 
     static func overview(now: Date = Date(), statsFiles: Int = MeetingStatsStore.fileCount()) -> Overview {
         let words = lifetimeWords, secs = lifetimeSeconds
-        let wpm = secs > 1 ? Int((Double(words) / (secs / 60)).rounded()) : 0
+        let wpm = secs > 1 ? Int((Double(lifetimeTimedWords) / (secs / 60)).rounded()) : 0
         let day = dailyWords
         return Overview(
             lifetimeWords: words,
@@ -88,6 +88,8 @@ enum Stats {
     nonisolated(unsafe) private static var d = UserDefaults.standard
     nonisolated(unsafe) private static var mirrorToDisk = true   // selftest turns this off
     static var lifetimeWords: Int { d.integer(forKey: "lifetimeWords") }
+    /// Words from dictations that have a duration; file imports (no seconds) are excluded so WPM isn't inflated.
+    static var lifetimeTimedWords: Int { d.integer(forKey: "lifetimeTimedWords") }
     static var lifetimeSeconds: Double { d.double(forKey: "lifetimeSeconds") }
     static var lifetimeDictations: Int { d.integer(forKey: "lifetimeDictations") }
     static var fixesAccepted: Int { d.integer(forKey: "fixesAccepted") }
@@ -124,6 +126,7 @@ enum Stats {
         guard words > 0 else { return }
         d.set(lifetimeWords + words, forKey: "lifetimeWords")
         d.set(lifetimeSeconds + (seconds ?? 0), forKey: "lifetimeSeconds")
+        if let sec = seconds, sec > 0 { d.set(lifetimeTimedWords + words, forKey: "lifetimeTimedWords") }
         d.set(lifetimeDictations + 1, forKey: "lifetimeDictations")
         var day = dailyWords
         day[dayKey(now), default: 0] += words
@@ -146,6 +149,7 @@ enum Stats {
     struct Snapshot: Codable {
         var lifetimeWords: Int
         var lifetimeSeconds: Double
+        var lifetimeTimedWords: Int?
         var lifetimeDictations: Int
         var fixesAccepted: Int
         var meetingsCount: Int
@@ -162,7 +166,7 @@ enum Stats {
 
     static func snapshot() -> Snapshot {
         Snapshot(lifetimeWords: lifetimeWords, lifetimeSeconds: lifetimeSeconds,
-                 lifetimeDictations: lifetimeDictations, fixesAccepted: fixesAccepted,
+                 lifetimeTimedWords: lifetimeTimedWords, lifetimeDictations: lifetimeDictations, fixesAccepted: fixesAccepted,
                  meetingsCount: d.integer(forKey: "meetingsCount"),
                  dailyWords: dailyWords, appWords: appWords)
     }
@@ -170,6 +174,7 @@ enum Stats {
     static func apply(_ s: Snapshot) {
         d.set(s.lifetimeWords, forKey: "lifetimeWords")
         d.set(s.lifetimeSeconds, forKey: "lifetimeSeconds")
+        if let t = s.lifetimeTimedWords { d.set(t, forKey: "lifetimeTimedWords") }
         d.set(s.lifetimeDictations, forKey: "lifetimeDictations")
         d.set(s.fixesAccepted, forKey: "fixesAccepted")
         d.set(s.meetingsCount, forKey: "meetingsCount")
@@ -185,6 +190,7 @@ enum Stats {
     /// Fresh defaults + a mirror on disk → restore; otherwise export so existing users get a file immediately.
     /// Never overwrites non-empty defaults from the file.
     static func syncOnLaunch() {
+        defer { backfillTimedWords() }
         if d.object(forKey: "lifetimeWords") == nil,
            let data = try? Data(contentsOf: fileURL),
            let s = try? JSONDecoder().decode(Snapshot.self, from: data) {
@@ -192,6 +198,15 @@ enum Stats {
         } else if lifetimeWords > 0 {
             persist()
         }
+    }
+
+    /// One-time: before 0.19 there was no timed-word counter; start it at lifetimeWords.
+    static func backfillTimedWords() {
+        guard !d.bool(forKey: "timedWordsBackfilledV19") else { return }
+        if d.object(forKey: "lifetimeTimedWords") != nil { d.set(true, forKey: "timedWordsBackfilledV19"); return }
+        d.set(lifetimeWords, forKey: "lifetimeTimedWords")
+        d.set(true, forKey: "timedWordsBackfilledV19")
+        persist()
     }
 
     // MARK: - Derived (pure, self-tested)
@@ -368,8 +383,8 @@ enum Stats {
         Fixtures.expectEqual(o.lifetimeWords, 180, "overview words")
         Fixtures.expectEqual(o.lifetimeDictations, 3, "overview dictations")
         Fixtures.expectClose(o.lifetimeSeconds, 60, "overview seconds")
-        Fixtures.expectEqual(o.avgWPM, 180, "overview avgWPM")   // 180 words / 1 min
-        Fixtures.expectClose(o.hoursSaved, timeSavedMinutes(words: 180, wpm: 180) / 60, "overview hoursSaved")
+        Fixtures.expectEqual(o.avgWPM, 150, "overview avgWPM")   // 150 timed words / 1 min (import excluded)
+        Fixtures.expectClose(o.hoursSaved, timeSavedMinutes(words: 180, wpm: 150) / 60, "overview hoursSaved")
         Fixtures.expectEqual(o.streakDays, 1, "overview streak")
         Fixtures.expectEqual(o.todayWords, 180, "overview todayWords")
         Fixtures.expectEqual(o.meetingsCount, 1, "overview meetingsCount")

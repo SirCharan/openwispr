@@ -2,11 +2,15 @@ import AppKit
 import SwiftUI
 
 /// Headless UI renders for review: `Whispr --snap-panes <dir>`. Draws every Home pane, every
-/// onboarding step and the floating views in light and dark into PNGs. No mic, no screen
-/// capture, no user data written.
+/// onboarding step and the floating views in light and dark into PNGs. Panes render the real
+/// local data (history, stats, meetings); only the PNGs are written. The mic and screen capture
+/// are never started (`isRendering` keeps the onboarding level meter off).
 @MainActor
 enum Snapshot {
+    nonisolated(unsafe) static var isRendering = false
+
     static func run(dir: String) {
+        isRendering = true
         let out = URL(fileURLWithPath: dir, isDirectory: true)
         try? FileManager.default.createDirectory(at: out, withIntermediateDirectories: true)
         let app = NSApplication.shared

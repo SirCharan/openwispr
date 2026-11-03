@@ -215,6 +215,7 @@ private struct DictationsPane: View {
     @ObservedObject var state: AppState
     @Binding var search: String
     @State private var entries: [HistoryEntry] = []
+    @State private var overview = Stats.overview()
     @State private var confirmClear = false
 
     var body: some View {
@@ -270,14 +271,14 @@ private struct DictationsPane: View {
         } message: { Text("This removes every saved transcript. Your stats stay.") }
     }
 
-    private func refresh() { entries = HistoryStore.load() }
+    private func refresh() { entries = HistoryStore.load(); overview = Stats.overview() }
 
     private var filtered: [HistoryEntry] {
         search.isEmpty ? entries : entries.filter { $0.text.localizedCaseInsensitiveContains(search) }
     }
 
     private var statsRow: some View {
-        let s = Stats.overview()
+        let s = overview
         return HStack(spacing: Brand.s12) {
             StatTile(value: "\(s.streakDays)", label: "day streak")
             StatTile(value: format(s.lifetimeWords), label: "words, all time")

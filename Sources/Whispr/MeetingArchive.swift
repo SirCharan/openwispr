@@ -21,6 +21,19 @@ enum MeetingArchive {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("OpenWispr")
     }
 
+    static func fileURL(stamp: String, in dir: URL = directory) -> URL {
+        dir.appendingPathComponent("meeting-\(stamp).md")
+    }
+
+    /// Header only: the first few lines carry "Duration: m:ss · A · B", so list() never parses a transcript.
+    private static func header(of url: URL) -> Parsed {
+        guard let h = try? FileHandle(forReadingFrom: url) else { return Parsed() }
+        defer { try? h.close() }
+        let data = (try? h.read(upToCount: 1024)) ?? Data()
+        let text = String(decoding: data, as: UTF8.self)
+        return parse(text.split(separator: "\n", omittingEmptySubsequences: true).prefix(5).joined(separator: "\n"))
+    }
+
     static func date(fromStamp stamp: String) -> Date? {
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")
@@ -38,14 +51,14 @@ enum MeetingArchive {
             guard n.hasPrefix("meeting-"), n.hasSuffix(".md") else { return nil }
             let stamp = String(n.dropFirst("meeting-".count).dropLast(".md".count))
             guard let d = date(fromStamp: stamp) else { return nil }
-            let head = parse((try? String(contentsOf: url, encoding: .utf8)) ?? "")
+            let head = header(of: url)
             return Entry(stamp: stamp, date: d, duration: head.duration, speakers: head.speakers,
                          hasStats: names.contains("meeting-\(stamp).stats.json"))
         }.sorted { $0.date > $1.date }
     }
 
     static func load(stamp: String, in dir: URL = directory) -> (lines: [MeetingLine], stats: MeetingStats?)? {
-        let md = dir.appendingPathComponent("meeting-\(stamp).md")
+        let md = fileURL(stamp: stamp, in: dir)
         guard let text = try? String(contentsOf: md, encoding: .utf8) else { return nil }
         var lines = parse(text).lines
         if let base = date(fromStamp: stamp) {
