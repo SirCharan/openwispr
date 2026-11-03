@@ -1,4 +1,6 @@
 import Foundation
+import QuartzCore
+import FluidAudio
 
 struct MeetingLine: Identifiable, Codable {
     var id = UUID()
@@ -38,10 +40,6 @@ final class MeetingController: ObservableObject {
     private let diarizer = Diarizer()
     private var timer: Timer?
     private let minSamples = 3200        // ignore chunks under 0.2 s
-    private let minChunkSeconds = 6.0
-    private let maxChunkSeconds = 30.0
-    private let pauseWindow = 0.7
-    private let pauseRMS: Float = 0.004
     /// Speech floor applied to the loudest half-second of a chunk (not its mean).
     /// Read from Settings so a quiet room can be tuned without a rebuild — see
     /// `Settings.meetingSpeechFloor` for the measurements behind the default.
@@ -52,9 +50,19 @@ final class MeetingController: ObservableObject {
     /// Meeting cleanup keeps capitalization and spacing but never deletes words.
     static let meetingTextOptions = TextProcessor.Options(removeFillers: false, cleanUp: true)
 
-    // stream timelines (cumulative across pause/resume) + full system audio for stop-time diarization
-    private var micOffset = 0.0
-    private var sysOffset = 0.0
+    // One shared clock (pause excluded). Each stream's raw sample count is kept equal to clock
+    // time by zero-filling dropouts, so a sample index is a meeting timestamp on both streams.
+    private var clock = MeetingClock()
+    private var vadModel: VadManager?
+    private var micSegV: MeetingSegmenter?
+    private var sysSegV: MeetingSegmenter?
+    private var micRaw = 0
+    private var sysRaw = 0
+    private var tick = 0
+    private var pumpTask: Task<Void, Never>?
+    /// Dropouts longer than this are zero-filled so the timeline shows them as silence.
+    private let gapFillSeconds = 0.5
+    // full system audio for stop-time diarization
     private var fullSysAudio: [Float] = []
     // ponytail: full floats in RAM ≈ 230MB/hour — fine for normal meetings; stream-to-disk if ever needed
     private var meetingFile: URL?
@@ -105,6 +113,7 @@ final class MeetingController: ObservableObject {
                 await self.restartSystemAudio()
             }
         }
+        if vadModel == nil { vadModel = await MeetingSegmenter.loadVad() }
         do {
             try mic.start(voiceProcessing: true) // AEC: keep speaker playback out of "You"
             try await system.start()
@@ -121,7 +130,9 @@ final class MeetingController: ObservableObject {
         summary = nil
         savedTo = nil
         lines.removeAll()
-        micOffset = 0; sysOffset = 0
+        clock = MeetingClock()
+        micSegV = MeetingSegmenter(vad: vadModel); sysSegV = MeetingSegmenter(vad: vadModel)
+        micRaw = 0; sysRaw = 0
         fullSysAudio.removeAll()
         pending.removeAll()
         // fix the checkpoint file at start so every save hits the same path
@@ -138,12 +149,7 @@ final class MeetingController: ObservableObject {
         lastMicAppends = 0; lastSysAppends = 0
         micQuietTicks = 0; sysQuietTicks = 0
         sysRestartAttempts = 0; sysRestartCooldown = 0
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.checkHealth()
-                self?.checkRotation()
-            }
-        }
+        startTimer()
     }
 
     // MARK: - Raw audio retention
@@ -252,12 +258,9 @@ final class MeetingController: ObservableObject {
     func pause() async {
         guard isRunning, !isPaused else { return }
         isPaused = true
-        timer?.invalidate(); timer = nil
         status = "pausing…"
-        let micTail = mic.stop()
-        let sysTail = await system.stop()
-        enqueue(micTail, speaker: "You", stream: .mic)
-        enqueue(sysTail, speaker: "Others", stream: .system)
+        await finishStreams()
+        clock.pause()
         await flushPending()
         status = "paused"
     }
@@ -273,16 +276,12 @@ final class MeetingController: ObservableObject {
             return
         }
         isPaused = false
+        clock.resume()
         status = "recording"
         lastMicAppends = mic.diagnostics.appends
         lastSysAppends = system.diagnostics.appends
         micQuietTicks = 0; sysQuietTicks = 0
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.checkHealth()
-                self?.checkRotation()
-            }
-        }
+        startTimer()
     }
 
     func stop() async {
@@ -290,12 +289,7 @@ final class MeetingController: ObservableObject {
         isRunning = false // clear before awaits so a double-stop can't re-enter teardown
         timer?.invalidate(); timer = nil
         status = "finishing…"
-        if !isPaused {
-            let micTail = mic.stop()
-            let sysTail = await system.stop()
-            enqueue(micTail, speaker: "You", stream: .mic)
-            enqueue(sysTail, speaker: "Others", stream: .system)
-        }
+        if !isPaused { await finishStreams() }
         isPaused = false
         // Finish the backlog before closing up: this is where queued chunks used to vanish.
         if !pending.isEmpty { status = "transcribing the last \(pending.count) chunk(s)…" }
@@ -361,13 +355,62 @@ final class MeetingController: ObservableObject {
         }
     }
 
-    private func checkRotation() {
-        guard isRunning, !isPaused else { return }
-        rotateIfDue(label: "mic", buffered: mic.bufferedSeconds, tail: mic.tailRMS(pauseWindow)) {
-            self.enqueue(self.mic.drain(), speaker: "You", stream: .mic)
+    // MARK: - Capture pump (VAD segmentation on the shared clock)
+
+    private func startTimer() {
+        tick = 0
+        timer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.onTick() }
         }
-        rotateIfDue(label: "others", buffered: system.bufferedSeconds, tail: system.tailRMS(pauseWindow)) {
-            self.enqueue(self.system.drain(), speaker: "Others", stream: .system)
+    }
+
+    private func onTick() {
+        guard isRunning, !isPaused else { return }
+        tick += 1
+        if tick % 4 == 0 { checkHealth() }
+        guard pumpTask == nil else { return }
+        pumpTask = Task { @MainActor in
+            await feed(mic.drain(), stream: .mic)
+            await feed(system.drain(), stream: .system)
+            pumpTask = nil
+        }
+    }
+
+    /// Stop both streams and push everything left (tails plus the segmenters' open speech) to the queue.
+    private func finishStreams() async {
+        timer?.invalidate(); timer = nil
+        await pumpTask?.value
+        let micTail = mic.stop()
+        let sysTail = await system.stop()
+        await feed(micTail, stream: .mic)
+        await feed(sysTail, stream: .system)
+        for seg in micSegV?.flush() ?? [] { enqueue(seg, speaker: "You", stream: .mic) }
+        for seg in sysSegV?.flush() ?? [] { enqueue(seg, speaker: "Others", stream: .system) }
+    }
+
+    /// One drained slice: zero-fill any dropout so index == clock time, write the raw audio,
+    /// run VAD, queue finished speech segments.
+    private func feed(_ samples: [Float], stream: Stream) async {
+        guard !samples.isEmpty else { return }
+        let raw = stream == .mic ? micRaw : sysRaw
+        let now = clock.time(forHost: CACurrentMediaTime())
+        var data = samples
+        let gap = (now - Double(samples.count) / 16000) - Double(raw) / 16000
+        if gap > gapFillSeconds {
+            Log.audio.info("\(stream == .mic ? "mic" : "others", privacy: .public): \(gap, format: .fixed(precision: 1), privacy: .public)s dropout zero-filled")
+            data = [Float](repeating: 0, count: Int(gap * 16000)) + samples
+        }
+        let start = Double(raw) / 16000
+        switch stream {
+        case .mic:
+            micRaw += data.count; micWav?.append(data)
+        case .system:
+            sysRaw += data.count; sysWav?.append(data)
+            fullSysAudio.append(contentsOf: data) // kept for stop-time diarization
+        }
+        guard let seg = stream == .mic ? micSegV : sysSegV else { return }
+        for out in await seg.feed(data, start: start) {
+            enqueue(out, speaker: stream == .mic ? "You" : "Others", stream: stream)
         }
     }
 
@@ -375,6 +418,7 @@ final class MeetingController: ObservableObject {
 
     private struct PendingChunk {
         let samples: [Float]
+        let start: Double
         let speaker: String
         let stream: Stream
     }
@@ -384,9 +428,9 @@ final class MeetingController: ObservableObject {
     /// backlog grew for the rest of the meeting, chunks completed out of order, and everything
     /// still in flight at Stop was dropped — a 38-minute meeting produced 12 lines. One FIFO
     /// consumer instead: ordered, and drained to completion before the transcript is finished.
-    private func enqueue(_ samples: [Float], speaker: String, stream: Stream) {
-        guard !samples.isEmpty else { return }
-        pending.append(PendingChunk(samples: samples, speaker: speaker, stream: stream))
+    private func enqueue(_ seg: MeetingSegmenter.Segment, speaker: String, stream: Stream) {
+        guard !seg.samples.isEmpty else { return }
+        pending.append(PendingChunk(samples: seg.samples, start: seg.start, speaker: speaker, stream: stream))
         if pending.count > 8 {
             Log.audio.error("transcription backlog \(self.pending.count) chunks — inference is slower than capture")
         }
@@ -398,7 +442,7 @@ final class MeetingController: ObservableObject {
         drainTask = Task { @MainActor in
             while !pending.isEmpty {
                 let next = pending.removeFirst()
-                await ingest(next.samples, speaker: next.speaker, stream: next.stream)
+                await ingest(next.samples, start: next.start, speaker: next.speaker, stream: next.stream)
             }
             drainTask = nil
         }
@@ -455,34 +499,12 @@ final class MeetingController: ObservableObject {
         print("MeetingController.selfTest PASS")
     }
 
-    private func rotateIfDue(label: String, buffered: Double, tail: Float, rotate: () -> Void) {
-        guard buffered >= minChunkSeconds else { return }
-        let forced = buffered >= maxChunkSeconds
-        guard tail < pauseRMS || forced else { return }
-        Log.audio.info("""
-            rotate \(label, privacy: .public) buffered=\(buffered, format: .fixed(precision: 1), privacy: .public)s \
-            tailRMS=\(tail, format: .fixed(precision: 4), privacy: .public) \
-            reason=\(forced ? "maxDuration" : "pause", privacy: .public)
-            """)
-        rotate()
-    }
-
     // MARK: - Chunk ingestion (timeline-stamped)
 
     private enum Stream { case mic, system }
 
-    private func ingest(_ samples: [Float], speaker: String, stream: Stream) async {
+    private func ingest(_ samples: [Float], start: Double, speaker: String, stream: Stream) async {
         let duration = Double(samples.count) / 16000
-        let start: Double
-        switch stream {
-        case .mic:
-            start = micOffset; micOffset += duration
-            micWav?.append(samples)
-        case .system:
-            start = sysOffset; sysOffset += duration
-            fullSysAudio.append(contentsOf: samples) // kept for stop-time diarization
-            sysWav?.append(samples)
-        }
         let which = stream == .mic ? "mic" : "others"
         let meanRMS = ResamplingBuffer.rms(samples)
         let peakRMS = ResamplingBuffer.maxWindowRMS(samples)
