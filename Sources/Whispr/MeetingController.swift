@@ -91,6 +91,14 @@ final class MeetingController: ObservableObject {
     private var sysRestartAttempts = 0
     private var sysRestartCooldown = 0
 
+    // mic-dead watchdog: buffers arrive but carry no signal (VPIO + another app on the input)
+    private var micWatchdog = MicDeadWatchdog()
+    private var micWatchdogTripped = false
+    private var micDeadRestarts = 0
+    private var micLost = false
+    private var micVoiceProcessing = true
+    private let maxMicDeadRestarts = 2
+
     // ordered transcription queue
     private var pending: [PendingChunk] = []
     private var drainTask: Task<Void, Never>?
@@ -125,7 +133,9 @@ final class MeetingController: ObservableObject {
         }
         if vadModel == nil { vadModel = await MeetingSegmenter.loadVad() }
         do {
-            try mic.start(voiceProcessing: true) // AEC: keep speaker playback out of "You"
+            micVoiceProcessing = Settings.meetingMicVoiceProcessing
+            // AEC (default on): keep speaker playback out of "You"
+            try mic.start(voiceProcessing: micVoiceProcessing)
             try await system.start()
         } catch {
             needsScreenRec = (error as NSError).domain.contains("ScreenCaptureKit")
@@ -161,6 +171,9 @@ final class MeetingController: ObservableObject {
         lastMicAppends = 0; lastSysAppends = 0
         micQuietTicks = 0; sysQuietTicks = 0
         sysRestartAttempts = 0; sysRestartCooldown = 0
+        micWatchdog = MicDeadWatchdog(); micWatchdogTripped = false
+        micDeadRestarts = 0; micLost = false
+        Log.app.info("meeting: start voiceProcessing=\(self.micVoiceProcessing, privacy: .public)")
         startTimer()
         roster?.stop(); roster = nil
         if isZoomMeeting() {
@@ -244,6 +257,19 @@ final class MeetingController: ObservableObject {
         }
         lastMicAppends = micAppends
 
+        if micWatchdogTripped {
+            micWatchdogTripped = false
+            if micDeadRestarts < maxMicDeadRestarts {
+                micDeadRestarts += 1
+                Log.audio.error("meeting mic dead for 10 s, restarting without voice processing (attempt \(self.micDeadRestarts)/\(self.maxMicDeadRestarts))")
+                Task { await self.restartMicWithoutVoiceProcessing() }
+            } else if !micLost {
+                micLost = true
+                Log.audio.error("meeting mic dead again after \(self.maxMicDeadRestarts) restarts — giving up")
+                banner = Self.micLostBanner
+            }
+        }
+
         if sysRestartCooldown > 0 { sysRestartCooldown -= 1 }
         let sysAppends = system.diagnostics.appends
         if sysAppends == lastSysAppends {
@@ -259,9 +285,30 @@ final class MeetingController: ObservableObject {
                 status = "recording"
             }
             sysQuietTicks = 0; systemHealthy = true; sysRestartAttempts = 0
-            banner = nil
+            banner = micLost ? Self.micLostBanner : nil
         }
         lastSysAppends = sysAppends
+    }
+
+    static let micLostBanner = "Mic audio lost"
+
+    /// Restart the mic engine with AEC off. The clock is untouched: `feed` zero-fills the gap by
+    /// host time, so the mic WAV stays aligned with the system stream.
+    private func restartMicWithoutVoiceProcessing() async {
+        await pumpTask?.value
+        guard isRunning, !isPaused else { return }
+        await feed(mic.stop(), stream: .mic)
+        micVoiceProcessing = false
+        do {
+            try mic.start(voiceProcessing: false)
+            _ = mic.drain() // discard the first buffer, as start() does
+            micWatchdog = MicDeadWatchdog()
+            lastMicAppends = mic.diagnostics.appends; micQuietTicks = 0
+        } catch {
+            Log.audio.error("meeting mic restart failed: \(error.localizedDescription, privacy: .public)")
+            micHealthy = false
+            status = "your microphone stopped delivering audio"
+        }
     }
 
     /// Reconnect the system-audio tap with exponential backoff, keeping buffered audio.
@@ -308,7 +355,7 @@ final class MeetingController: ObservableObject {
         transitioning = true
         defer { transitioning = false }
         do {
-            try mic.start(voiceProcessing: true)
+            try mic.start(voiceProcessing: micVoiceProcessing)
             try await system.start()
         } catch {
             _ = mic.stop() // mic may already be running if the system stream was what failed
@@ -322,6 +369,7 @@ final class MeetingController: ObservableObject {
         lastMicAppends = mic.diagnostics.appends
         lastSysAppends = system.diagnostics.appends
         micQuietTicks = 0; sysQuietTicks = 0
+        micWatchdog = MicDeadWatchdog(); micWatchdogTripped = false
         startTimer()
     }
 
@@ -355,6 +403,7 @@ final class MeetingController: ObservableObject {
             Log.audio.info("meeting ended: \(self.floorDrops, privacy: .public) chunk(s) dropped below the speech floor \(self.speechPeakRMS, format: .fixed(precision: 4), privacy: .public) — if quiet speech is missing, lower meetingSpeechFloor")
         }
         floorDrops = 0
+        Log.app.info("meeting: stop lines=\(self.lines.count, privacy: .public)")
         status = "done"
         if !lines.isEmpty {
             Stats.recordMeeting()
@@ -474,6 +523,9 @@ final class MeetingController: ObservableObject {
         let start = Double(raw) / 16000
         switch stream {
         case .mic:
+            if micWatchdog.observe(rms: ResamplingBuffer.rms(samples), seconds: Double(samples.count) / 16000) {
+                micWatchdogTripped = true
+            }
             micRaw += data.count; micWav?.append(data)
         case .system:
             sysRaw += data.count; sysWav?.append(data)
@@ -599,6 +651,16 @@ final class MeetingController: ObservableObject {
         for s in realSpeech {
             Fixtures.expect(s > floor, "real speech \(s) falls below the speech floor \(floor) — it would be silently dropped")
         }
+        // Mic-dead watchdog: 12 s of near-silence fires once; 12 s of speech never does.
+        func fires(_ rms: Float) -> Int {
+            var w = MicDeadWatchdog(); var n = 0
+            for _ in 0..<48 where w.observe(rms: rms, seconds: 0.25) { n += 1 } // 12 s
+            return n
+        }
+        let silentFires = fires(0.0003), speechFires = fires(0.08)
+        precondition(silentFires == 1, "mic watchdog fired \(silentFires)x on 12 s of silence, want 1")
+        precondition(speechFires == 0, "mic watchdog fired on speech")
+        print("MeetingController.micWatchdog PASS (silence fires=\(silentFires), speech fires=\(speechFires))")
         print("MeetingController.selfTest PASS")
     }
 
@@ -729,3 +791,19 @@ final class MeetingController: ObservableObject {
 }
 
 private extension String { var nonEmpty: String? { isEmpty ? nil : self } }
+
+/// Pure mic-dead detector: fed the RMS of each mic slice, trips once after `limit` seconds of
+/// continuous sub-`threshold` audio (buffers arriving, no signal — VPIO with another app on the input).
+struct MicDeadWatchdog {
+    static let threshold: Float = 0.004
+    static let limit = 10.0
+    private(set) var quietSeconds = 0.0
+
+    mutating func observe(rms: Float, seconds: Double) -> Bool {
+        if rms >= Self.threshold { quietSeconds = 0; return false }
+        quietSeconds += seconds
+        guard quietSeconds >= Self.limit else { return false }
+        quietSeconds = 0
+        return true
+    }
+}

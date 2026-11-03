@@ -74,6 +74,14 @@ enum Settings {
     /// the calibration corpus without trapping on a user's `defaults write` override.
     static let defaultMeetingSpeechFloor = 0.015
 
+    /// Apple voice processing (AEC) on the meeting mic. Default on; if it leaves the mic silent
+    /// (Meet in Chrome), the watchdog restarts without it. Flip with
+    /// `defaults write org.openwispr.app meetingMicVoiceProcessing -bool false`.
+    static var meetingMicVoiceProcessing: Bool {
+        get { UserDefaults.standard.object(forKey: "meetingMicVoiceProcessing") as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: "meetingMicVoiceProcessing") }
+    }
+
     static var meetingSpeechFloor: Double {
         get { UserDefaults.standard.object(forKey: "meetingSpeechFloor") as? Double ?? defaultMeetingSpeechFloor }
         set { UserDefaults.standard.set(newValue, forKey: "meetingSpeechFloor") }
