@@ -2,6 +2,12 @@
 
 Notable changes to OpenWispr (formerly Whispr), newest first.
 
+## [0.18.2] - 2026-11-03
+Meeting mic watchdog.
+- Meet plus voice processing could leave the meeting mic silent; a watchdog now restarts it without voice processing after 10 s of silence (twice at most, then a "Mic audio lost" banner).
+- `defaults write org.openwispr.app meetingMicVoiceProcessing -bool false` turns voice processing off for meetings.
+- Meeting start/stop are now logged.
+
 ## [0.18.1] - 2026-11-03
 Google Meet speaker names.
 - Meet speaker names via the bundled Chrome extension (load unpacked once, from Settings, "Reveal extension folder").
