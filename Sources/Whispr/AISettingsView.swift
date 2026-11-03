@@ -26,7 +26,7 @@ struct AISettingsView: View {
                 }
                 HStack {
                     Text("Status:")
-                    Text(status).foregroundStyle(status.hasPrefix("ready") ? .green : .secondary)
+                    Text(status).foregroundStyle(status.hasPrefix("ready") ? Brand.ok : Brand.muted)
                     Spacer()
                     Button("Check") { Task { await probe() } }
                 }.font(.caption)
@@ -36,7 +36,7 @@ struct AISettingsView: View {
                 Section("Ollama") {
                     if ollamaModels.isEmpty {
                         Text("Ollama not detected on localhost:11434. Install from ollama.com and `ollama pull llama3.2`.")
-                            .font(.caption).foregroundStyle(.secondary)
+                            .font(.caption).foregroundStyle(Brand.muted)
                     } else {
                         Picker("Model", selection: $model) {
                             ForEach(ollamaModels, id: \.self) { Text($0).tag($0) }
@@ -62,7 +62,7 @@ struct AISettingsView: View {
                 Toggle("Clean up dictated text", isOn: $cleanupOn)
                     .onChange(of: cleanupOn) { _, v in Settings.cleanupEnabled = v }
                 Text("Ollama only, so your text never leaves this Mac. Your original is always kept in History with a one-click revert.")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.caption).foregroundStyle(Brand.muted)
                 if cleanupOn {
                     Picker("Model", selection: $cleanupModel) {
                         if !cleanupModel.isEmpty && !ollamaModels.contains(cleanupModel) { Text(cleanupModel).tag(cleanupModel) }
@@ -72,7 +72,7 @@ struct AISettingsView: View {
                     Toggle("All apps", isOn: $cleanupAll)
                         .onChange(of: cleanupAll) { _, v in Settings.cleanupAllApps = v }
                     if !cleanupAll {
-                        Text("Apply in").font(.caption).foregroundStyle(.secondary)
+                        Text("Apply in").font(.caption).foregroundStyle(Brand.muted)
                         ForEach(apps, id: \.id) { app in
                             Toggle(app.name, isOn: Binding(
                                 get: { cleanupApps.contains(app.id) },
@@ -88,7 +88,7 @@ struct AISettingsView: View {
 
             Section {
                 Text("AI is optional. Dictation and meetings work fully without it. With Ollama, summaries and rewrites run 100% on your Mac.")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.caption).foregroundStyle(Brand.muted)
             }
         }
         .formStyle(.grouped)

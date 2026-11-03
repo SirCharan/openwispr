@@ -72,10 +72,10 @@ struct DictionaryView: View {
                         .disabled(vocabTrimmed.isEmpty)
                 }
                 if let vocabNote {
-                    Text(vocabNote).foregroundStyle(.secondary).font(.caption)
+                    Text(vocabNote).foregroundStyle(Brand.muted).font(.caption)
                 }
                 if model.data.vocab.isEmpty {
-                    Text("No terms yet.").foregroundStyle(.secondary).font(.caption)
+                    Text("No terms yet.").foregroundStyle(Brand.muted).font(.caption)
                 } else {
                     ScrollViewReader { proxy in
                         List {
@@ -92,14 +92,14 @@ struct DictionaryView: View {
                 HStack {
                     TextField("from", text: $newFrom)
                         .onSubmit { commitNewReplacement() }
-                    Image(systemName: "arrow.right").foregroundStyle(.secondary)
+                    Image(systemName: "arrow.right").foregroundStyle(Brand.muted)
                     TextField("to", text: $newTo)
                         .onSubmit { commitNewReplacement() }
                     Button("Add") { commitNewReplacement() }
                         .disabled(fromTrimmed.isEmpty)
                 }
                 if let replacementNote {
-                    Text(replacementNote).foregroundStyle(.secondary).font(.caption)
+                    Text(replacementNote).foregroundStyle(Brand.muted).font(.caption)
                 }
                 if !model.data.replacements.isEmpty {
                     List {
@@ -165,7 +165,7 @@ struct DictionaryView: View {
                         Text(term)
                         if DictionaryStore.defaultIsRealWord(term), term == term.lowercased() {
                             Image(systemName: "exclamationmark.triangle")
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(Brand.muted)
                                 .help("Common English word — it can capture similar words in your dictations. Consider removing it.")
                         }
                     }
@@ -183,7 +183,7 @@ struct DictionaryView: View {
                 TextField("from", text: $editText)
                     .textFieldStyle(.roundedBorder)
                     .focused($editFocused)
-                Image(systemName: "arrow.right").foregroundStyle(.secondary)
+                Image(systemName: "arrow.right").foregroundStyle(Brand.muted)
                 TextField("to", text: $editTo)
                     .textFieldStyle(.roundedBorder)
                 Button("Save") { commitReplacement(r.id) }
@@ -239,12 +239,12 @@ private struct EditableRow<Label: View>: View {
             Spacer()
             if hovering {
                 Button(action: edit) { Image(systemName: "pencil") }
-                    .buttonStyle(.plain).foregroundStyle(.secondary)
+                    .buttonStyle(.plain).foregroundStyle(Brand.muted)
                     .help("Edit")
             }
             // Delete stays visible: hidden until hover, it reads as a missing feature.
             Button(action: delete) { Image(systemName: "xmark.circle.fill") }
-                .buttonStyle(.plain).foregroundStyle(.secondary)
+                .buttonStyle(.plain).foregroundStyle(Brand.muted)
                 .help("Delete")
         }
         .contentShape(Rectangle())

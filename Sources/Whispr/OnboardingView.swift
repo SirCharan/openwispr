@@ -52,7 +52,6 @@ struct OnboardingView: View {
         .frame(width: 520, height: 560)
         .background(Brand.bg)
         .tint(Brand.coral)
-        .preferredColorScheme(.light)
         .onAppear {
             model.refreshAccessibility()
             launchAtLogin = LoginItem.isEnabled
@@ -176,7 +175,7 @@ struct OnboardingView: View {
             iconBadge(model.modelError == nil
                       ? (model.modelReady ? "checkmark.circle.fill" : "arrow.down.circle.fill")
                       : "exclamationmark.triangle.fill",
-                      tint: model.modelError == nil ? Brand.coral : .orange)
+                      tint: model.modelError == nil ? Brand.coral : Brand.warn)
             Text(model.modelReady ? "Speech model ready" : "Downloading the speech model")
                 .font(Brand.serif(24))
                 .foregroundStyle(Brand.text)
@@ -308,7 +307,7 @@ private struct PrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(size: 14, weight: .semibold))
-            .foregroundStyle(Color.white)
+            .foregroundStyle(Brand.onAccent)
             .padding(.horizontal, 22)
             .padding(.vertical, 10)
             .background(
@@ -380,7 +379,7 @@ private struct PermissionsStep: View {
                 } else if model.micDenied {
                     Text("Denied. System Settings → Privacy & Security → Microphone → OpenWispr.")
                         .font(.system(size: 11))
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(Brand.warn)
                 }
             }
             .padding(14)
@@ -568,7 +567,7 @@ private struct TriggerStep: View {
                 if loginItemFailed {
                     Text("Couldn't set launch-at-login — move OpenWispr to Applications first.")
                         .font(.system(size: 11))
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(Brand.warn)
                 } else if hotkeyMode == "fn" {
                     Text("Tip: System Settings → Keyboard → “Press 🌐 key to” = Do Nothing.")
                         .font(.system(size: 11))
@@ -667,7 +666,7 @@ private struct PracticeStep: View {
                         .foregroundStyle(isRecording ? Brand.coral : Brand.muted)
                 } else if isRecording {
                     Button("Stop") { model.onPracticeStop() }
-                        .buttonStyle(PrimaryButtonStyle(fill: Color.red.opacity(0.9)))
+                        .buttonStyle(PrimaryButtonStyle(fill: Brand.danger.opacity(0.9)))
                         .keyboardShortcut(.defaultAction)
                     Text("Listening…")
                         .font(Brand.mono(11))

@@ -50,7 +50,7 @@ struct SnippetsView: View {
                 }
                 .disabled(SnippetsModel.parse(triggers).isEmpty)
                 Text("Use a phrase, not a bare word: \"add my email\" expands, while \"email\" on its own would fire in every sentence that mentions one.")
-                    .foregroundStyle(.secondary).font(.caption)
+                    .foregroundStyle(Brand.muted).font(.caption)
             }
             Section("Snippets") {
                 Button("Add my details") { model.addPresets() }
@@ -58,7 +58,7 @@ struct SnippetsView: View {
                     .help("Adds starter rows for email, LinkedIn, X, GitHub, phone and signature. Fill in the ones you want.")
                 if model.items.isEmpty {
                     Text("No snippets yet. Say a trigger while dictating and it expands.")
-                        .foregroundStyle(.secondary).font(.caption)
+                        .foregroundStyle(Brand.muted).font(.caption)
                 } else {
                     List {
                         ForEach($model.items) { $item in
@@ -68,7 +68,7 @@ struct SnippetsView: View {
                     }.frame(minHeight: 160)
                 }
                 Text("Where two triggers overlap, the longer phrase wins, so the order of this list does not matter. A snippet with no expansion is ignored.")
-                    .foregroundStyle(.secondary).font(.caption)
+                    .foregroundStyle(Brand.muted).font(.caption)
             }
         }
         .formStyle(.grouped)
@@ -90,7 +90,7 @@ private struct SnippetRow: View {
             .help("Comma-separated. Every phrase here expands to the same text.")
             TextField("Expands to…", text: $item.to, axis: .vertical)
                 .lineLimit(1...4)
-                .foregroundStyle(item.to.isEmpty ? .secondary : .primary)
+                .foregroundStyle(item.to.isEmpty ? Brand.muted : .primary)
                 .help(item.to.isEmpty
                       ? "Empty, so this snippet is off. Type what the phrase should paste."
                       : "Pasted exactly as typed, even with an AI rewrite style on.")

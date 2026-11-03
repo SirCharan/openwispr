@@ -30,6 +30,7 @@ enum Whispr {
                 MeetingController.selfTest()
                 await MeetingSegmenter.selfTest()
                 OnboardingModel.selfTest()
+                Brand.selfTest()
                 exit(0)
             }
             dispatchMain()

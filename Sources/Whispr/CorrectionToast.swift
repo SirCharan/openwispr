@@ -95,7 +95,7 @@ private struct ToastView: View {
             Button(action: onAdd) {
                 Text("Add to dictionary")
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Brand.onAccent)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 6)
                     .background(RoundedRectangle(cornerRadius: 8).fill(Brand.coral))
@@ -132,7 +132,7 @@ private struct PromptView: View {
                     Button { onPick(i) } label: {
                         Text(labels[i])
                             .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(i == 0 ? .white : Brand.text)
+                            .foregroundStyle(i == 0 ? Brand.onAccent : Brand.text)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 6)
                             .background(RoundedRectangle(cornerRadius: 8).fill(i == 0 ? Brand.coral : Brand.line))

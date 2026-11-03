@@ -38,10 +38,10 @@ struct SettingsView: View {
                     KeyboardShortcuts.Recorder("Shortcut:", name: .dictate)
                 } else {
                     Text("Tip: set System Settings → Keyboard → “Press 🌐 key to” = Do Nothing, so the emoji picker stays out of the way.")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.caption).foregroundStyle(Brand.muted)
                 }
                 Text("Tap the trigger to start — it keeps listening until you tap again. Or hold to talk and release to transcribe. Both always work.")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.caption).foregroundStyle(Brand.muted)
             }
             Section("Behavior") {
                 Toggle("Auto-paste at cursor (off = copy to clipboard only)", isOn: $autoPaste)
@@ -56,14 +56,14 @@ struct SettingsView: View {
                     Text(muteMode == "pause"
                          ? "Sends the play/pause key, so you keep your place. It can't read what's playing, so it may occasionally toggle the wrong way."
                          : "Mutes your output device and unmutes it when dictation ends. Only acts if audio is already playing; if you muted it yourself it stays muted.")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.caption).foregroundStyle(Brand.muted)
                 }
                 Toggle("Separate remote meeting speakers (A/B) by voice", isOn: $diarizationEnabled)
                 Toggle("Detect meetings and offer to record", isOn: $detectMeetings)
                 Toggle("Google Meet names (Chrome extension)", isOn: $meetExtensionEnabled)
                     .onChange(of: meetExtensionEnabled) { _, _ in NotificationCenter.default.post(name: .whisprMeetExtensionChanged, object: nil) }
                 Text("Load the extension from <repo>/extensions/meet-names in chrome://extensions")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.caption).foregroundStyle(Brand.muted)
                 if let dir = Bundle.main.resourceURL?.appendingPathComponent("meet-names"),
                    FileManager.default.fileExists(atPath: dir.path) {
                     Button("Reveal extension folder") { NSWorkspace.shared.activateFileViewerSelecting([dir]) }
@@ -77,7 +77,7 @@ struct SettingsView: View {
                     }
                 if loginItemFailed {
                     Text("Couldn't set launch-at-login. Move OpenWispr to your Applications folder first.")
-                        .font(.caption).foregroundStyle(.orange)
+                        .font(.caption).foregroundStyle(Brand.warn)
                 }
             }
             Section("Transcript cleanup") {

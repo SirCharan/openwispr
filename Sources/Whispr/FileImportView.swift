@@ -52,8 +52,8 @@ struct FileImportView: View {
                 }
             case .failed(let msg):
                 VStack(spacing: 8) {
-                    Image(systemName: "exclamationmark.triangle").font(.system(size: 30)).foregroundStyle(.orange)
-                    Text(msg).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                    Image(systemName: "exclamationmark.triangle").font(.system(size: 30)).foregroundStyle(Brand.warn)
+                    Text(msg).foregroundStyle(Brand.muted).multilineTextAlignment(.center)
                     Button("Try again") { model.state = .idle }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -68,13 +68,13 @@ struct FileImportView: View {
             Image(systemName: "waveform.badge.plus").font(.system(size: 40)).foregroundStyle(.tint)
             Text("Drop an audio file here").font(.title3)
             Text("mp3 · m4a · wav · mp4 · flac — transcribed on-device, saved to History")
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.caption).foregroundStyle(Brand.muted)
             Button("Choose file…") { openPanel() }.keyboardShortcut(.defaultAction)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(dropActive ? Color.accentColor : Color.secondary.opacity(0.3),
+                .strokeBorder(dropActive ? Brand.coral : Brand.muted.opacity(0.3),
                               style: StrokeStyle(lineWidth: 2, dash: [7]))
         )
         .onDrop(of: [.fileURL], isTargeted: $dropActive) { providers in

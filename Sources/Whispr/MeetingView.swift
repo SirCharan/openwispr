@@ -12,11 +12,11 @@ struct MeetingView: View {
     private func streamDot(_ label: String, healthy: Bool) -> some View {
         HStack(spacing: 3) {
             Circle()
-                .fill(healthy ? Color.green : Color.red)
+                .fill(healthy ? Brand.ok : Brand.danger)
                 .frame(width: 6, height: 6)
             Text(label)
                 .font(.caption2)
-                .foregroundStyle(healthy ? .secondary : Color.red)
+                .foregroundStyle(healthy ? Brand.muted : Brand.danger)
         }
         .help(healthy ? "\(label): audio arriving" : "\(label): no audio arriving")
         .accessibilityLabel("\(label) audio \(healthy ? "arriving" : "stopped")")
@@ -26,9 +26,9 @@ struct MeetingView: View {
         VStack(spacing: 0) {
             HStack {
                 Circle()
-                    .fill(controller.isRunning ? (controller.isPaused ? Color.orange : Color.red) : Color.secondary.opacity(0.4))
+                    .fill(controller.isRunning ? (controller.isPaused ? Brand.warn : Brand.danger) : Brand.muted.opacity(0.4))
                     .frame(width: 9, height: 9)
-                Text(controller.status).font(.caption).foregroundStyle(.secondary)
+                Text(controller.status).font(.caption).foregroundStyle(Brand.muted)
                 if controller.isRunning {
                     // Per-stream capture health. Without this a stalled stream is
                     // indistinguishable from a room where nobody is talking.
@@ -47,7 +47,7 @@ struct MeetingView: View {
                         Task { controller.isPaused ? await controller.resume() : await controller.pause() }
                     }
                     Button("Stop") { Task { await controller.stop() } }
-                        .tint(.red)
+                        .tint(Brand.danger)
                         .accessibilityLabel("Stop recording")
                         .accessibilityIdentifier("Stop recording")
                 } else {
@@ -68,10 +68,10 @@ struct MeetingView: View {
             if let banner = controller.banner {
                 Text(banner)
                     .font(.caption.bold())
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Brand.onAccent)
                     .frame(maxWidth: .infinity)
                     .padding(6)
-                    .background(Color.red)
+                    .background(Brand.danger)
             }
             Divider()
 
@@ -83,7 +83,7 @@ struct MeetingView: View {
                         .padding(12)
                 }
                 .frame(maxHeight: 160)
-                .background(Color.accentColor.opacity(0.06))
+                .background(Brand.coral.opacity(0.06))
                 Divider()
             }
 
@@ -96,19 +96,19 @@ struct MeetingView: View {
                 Spacer()
                 VStack(spacing: 8) {
                     Image(systemName: !screenRecOK || controller.needsScreenRec ? "exclamationmark.shield" : "person.2.wave.2")
-                        .font(.system(size: 36)).foregroundStyle(!screenRecOK || controller.needsScreenRec ? .orange : .secondary)
+                        .font(.system(size: 36)).foregroundStyle(!screenRecOK || controller.needsScreenRec ? Brand.warn : Brand.muted)
                     if !screenRecOK || controller.needsScreenRec {
                         Text("Meetings need Screen Recording permission (that's how macOS exposes system audio). Click below — that adds OpenWispr to the list — then switch it ON and relaunch. A leftover \"Whispr\" entry from the old app can be removed.")
-                            .foregroundStyle(.secondary).multilineTextAlignment(.center)
+                            .foregroundStyle(Brand.muted).multilineTextAlignment(.center)
                         Button("Request permission + open settings") {
                             CGRequestScreenCaptureAccess() // registers OpenWispr in the pane; without this the row never appears
                             NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!)
                         }
                         Button("I've enabled it — re-check") { screenRecOK = CGPreflightScreenCaptureAccess() }
-                            .buttonStyle(.plain).font(.caption).foregroundStyle(.secondary)
+                            .buttonStyle(.plain).font(.caption).foregroundStyle(Brand.muted)
                     } else {
                         Text("Start recording to capture your mic (You) and the other side's audio — remote voices are separated into Speaker A/B after you stop.")
-                            .foregroundStyle(.secondary).multilineTextAlignment(.center)
+                            .foregroundStyle(Brand.muted).multilineTextAlignment(.center)
                         Text("Transcript checkpoints to Documents/OpenWispr after every line. First meeting downloads the speaker model (~100 MB) once.")
                             .font(.caption).foregroundStyle(.tertiary)
                     }
@@ -124,7 +124,7 @@ struct MeetingView: View {
                                 .frame(width: 38, alignment: .trailing)
                             Text(line.speaker)
                                 .font(.caption.bold())
-                                .foregroundStyle(line.speaker == "You" ? Color.accentColor : .orange)
+                                .foregroundStyle(line.speaker == "You" ? Brand.coral : Brand.warn)
                                 .frame(width: 70, alignment: .trailing)
                             Text(line.text)
                         }
@@ -183,11 +183,11 @@ struct MeetingView: View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Label the speakers").font(.title3.bold())
             Text("Type real names — the transcript and the saved file update everywhere.")
-                .font(.caption).foregroundStyle(.secondary)
+                .font(.caption).foregroundStyle(Brand.muted)
             ForEach(controller.distinctSpeakers, id: \.self) { s in
                 HStack {
                     Text(s).font(.system(size: 12, design: .monospaced))
-                        .frame(width: 90, alignment: .trailing).foregroundStyle(.secondary)
+                        .frame(width: 90, alignment: .trailing).foregroundStyle(Brand.muted)
                     TextField(s == "You" ? "your name (optional)" : "e.g. Priya", text: Binding(
                         get: { renames[s] ?? "" },
                         set: { renames[s] = $0 }

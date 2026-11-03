@@ -22,7 +22,7 @@ struct PerAppView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text("Turn dictation off in specific apps.").font(.caption).foregroundStyle(.secondary)
+                Text("Turn dictation off in specific apps.").font(.caption).foregroundStyle(Brand.muted)
                 Spacer()
                 Button("Refresh") { model.refresh() }
             }.padding(12)
@@ -34,7 +34,7 @@ struct PerAppView: View {
                 )) {
                     VStack(alignment: .leading, spacing: 1) {
                         Text(app.name)
-                        Text(app.id).font(.caption2).foregroundStyle(.secondary)
+                        Text(app.id).font(.caption2).foregroundStyle(Brand.muted)
                     }
                 }
             }

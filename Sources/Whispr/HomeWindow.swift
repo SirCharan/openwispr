@@ -20,21 +20,6 @@ extension Notification.Name {
     static let whisprStageVocab = Notification.Name("whispr.stageVocab")
 }
 
-// "Paper Studio" design tokens — identical hex values to web/index.html. One source, every surface.
-enum Brand {
-    static let bg = Color(red: 0.957, green: 0.937, blue: 0.902)        // #F4EFE6 cream
-    static let surface = Color(red: 0.925, green: 0.894, blue: 0.839)   // #ECE4D6
-    static let line = Color(red: 0.863, green: 0.824, blue: 0.753)      // #DCD2C0
-    static let text = Color(red: 0.141, green: 0.122, blue: 0.102)      // #241F1A espresso
-    static let muted = Color(red: 0.420, green: 0.373, blue: 0.306)     // #6B5F4E (5.4:1 on cream)
-    /// Follows the user's accent choice (Theme); tape red-coral #E2543E is the default.
-    static var coral: Color { Color(nsColor: Theme.nsAccent) }
-    static var coralSoft: Color { coral.opacity(0.12) }
-
-    static func serif(_ size: CGFloat) -> Font { .system(size: size, design: .serif) }
-    static func mono(_ size: CGFloat) -> Font { .system(size: size, design: .monospaced) }
-}
-
 enum HomePane: String, CaseIterable, Identifiable {
     case dictations = "Dictations"
     case insights = "Insights"
@@ -88,7 +73,6 @@ struct HomeView: View {
             detail
         }
         .background(Brand.bg)
-        .preferredColorScheme(.light) // Paper Studio is a light, warm surface
         .frame(minWidth: 900, minHeight: 620)
     }
 
@@ -135,7 +119,7 @@ struct HomeView: View {
 
             HStack(spacing: 8) {
                 Circle()
-                    .fill(state.isRecording ? .red : (state.status.hasPrefix("ready") ? .green : Brand.muted))
+                    .fill(state.isRecording ? Brand.danger : (state.status.hasPrefix("ready") ? Brand.ok : Brand.muted))
                     .frame(width: 8, height: 8)
                 Text(state.status).font(.caption2).foregroundStyle(Brand.muted).lineLimit(2)
             }
@@ -421,9 +405,9 @@ private struct ModelsPane: View {
                     NotificationCenter.default.post(name: .whisprModelChanged, object: new)
                 }
                 Text("Switching downloads the model if needed, then reloads. Turbo = best accuracy; tiny/base = fastest.")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.caption).foregroundStyle(Brand.muted)
                 Text("large-v3 is the full model turbo was distilled from. It is slower and a bigger download; whether it transcribes your language better is worth testing rather than assuming.")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.caption).foregroundStyle(Brand.muted)
             }
             Section("Language") {
                 Picker("Spoken language", selection: $language) {
@@ -435,7 +419,7 @@ private struct ModelsPane: View {
                     Text("English translation").tag("translate")
                 }
                 Text("Speak Hindi (or any language) and type it in Roman letters, or let Whisper translate to English. Applies to dictation and meetings. Note: English translation needs a non-turbo model — pick \"medium\" for the best Hindi→English quality; the turbo model transcribes only.")
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.caption).foregroundStyle(Brand.muted)
             }
         }
         .formStyle(.grouped)
