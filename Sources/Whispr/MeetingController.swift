@@ -65,6 +65,9 @@ final class MeetingController: ObservableObject {
     private let gapFillSeconds = 0.5
     // full system audio for stop-time diarization
     private var fullSysAudio: [Float] = []
+    /// Set by AppController: is the detected meeting app Zoom right now?
+    var isZoomMeeting: () -> Bool = { false }
+    private var roster: ZoomRosterReader?
     // ponytail: full floats in RAM ≈ 230MB/hour — fine for normal meetings; stream-to-disk if ever needed
     private var meetingFile: URL?
     private var diarSegments: [Diarizer.Segment] = []
@@ -154,6 +157,16 @@ final class MeetingController: ObservableObject {
         micQuietTicks = 0; sysQuietTicks = 0
         sysRestartAttempts = 0; sysRestartCooldown = 0
         startTimer()
+        roster?.stop(); roster = nil
+        if isZoomMeeting() {
+            let rr = ZoomRosterReader(isZoom: { [weak self] in self?.isZoomMeeting() ?? false },
+                                      clock: { [weak self] in
+                guard let self, self.isRunning, !self.isPaused else { return nil }
+                return self.clock.time(forHost: CACurrentMediaTime())
+            })
+            rr.start()
+            roster = rr
+        }
     }
 
     // MARK: - Raw audio retention
@@ -299,7 +312,13 @@ final class MeetingController: ObservableObject {
         if !pending.isEmpty { status = "transcribing the last \(pending.count) chunk(s)…" }
         await flushPending()
         closeAudioWriters()
-        await applyDiarization()
+        roster?.stop()
+        let segments = await applyDiarization()
+        if let rr = roster, !segments.isEmpty {
+            let map = ZoomRosterReader.names(segments: segments, timeline: rr.timeline)
+            if !map.isEmpty { renameSpeakers(map) }
+        }
+        roster = nil
         // The floor is calibrated on one room and one mic gain. A high drop count is the signal
         // to loosen `meetingSpeechFloor` — surfaced here so the user doesn't need Console.app.
         if floorDrops > 0 {
@@ -316,21 +335,24 @@ final class MeetingController: ObservableObject {
     }
 
     /// Split "Others" lines into Speaker A/B/… using the full system recording. Falls back silently.
-    private func applyDiarization() async {
-        guard Settings.diarizationEnabled, !fullSysAudio.isEmpty else { return }
+    @discardableResult
+    private func applyDiarization() async -> [Diarizer.Segment] {
+        guard Settings.diarizationEnabled, !fullSysAudio.isEmpty else { return [] }
         status = "separating speakers…"
         let audio = fullSysAudio
         do {
             let segments = try await diarizer.diarize(audio)
-            guard !segments.isEmpty else { return }
+            guard !segments.isEmpty else { return [] }
             diarSegments = segments
             for i in lines.indices where lines[i].speaker == "Others" {
                 if let who = Diarizer.assign(start: lines[i].start, end: lines[i].end, segments: segments) {
                     lines[i].speaker = who
                 }
             }
+            return segments
         } catch {
             Log.audio.error("diarization failed, keeping Others: \(error.localizedDescription, privacy: .public)")
+            return []
         }
     }
 

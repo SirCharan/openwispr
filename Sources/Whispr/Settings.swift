@@ -27,6 +27,12 @@ enum Settings {
         set { UserDefaults.standard.set(newValue, forKey: "diarizationEnabled") }
     }
 
+    /// Offer to record when a Zoom / Meet / Teams meeting window appears.
+    static var detectMeetings: Bool {
+        get { UserDefaults.standard.object(forKey: "detectMeetings") as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: "detectMeetings") }
+    }
+
     /// Silence other audio while dictating, then put it back. Dictation only — meetings never
     /// touch the output, because the remote party's audio IS the system output we capture.
     static var muteWhileDictating: Bool {

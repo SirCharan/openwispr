@@ -38,6 +38,7 @@ final class AppController {
     private let indicator = RecordingIndicator()
     private lazy var idleWidget = IdleWidget(onTap: { [weak self] in self?.startDictation() })
     private var onboarding: OnboardingWindowController?
+    private var meetingDetector: MeetingWindowDetector?
 
     func start() {
         Log.app.notice("launch v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev", privacy: .public) onboarded=\(Settings.onboarded, privacy: .public) model=\(self.modelManager.selectedModel, privacy: .public)")
@@ -115,9 +116,28 @@ final class AppController {
     private func bootModel() async {
         await loadSelectedModel()
         attachHotkeys()
+        startMeetingDetector()
         if Settings.autoPaste && !Permissions.hasAccessibility {
             Permissions.requestAccessibility() // one-time prompt so auto-paste works
         }
+    }
+
+    private func startMeetingDetector() {
+        guard meetingDetector == nil else { return }
+        let d = MeetingWindowDetector(
+            isRecording: { [weak self] in self?.meetingCtrl.isRunning ?? false },
+            startRecording: { [weak self] in
+                guard let self else { return }
+                Task { await self.meetingCtrl.start() }
+            },
+            prompt: { msg, actions in CorrectionToast.shared.ask(msg, actions: actions) }
+        )
+        NotificationCenter.default.addObserver(forName: .whisprStopMeeting, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor in await self?.meetingCtrl.stop() }
+        }
+        d.start()
+        meetingDetector = d
+        meetingCtrl.isZoomMeeting = { [weak d] in d?.current?.id == "us.zoom.xos" }
     }
 
     // MARK: - First-run onboarding

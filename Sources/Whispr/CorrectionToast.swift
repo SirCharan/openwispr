@@ -28,8 +28,21 @@ final class CorrectionToast {
             },
             onClose: { [weak self] in self?.hide() }
         )
-        let host = NSHostingView(rootView: view)
-        host.frame = NSRect(x: 0, y: 0, width: 340, height: CGFloat(64 + shown.count * 24))
+        present(NSHostingView(rootView: view), size: NSSize(width: 340, height: CGFloat(64 + shown.count * 24)), ttl: 10)
+    }
+
+    /// Generic yes/no style prompt: a message plus one button per action (each action also closes it).
+    func ask(_ message: String, actions: [(String, () -> Void)]) {
+        hide()
+        let view = PromptView(message: message, labels: actions.map(\.0)) { [weak self] i in
+            actions[i].1()
+            self?.hide()
+        }
+        present(NSHostingView(rootView: view), size: NSSize(width: 340, height: 92), ttl: 20)
+    }
+
+    private func present(_ host: NSView, size: NSSize, ttl: TimeInterval) {
+        host.frame = NSRect(origin: .zero, size: size)
         let p = NSPanel(contentRect: host.frame,
                         styleMask: [.borderless, .nonactivatingPanel],
                         backing: .buffered, defer: false)
@@ -46,7 +59,7 @@ final class CorrectionToast {
         }
         p.orderFrontRegardless()
         panel = p
-        dismissTimer = Timer.scheduledTimer(withTimeInterval: 10, repeats: false) { [weak self] _ in
+        dismissTimer = Timer.scheduledTimer(withTimeInterval: ttl, repeats: false) { [weak self] _ in
             Task { @MainActor in self?.hide() }
         }
     }
@@ -88,6 +101,39 @@ private struct ToastView: View {
                     .background(RoundedRectangle(cornerRadius: 8).fill(Brand.coral))
             }
             .buttonStyle(.plain)
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 12).fill(Brand.bg)
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Brand.line))
+                .shadow(color: Brand.text.opacity(0.18), radius: 12, y: 4)
+        )
+    }
+}
+
+private struct PromptView: View {
+    let message: String
+    let labels: [String]
+    let onPick: (Int) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(message)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Brand.text)
+            HStack(spacing: 6) {
+                ForEach(labels.indices, id: \.self) { i in
+                    Button { onPick(i) } label: {
+                        Text(labels[i])
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(i == 0 ? .white : Brand.text)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 6)
+                            .background(RoundedRectangle(cornerRadius: 8).fill(i == 0 ? Brand.coral : Brand.line))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
         }
         .padding(14)
         .background(
