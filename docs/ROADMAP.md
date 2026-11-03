@@ -11,7 +11,7 @@ The v0.17.x rebuild fixed the capture layer (dead mic, dropped chunks, hallucina
 3. **Stream-failure hardening.** Fix three known bugs: `AudioRecorder.start` leaks its tap when `engine.start()` throws; `resume()` leaves the mic running when the system stream fails to start; after eight failed restarts a meeting keeps running mic-only with no banner. A dead stream must be loud in the UI, not a quiet room.
 4. **Audio playback in meeting history.** The raw WAVs are already retained. A play button per meeting lets you check whether a bad transcript was a bad recording or a bad model. Cheapest trust feature available.
 5. **Named speakers that persist.** The rename sheet exists per meeting. Store voice embeddings so "Speaker A" becomes "Ravi" in the next meeting too.
-6. **Echo dedup, re-enabled behind evidence.** Cross-stream dedup is off because it deleted real mic lines. It stays off until logs show AEC keeps speaker bleed out of the mic stream.
+6. **Echo dedup (re-enabled).** Now on the shared meeting clock: an Others line is dropped only for a You line within ±1.5 s with Jaccard ≥ 0.8; both texts are logged at debug. Disable with `defaults write org.openwispr.app meetingEchoDedup -bool false`.
 7. **Live transcript view.** Lines already arrive incrementally; show them during the meeting instead of only at the end.
 
 ## 2. Dictation and app features
