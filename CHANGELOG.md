@@ -2,6 +2,14 @@
 
 Notable changes to OpenWispr (formerly Whispr), newest first.
 
+## [0.19.1] - 2026-11-04
+On-device meeting summaries.
+- Summarize works with no setup on Macs with Apple Intelligence (macOS 26): it uses the Apple on-device model when no other AI is configured. Order: your AI settings choice, then Ollama, then Apple.
+- Long meetings are summarised in chunks, then merged, to fit the on-device model's small window.
+- With no model available, the Meetings pane shows a "Summaries need an AI model" card with an Open AI settings button, and Summarize is disabled. Errors use the same card.
+- The AI pane shows Apple on-device status and which model Summarize will use. Dictation cleanup stays Ollama-only.
+- `--summarize-file <meeting.md>` runs the resolved provider on a transcript.
+
 ## [0.19.0] - 2026-11-03
 UI polish for release.
 - Paper Studio tokens and a real dark mode (the Theme picker now works).
