@@ -18,6 +18,7 @@ enum Whispr {
             SnippetStore.selfTest()
             Stats.selfTest()
             Transliterate.selfTest()
+            SummaryEngine.selfTest()
             Task { @MainActor in
                 CorrectionsWatcher.selfTest()
                 AXEditWatcher.selfTest()
@@ -38,6 +39,30 @@ enum Whispr {
         }
         if let i = args.firstIndex(of: "--snap-panes"), i + 1 < args.count {
             MainActor.assumeIsolated { Snapshot.run(dir: args[i + 1], sample: args.contains("--sample")) }
+            exit(0)
+        }
+        if let i = args.firstIndex(of: "--summarize-file"), i + 1 < args.count {
+            let path = args[i + 1]
+            let sem = DispatchSemaphore(value: 0)
+            Task.detached {
+                let a = AppleLocalEngine.status()
+                print("apple availability: \(a.text)")
+                let choice = await SummaryEngine.resolveLive()
+                print("provider: \(choice.label)")
+                guard choice != .none else { print("no provider available"); sem.signal(); return }
+                do {
+                    let raw = try String(contentsOfFile: path, encoding: .utf8)
+                    let body = raw.components(separatedBy: "\n").filter { $0.hasPrefix("[") }
+                        .map { l -> String in
+                            // "[0:00] **Speaker C**: text" -> "Speaker C: text"
+                            l.replacingOccurrences(of: #"^\[[0-9:]+\] \*\*(.*?)\*\*:"#, with: "$1:", options: .regularExpression)
+                        }.joined(separator: "\n")
+                    let out = try await SummaryEngine.summarize(transcript: body, choice: choice)
+                    print("summary (first 300 chars): \(out.prefix(300))")
+                } catch { print("error: \(error)") }
+                sem.signal()
+            }
+            sem.wait()
             exit(0)
         }
         if let i = args.firstIndex(of: "--record-test"), i + 2 < args.count {

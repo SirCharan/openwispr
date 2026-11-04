@@ -12,6 +12,8 @@ struct AISettingsView: View {
     @State private var cleanupAll = Settings.cleanupAllApps
     @State private var cleanupApps = Set(Settings.cleanupApps)
     @State private var apps: [(name: String, id: String)] = []
+    @State private var apple = AppleLocalEngine.status()
+    @State private var choice: SummaryChoice?
 
     var body: some View {
         Form {
@@ -29,6 +31,22 @@ struct AISettingsView: View {
                     Text(status).foregroundStyle(status.hasPrefix("ready") ? Brand.ok : Brand.muted)
                     Spacer()
                     Button("Check") { Task { await probe() } }
+                }.font(Brand.caption)
+            }
+
+            PSection("Apple on-device model") {
+                HStack {
+                    Image(systemName: apple.ready ? "checkmark.circle.fill" : "circle.dashed")
+                        .foregroundStyle(apple.ready ? Brand.ok : Brand.muted)
+                    Text(apple.text).foregroundStyle(apple.ready ? Brand.ok : Brand.muted)
+                    Spacer()
+                }.font(Brand.caption)
+                Text("Free and private, no key. Used for meeting summaries when no other model is set up. Dictation cleanup stays Ollama-only.")
+                    .font(Brand.caption).foregroundStyle(Brand.muted)
+                HStack {
+                    Text("Summarize will use:").foregroundStyle(Brand.muted)
+                    Text(choice?.label ?? "checking…").foregroundStyle(Brand.text)
+                    Spacer()
                 }.font(Brand.caption)
             }
 
@@ -105,6 +123,8 @@ struct AISettingsView: View {
 
     private func probe() async {
         status = "checking…"
+        apple = AppleLocalEngine.status()
+        defer { Task { choice = await SummaryEngine.resolveLive() } }
         if provider == .ollama {
             ollamaModels = await LLMClient.ollamaModels()
             if model.isEmpty, let first = ollamaModels.first { model = first; LLMClient.model = first }

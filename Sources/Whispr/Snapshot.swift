@@ -37,6 +37,11 @@ enum Snapshot {
                       to: out.appendingPathComponent("\(tag)-\(slug(pane.rawValue)).png"))
             }
 
+            let setup = MeetingController(transcriber: transcriber)
+            setup.previewSummaryState(lines: [MeetingLine(speaker: "You", text: "Let's ship Thursday.", start: 0, end: 4)], choice: SummaryChoice.none)
+            write(MeetingView(controller: setup).background(Brand.bg), size: NSSize(width: 730, height: 560), appearance: appearance,
+                  to: out.appendingPathComponent("\(tag)-meetings-setup.png"))
+
             for step in 0...OnboardingModel.Step.done.rawValue {
                 onboarding.step = OnboardingModel.Step(rawValue: step) ?? .welcome
                 write(OnboardingView(model: onboarding), size: NSSize(width: 520, height: 560), appearance: appearance,

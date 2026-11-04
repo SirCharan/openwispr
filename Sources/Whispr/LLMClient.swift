@@ -19,7 +19,7 @@ enum LLMError: Error, LocalizedError {
     case notConfigured, badResponse(String)
     var errorDescription: String? {
         switch self {
-        case .notConfigured: "No AI provider configured. Start Ollama or add an API key in Settings → AI."
+        case .notConfigured: "No AI model is set up. Turn on Apple Intelligence, install Ollama, or add an API key in AI settings."
         case .badResponse(let s): "AI request failed: \(s)"
         }
     }
@@ -90,14 +90,15 @@ enum LLMClient {
     // MARK: - Chat
 
     /// One-shot chat completion via the configured BYOK provider.
-    static func complete(system: String, user: String) async throws -> String {
+    static func complete(system: String, user: String, using chosen: LLMProvider? = nil) async throws -> String {
+        let provider = chosen ?? self.provider
         switch provider {
         case .ollama:
             return try await ollamaChat(system: system, user: user)
         case .openai:
-            return try await openAIChat(base: "https://api.openai.com/v1", system: system, user: user)
+            return try await openAIChat(base: "https://api.openai.com/v1", provider: provider, system: system, user: user)
         case .openrouter:
-            return try await openAIChat(base: "https://openrouter.ai/api/v1", system: system, user: user)
+            return try await openAIChat(base: "https://openrouter.ai/api/v1", provider: provider, system: system, user: user)
         }
     }
 
@@ -120,7 +121,8 @@ enum LLMClient {
                                    timeout: TimeInterval = 120, temperature: Double? = nil) async throws -> String {
         guard await ollamaAlive() else { throw LLMError.notConfigured }
         var name = override ?? model
-        if name.isEmpty { name = await ollamaModels().first ?? "" }
+        let local = await ollamaModels()
+        if name.isEmpty || (override == nil && !local.contains(name)) { name = local.first ?? "" }
         guard !name.isEmpty else { throw LLMError.notConfigured }
 
         var req = URLRequest(url: URL(string: "http://localhost:11434/api/chat")!)
@@ -146,7 +148,7 @@ enum LLMClient {
         return content.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private static func openAIChat(base: String, system: String, user: String) async throws -> String {
+    private static func openAIChat(base: String, provider: LLMProvider, system: String, user: String) async throws -> String {
         guard let key = apiKey(for: provider), !key.isEmpty else { throw LLMError.notConfigured }
         let name = model.isEmpty ? (provider == .openai ? "gpt-4o-mini" : "openai/gpt-4o-mini") : model
 

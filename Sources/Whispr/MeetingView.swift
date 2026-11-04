@@ -4,6 +4,7 @@ import AppKit
 /// Live meeting transcript: start/pause/stop, timestamped speaker lines, rename-at-stop, export.
 struct MeetingView: View {
     @ObservedObject var controller: MeetingController
+    var openAISettings: () -> Void = {}
     @State private var screenRecOK = CGPreflightScreenCaptureAccess()
     @State private var renames: [String: String] = [:]
     @State private var archive: [MeetingArchive.Entry] = []
@@ -104,6 +105,7 @@ struct MeetingView: View {
         .frame(minWidth: 680, minHeight: 400)
         .background(Brand.bg)
         .onAppear { screenRecOK = CGPreflightScreenCaptureAccess(); reload() }
+        .task { await controller.refreshSummaryChoice() }
         .onChange(of: controller.isRunning) { _, running in
             if running { selected = nil } else { reload() }
         }
@@ -153,15 +155,27 @@ struct MeetingView: View {
                     .opacity(screenRecOK ? 1 : 0.5)
                     .accessibilityIdentifier("Start recording")
             }
-            let noSummary = viewingPast || controller.lines.isEmpty || controller.isRunning || controller.summarizing
+            let noModel = controller.summaryChoice == SummaryChoice.none
+            let noSummary = viewingPast || controller.lines.isEmpty || controller.isRunning || controller.summarizing || noModel
             PaperButton(title: controller.summarizing ? "Summarizing…" : "Summarize", role: .secondary) {
                 Task { await controller.summarize() }
             }
             .disabled(noSummary).opacity(noSummary ? 0.5 : 1)
+            .help(noModel ? "Set up an AI model to summarise" : "Summarise this meeting")
             PaperButton(title: "Export…", role: .secondary) { export() }
                 .disabled(shownLines.isEmpty).opacity(shownLines.isEmpty ? 0.5 : 1)
         }
         .padding(12)
+    }
+
+    private func setupCard(title: String, line: String) -> some View {
+        PaperCard {
+            VStack(alignment: .leading, spacing: Brand.s8) {
+                Text(title).font(Brand.title).foregroundStyle(Brand.text)
+                Text(line).font(Brand.body).foregroundStyle(Brand.muted).fixedSize(horizontal: false, vertical: true)
+                PaperButton(title: "Open AI settings", role: .secondary, action: openAISettings)
+            }
+        }
     }
 
     private var detail: some View {
@@ -177,6 +191,22 @@ struct MeetingView: View {
             }
             Divider()
 
+            if !viewingPast, controller.summarizing {
+                HStack(spacing: Brand.s8) {
+                    ProgressView().controlSize(.small)
+                    Text("Summarising with \(controller.summarizingWith)…").font(Brand.caption).foregroundStyle(Brand.muted)
+                }
+                .padding(Brand.s12).frame(maxWidth: .infinity, alignment: .leading)
+                Divider()
+            } else if !viewingPast, let err = controller.summaryError {
+                setupCard(title: "Summary failed", line: err).padding(Brand.s12)
+                Divider()
+            } else if !viewingPast, !controller.lines.isEmpty, !controller.isRunning,
+                      controller.summary == nil, controller.summaryChoice == SummaryChoice.none {
+                setupCard(title: "Summaries need an AI model",
+                          line: "Turn on Apple Intelligence, install Ollama, or add an API key.").padding(Brand.s12)
+                Divider()
+            }
             if !viewingPast, let summary = controller.summary {
                 ScrollView {
                     Text(LocalizedStringKey(summary))

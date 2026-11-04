@@ -23,6 +23,9 @@ final class MeetingController: ObservableObject {
     @Published private(set) var status = "idle"
     @Published var summary: String?
     @Published private(set) var summarizing = false
+    @Published private(set) var summaryChoice: SummaryChoice?   // nil until first probe
+    @Published private(set) var summaryError: String?
+    @Published private(set) var summarizingWith = ""
     @Published private(set) var needsScreenRec = false
     @Published private(set) var savedTo: String?
     @Published var showRenameSheet = false
@@ -769,27 +772,32 @@ final class MeetingController: ObservableObject {
 
     // MARK: - AI summary (BYOK, optional)
 
+    /// Re-probe which backend Summarize would use (Meetings pane calls this on appear).
+    func refreshSummaryChoice() async {
+        if Snapshot.isRendering { return } // renders pin the state via previewSummaryState
+        summaryChoice = await SummaryEngine.resolveLive()
+    }
+
+    /// Snapshot/preview only: put the pane into a given summarise state.
+    func previewSummaryState(lines l: [MeetingLine], choice: SummaryChoice?, error: String? = nil) {
+        lines = l; summaryChoice = choice; summaryError = error
+    }
+
     func summarize() async {
         guard !lines.isEmpty, !summarizing else { return }
         summarizing = true
+        summaryError = nil
         defer { summarizing = false }
-        guard await LLMClient.available() else {
-            summary = "_No AI provider configured. Install Ollama from ollama.com (then `ollama pull llama3.2`), or add an API key in the AI settings — then click Summarize again._"
-            return
-        }
+        let choice = await SummaryEngine.resolveLive()
+        summaryChoice = choice
+        guard choice != .none else { return }
+        summarizingWith = choice.label
         let transcript = lines.map { "\($0.speaker): \($0.text)" }.joined(separator: "\n")
         do {
-            summary = try await LLMClient.complete(
-                system: """
-                You summarize meeting transcripts. "You" is the local user; other names/speakers are remote participants.
-                Reply in Markdown with exactly these sections: ## Summary (2-4 sentences),
-                ## Decisions (bullets, or "None"), ## Action items (bullets with owner if known, or "None").
-                """,
-                user: transcript
-            )
+            summary = try await SummaryEngine.summarize(transcript: transcript, choice: choice)
             autosave()
         } catch {
-            summary = "_\(error.localizedDescription)_"
+            summaryError = error.localizedDescription
         }
     }
 

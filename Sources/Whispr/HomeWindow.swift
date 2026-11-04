@@ -160,7 +160,7 @@ struct HomeView: View {
         switch pane {
         case .dictations: DictationsPane(state: state, search: $search)
         case .insights: InsightsPane()
-        case .meetings: MeetingView(controller: meetingController).background(Brand.bg)
+        case .meetings: MeetingView(controller: meetingController, openAISettings: { state.pane = .ai }).background(Brand.bg)
         case .importFile: FileImportView(model: importModel).background(Brand.bg)
         case .dictionary: DictionaryView()
         case .snippets: SnippetsView()
