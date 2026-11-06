@@ -50,9 +50,6 @@ enum Whispr {
             Task.detached {
                 let a = AppleLocalEngine.status()
                 print("apple availability: \(a.text)")
-                let choice = await SummaryEngine.resolveLive()
-                print("provider: \(choice.label)")
-                guard choice != .none else { print("no provider available"); sem.signal(); return }
                 do {
                     let raw = try String(contentsOfFile: path, encoding: .utf8)
                     let body = raw.components(separatedBy: "\n").filter { $0.hasPrefix("[") }
@@ -60,9 +57,13 @@ enum Whispr {
                             // "[0:00] **Speaker C**: text" -> "Speaker C: text"
                             l.replacingOccurrences(of: #"^\[[0-9:]+\] \*\*(.*?)\*\*:"#, with: "$1:", options: .regularExpression)
                         }.joined(separator: "\n")
+                    print("language: \(SummaryEngine.dominantLanguage(body) ?? "unknown")")
+                    let choice = await SummaryEngine.resolveLive(for: body)
+                    print("provider: \(choice.label)")
+                    guard choice != .none else { print(SummaryEngine.noModelReason(for: body) ?? "no provider available"); sem.signal(); return }
                     let out = try await SummaryEngine.summarize(transcript: body, choice: choice)
                     print("summary (first 300 chars): \(out.prefix(300))")
-                } catch { print("error: \(error)") }
+                } catch { print("error: \(error.localizedDescription)") }
                 sem.signal()
             }
             sem.wait()

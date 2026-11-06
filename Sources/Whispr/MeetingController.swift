@@ -775,8 +775,10 @@ final class MeetingController: ObservableObject {
     /// Re-probe which backend Summarize would use (Meetings pane calls this on appear).
     func refreshSummaryChoice() async {
         if Snapshot.isRendering { return } // renders pin the state via previewSummaryState
-        summaryChoice = await SummaryEngine.resolveLive()
+        summaryChoice = await SummaryEngine.resolveLive(for: transcriptText)
     }
+
+    private var transcriptText: String { lines.map { "\($0.speaker): \($0.text)" }.joined(separator: "\n") }
 
     /// Snapshot/preview only: put the pane into a given summarise state.
     func previewSummaryState(lines l: [MeetingLine], choice: SummaryChoice?, error: String? = nil) {
@@ -788,11 +790,11 @@ final class MeetingController: ObservableObject {
         summarizing = true
         summaryError = nil
         defer { summarizing = false }
-        let choice = await SummaryEngine.resolveLive()
+        let transcript = transcriptText
+        let choice = await SummaryEngine.resolveLive(for: transcript)
         summaryChoice = choice
-        guard choice != .none else { return }
+        guard choice != .none else { summaryError = SummaryEngine.noModelReason(for: transcript); return }
         summarizingWith = choice.label
-        let transcript = lines.map { "\($0.speaker): \($0.text)" }.joined(separator: "\n")
         do {
             summary = try await SummaryEngine.summarize(transcript: transcript, choice: choice)
             autosave()

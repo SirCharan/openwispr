@@ -1,4 +1,5 @@
 import Foundation
+import NaturalLanguage
 
 /// Which backend Summarize will use.
 enum SummaryChoice: Equatable {
@@ -29,20 +30,48 @@ enum SummaryEngine {
     static let chunkWords = 2500
 
     /// Explicit AI-settings choice if set and reachable, else Ollama if up, else Apple if ready, else none.
-    static func resolve(explicit: LLMProvider?, explicitReady: Bool, ollamaUp: Bool, appleReady: Bool) -> SummaryChoice {
+    static func resolve(explicit: LLMProvider?, explicitReady: Bool, ollamaUp: Bool, appleReady: Bool, appleSupportsLanguage: Bool = true) -> SummaryChoice {
         if let explicit, explicitReady { return .provider(explicit) }
         if ollamaUp { return .provider(.ollama) }
-        if appleReady { return .apple }
+        if appleReady && appleSupportsLanguage { return .apple }
         return .none
     }
 
-    static func resolveLive() async -> SummaryChoice {
+    /// Dominant language code ("en", "hi", …) of a transcript, nil when it can't tell.
+    static func dominantLanguage(_ text: String) -> String? {
+        let r = NLLanguageRecognizer()
+        r.processString(text)
+        return r.dominantLanguage?.rawValue
+    }
+
+    static func languageName(_ code: String) -> String {
+        Locale(identifier: "en").localizedString(forLanguageCode: code) ?? code
+    }
+
+    /// Plain-English reason shown when Apple's model can't read the transcript and nothing else is set up.
+    static func unsupportedReason(language code: String) -> String {
+        "This transcript is mostly \(languageName(code)). Apple's on-device model only summarizes English and a few other languages. Install Ollama (https://ollama.com), run `ollama pull qwen3:8b`, and OpenWispr will use it automatically — or add an OpenAI/OpenRouter key in AI settings."
+    }
+
+    /// Reason to show instead of the generic setup text, or nil when the transcript language isn't the problem.
+    static func noModelReason(for transcript: String) -> String? {
+        guard AppleLocalEngine.isAvailable(), let lang = dominantLanguage(transcript),
+              !AppleLocalEngine.supports(language: lang) else { return nil }
+        return unsupportedReason(language: lang)
+    }
+
+    static func resolveLive(for transcript: String? = nil) async -> SummaryChoice {
+        let lang = transcript.flatMap(dominantLanguage)
+        return await resolveLive(appleOK: lang.map(AppleLocalEngine.supports(language:)) ?? true)
+    }
+
+    private static func resolveLive(appleOK: Bool) async -> SummaryChoice {
         let raw = UserDefaults.standard.string(forKey: "llmProvider")
         let explicit = raw.flatMap(LLMProvider.init(rawValue:))
         let ollama = await LLMClient.ollamaAlive()
         var ready = false
         if let explicit { ready = explicit == .ollama ? ollama : (LLMClient.apiKey(for: explicit)?.isEmpty == false) }
-        return resolve(explicit: explicit, explicitReady: ready, ollamaUp: ollama, appleReady: AppleLocalEngine.isAvailable())
+        return resolve(explicit: explicit, explicitReady: ready, ollamaUp: ollama, appleReady: AppleLocalEngine.isAvailable(), appleSupportsLanguage: appleOK)
     }
 
     /// Split on line boundaries into chunks of at most `maxWords` words; an over-long line is split by words.
@@ -73,7 +102,14 @@ enum SummaryEngine {
 
     private static func call(_ choice: SummaryChoice, system: String, user: String) async throws -> String {
         switch choice {
-        case .apple: return try await AppleLocalEngine.complete(system: system, user: user)
+        case .apple:
+            do { return try await AppleLocalEngine.complete(system: system, user: user) }
+            catch where String(describing: error).contains("unsupportedLanguageOrLocale") {
+                // Apple rejected the language at runtime: retry once with Ollama / the keyed provider.
+                let next = await resolveLive(appleOK: false)
+                if next != .none { return try await call(next, system: system, user: user) }
+                throw LLMError.badResponse(unsupportedReason(language: dominantLanguage(user) ?? "this language"))
+            }
         case .provider(let p): return try await LLMClient.complete(system: system, user: user, using: p)
         case .none: throw LLMError.notConfigured
         }
@@ -109,7 +145,23 @@ enum SummaryEngine {
         precondition(resolve(explicit: nil, explicitReady: false, ollamaUp: false, appleReady: true) == C.apple, "apple when alone")
         precondition(resolve(explicit: .openrouter, explicitReady: false, ollamaUp: false, appleReady: true) == C.apple, "apple after dead explicit")
         precondition(resolve(explicit: nil, explicitReady: false, ollamaUp: false, appleReady: false) == C.none, "none")
-        print("SummaryEngine.resolve selfTest PASS (6 cases)")
+        precondition(resolve(explicit: nil, explicitReady: false, ollamaUp: false, appleReady: true, appleSupportsLanguage: false) == C.none, "apple skipped for unsupported language")
+        precondition(resolve(explicit: nil, explicitReady: false, ollamaUp: true, appleReady: true, appleSupportsLanguage: false) == C.provider(.ollama), "ollama wins for unsupported language")
+        print("SummaryEngine.resolve selfTest PASS (8 cases)")
+
+        let langs = [("Let's review the launch plan and decide who owns the pricing page by Friday.", "en"),
+                     ("आज हम लॉन्च की योजना पर बात करेंगे और तय करेंगे कि कीमत का पेज कौन बनाएगा।", "hi"),
+                     ("aaj hum launch plan par baat karenge aur tay karenge ki pricing page kaun banayega", "hinglish"),
+                     ("", "nil")]
+        for (text, want) in langs {
+            let got = dominantLanguage(text)
+            switch want {
+            case "nil": precondition(got == nil, "empty text → nil, got \(got ?? "")")
+            case "hinglish": precondition(got != nil, "hinglish must detect something"); print("  hinglish detected as \(got!)")
+            default: precondition(got == want, "expected \(want), got \(got ?? "nil")")
+            }
+        }
+        print("SummaryEngine.dominantLanguage selfTest PASS (4 cases)")
 
         let line = Array(repeating: "word", count: 40).joined(separator: " ")
         let text = (0..<250).map { _ in "You: \(line)" }.joined(separator: "\n") // 250 * 41 = 10,250 words

@@ -4,6 +4,7 @@ Notable changes to OpenWispr (formerly Whispr), newest first.
 
 ## 0.20.0 (unreleased)
 - Sparkle auto-update: "Check for Updates…" in the menu, an automatic-check toggle in Settings, signed update feed at openwispr.vercel.app/appcast.xml.
+- Fix: meeting summaries on Hindi (and other languages Apple's on-device model can't read) now skip Apple, fall back to Ollama or a keyed provider, and otherwise explain exactly what to install. The Ollama hint now suggests `qwen3:8b`.
 
 ## [0.19.1] - 2026-11-04
 On-device meeting summaries.

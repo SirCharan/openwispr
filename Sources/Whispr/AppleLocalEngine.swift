@@ -29,6 +29,16 @@ enum AppleLocalEngine {
 
     static func isAvailable() -> Bool { status().ready }
 
+    /// Whether the on-device model can read this language. Unknown stays true so the runtime retry in SummaryEngine decides.
+    static func supports(language code: String) -> Bool {
+        #if canImport(FoundationModels)
+        if #available(macOS 26.0, *) {
+            return SystemLanguageModel.default.supportsLocale(Locale(identifier: code))
+        }
+        #endif
+        return ["en", "es", "fr", "de", "it", "pt", "ja", "ko", "zh"].contains(String(code.prefix(2)))
+    }
+
     /// One-shot completion: `system` becomes the session instructions, `user` the prompt.
     static func complete(system: String, user: String) async throws -> String {
         #if canImport(FoundationModels)

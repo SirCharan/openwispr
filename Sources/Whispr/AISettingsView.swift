@@ -53,7 +53,7 @@ struct AISettingsView: View {
             if provider == .ollama {
                 PSection("Ollama") {
                     if ollamaModels.isEmpty {
-                        Text("Ollama not detected on localhost:11434. Install from ollama.com and `ollama pull llama3.2`.")
+                        Text("Ollama not detected on localhost:11434. Install from ollama.com and `ollama pull qwen3:8b`.")
                             .font(Brand.caption).foregroundStyle(Brand.muted)
                     } else {
                         Picker("Model", selection: $model) {
