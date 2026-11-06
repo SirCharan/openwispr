@@ -154,5 +154,6 @@ enum SampleData {
                                  speakers: [spk("You", 290, 45, 740, 153, 14, 48, 1), spk("Priya", 230, 36, 590, 154, 11, 62, 0), spk("Arjun", 120, 19, 310, 155, 8, 35, 1)],
                                  questionsPerHour: 14, fillersPerMinute: 1.8)
         MeetingStatsStore.save(stats, transcript: url)
+        MeetingArchive.saveSummary("**Release status.** Design is signed off; engineering needs one more pass on export.\n\n- Freeze scope by Wednesday\n- Test build posted Thursday morning", for: url)
     }
 }

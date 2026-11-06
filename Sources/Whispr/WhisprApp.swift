@@ -71,6 +71,11 @@ enum Whispr {
                     guard choice != .none else { print(SummaryEngine.noModelReason(for: body) ?? "no provider available"); sem.signal(); return }
                     let out = try await SummaryEngine.summarize(transcript: body, choice: choice)
                     print("summary (first 300 chars): \(out.prefix(300))")
+                    if args.contains("--save") {
+                        let u = URL(fileURLWithPath: path)
+                        MeetingArchive.saveSummary(out, for: u)
+                        print("saved: \(MeetingArchive.summaryURL(for: u).path)")
+                    }
                 } catch { print("error: \(error.localizedDescription)") }
                 sem.signal()
             }

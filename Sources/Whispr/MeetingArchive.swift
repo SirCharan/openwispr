@@ -9,6 +9,7 @@ enum MeetingArchive {
         let duration: String     // "m:ss" from the header
         let speakers: [String]
         let hasStats: Bool
+        var hasSummary = false
     }
 
     struct Parsed {
@@ -27,6 +28,19 @@ enum MeetingArchive {
 
     static func fileURL(stamp: String, in dir: URL = directory) -> URL {
         dir.appendingPathComponent("meeting-\(stamp).md")
+    }
+
+    /// Sibling `meeting-<stamp>.summary.md`; never listed as a meeting.
+    static func summaryURL(for transcript: URL) -> URL {
+        transcript.deletingPathExtension().appendingPathExtension("summary.md")
+    }
+
+    static func loadSummary(for transcript: URL) -> String? {
+        try? String(contentsOf: summaryURL(for: transcript), encoding: .utf8)
+    }
+
+    static func saveSummary(_ text: String, for transcript: URL) {
+        try? text.write(to: summaryURL(for: transcript), atomically: true, encoding: .utf8)
     }
 
     /// Header only: the first few lines carry "Duration: m:ss · A · B", so list() never parses a transcript.
@@ -52,12 +66,13 @@ enum MeetingArchive {
         let names = Set(files.map(\.lastPathComponent))
         return files.compactMap { url -> Entry? in
             let n = url.lastPathComponent
-            guard n.hasPrefix("meeting-"), n.hasSuffix(".md") else { return nil }
+            guard n.hasPrefix("meeting-"), n.hasSuffix(".md"), !n.hasSuffix(".summary.md") else { return nil }
             let stamp = String(n.dropFirst("meeting-".count).dropLast(".md".count))
             guard let d = date(fromStamp: stamp) else { return nil }
             let head = header(of: url)
             return Entry(stamp: stamp, date: d, duration: head.duration, speakers: head.speakers,
-                         hasStats: names.contains("meeting-\(stamp).stats.json"))
+                         hasStats: names.contains("meeting-\(stamp).stats.json"),
+                         hasSummary: names.contains("meeting-\(stamp).summary.md"))
         }.sorted { $0.date > $1.date }
     }
 
@@ -107,6 +122,16 @@ enum MeetingArchive {
         precondition(p.lines.count == 2 && p.lines[0].start == 28 && p.lines[0].speaker == "You"
                      && p.lines[0].text == "hello: world" && p.lines[1].start == 65, "MeetingArchive lines failed")
         precondition(date(fromStamp: "2026-11-03T08-13-04") != nil, "MeetingArchive stamp failed")
+        let t = URL(fileURLWithPath: "/tmp/meeting-2026-11-03T08-13-04.md")
+        precondition(summaryURL(for: t).lastPathComponent == "meeting-2026-11-03T08-13-04.summary.md", "summaryURL failed")
+        let tmp = FileManager.default.temporaryDirectory.appendingPathComponent("arch-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: tmp, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tmp) }
+        let mdf = fileURL(stamp: "2026-11-03T08-13-04", in: tmp)
+        try? md.write(to: mdf, atomically: true, encoding: .utf8)
+        saveSummary("sum", for: mdf)
+        let l = list(in: tmp)
+        precondition(l.count == 1 && l[0].hasSummary && loadSummary(for: mdf) == "sum", "archive summary filter failed")
         print("MeetingArchive.selfTest PASS (2 lines, duration \(p.duration), speakers \(p.speakers.count))")
     }
 }

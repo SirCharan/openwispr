@@ -68,7 +68,7 @@ enum SummaryEngine {
     private static func resolveLive(appleOK: Bool) async -> SummaryChoice {
         let raw = UserDefaults.standard.string(forKey: "llmProvider")
         let explicit = raw.flatMap(LLMProvider.init(rawValue:))
-        let ollama = await LLMClient.ollamaAlive()
+        let ollama = await !LLMClient.ollamaModels().isEmpty   // running with no model pulled is not usable
         var ready = false
         if let explicit { ready = explicit == .ollama ? ollama : (LLMClient.apiKey(for: explicit)?.isEmpty == false) }
         return resolve(explicit: explicit, explicitReady: ready, ollamaUp: ollama, appleReady: AppleLocalEngine.isAvailable(), appleSupportsLanguage: appleOK)

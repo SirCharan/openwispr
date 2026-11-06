@@ -7,6 +7,7 @@ Notable changes to OpenWispr (formerly Whispr), newest first.
 - Fix: meeting summaries on Hindi (and other languages Apple's on-device model can't read) now skip Apple, fall back to Ollama or a keyed provider, and otherwise explain exactly what to install. The Ollama hint now suggests `qwen3:8b`.
 - Google Meet names: the Meetings pane now shows whether the Chrome extension is connected, with a Set up button and the three load-unpacked steps; a hint appears 20 s into a Meet recording if no names arrive.
 - Experimental: speaker names from the screen. During a Meet, Teams or Zoom recording OpenWispr captures the meeting window once a second, finds the highlighted active-speaker tile and reads its name label on-device. Extension and Zoom names still win. On by default, toggle in Meetings. Not yet tried on a live call.
+- Meeting summaries are now saved next to the transcript (`meeting-<stamp>.summary.md`), shown for past meetings, and past meetings can be summarised or re-summarised. `--summarize-file <f> --save` does it headlessly. Ollama with no model pulled is no longer picked as the summary provider.
 
 ## [0.19.1] - 2026-11-04
 On-device meeting summaries.

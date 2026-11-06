@@ -824,6 +824,7 @@ final class MeetingController: ObservableObject {
         summarizingWith = choice.label
         do {
             summary = try await SummaryEngine.summarize(transcript: transcript, choice: choice)
+            if let url = meetingFile, let summary { MeetingArchive.saveSummary(summary, for: url) }
             autosave()
         } catch {
             summaryError = error.localizedDescription

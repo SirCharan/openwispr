@@ -13,6 +13,9 @@ struct MeetingView: View {
     @State private var selected: String?   // nil = the live meeting
     @State private var pastLines: [MeetingLine] = []
     @State private var pastStats: MeetingStats?
+    @State private var pastSummary: String?
+    @State private var pastSummarizing = false
+    @State private var pastError: String?
 
     /// Small labelled dot: green while audio buffers keep arriving on that stream, red once
     /// they stop. Text carries the state too, so it does not rely on colour alone.
@@ -44,6 +47,8 @@ struct MeetingView: View {
 
     private func select(_ stamp: String?) {
         selected = stamp
+        pastError = nil
+        pastSummary = stamp.flatMap { MeetingArchive.loadSummary(for: MeetingArchive.fileURL(stamp: $0)) }
         guard let stamp, let loaded = MeetingArchive.load(stamp: stamp) else { pastLines = []; pastStats = nil; return }
         pastLines = loaded.lines
         pastStats = loaded.stats
@@ -53,13 +58,18 @@ struct MeetingView: View {
         let f = DateFormatter(); f.dateFormat = "d MMM yyyy, h:mm a"; return f
     }()
 
-    private func row(title: String, detail: String, badge: Bool, active: Bool, dot: Color? = nil, tap: @escaping () -> Void) -> some View {
+    private func row(title: String, detail: String, badge: Bool, summaryBadge: Bool = false, active: Bool, dot: Color? = nil, tap: @escaping () -> Void) -> some View {
         Button(action: tap) {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     if let dot { Circle().fill(dot).frame(width: 7, height: 7) }
                     Text(title).font(Brand.serif(12)).foregroundStyle(Brand.text).lineLimit(1)
                     Spacer(minLength: 0)
+                    if summaryBadge {
+                        Text("summary").font(.system(size: 10)).foregroundStyle(Brand.muted)
+                            .padding(.horizontal, 5).padding(.vertical, 1)
+                            .overlay(RoundedRectangle(cornerRadius: 4).strokeBorder(Brand.line, lineWidth: 1))
+                    }
                     if badge {
                         Text("stats").font(.system(size: 10)).foregroundStyle(Brand.muted)
                             .padding(.horizontal, 5).padding(.vertical, 1)
@@ -87,7 +97,7 @@ struct MeetingView: View {
                 ForEach(archive) { e in
                     row(title: Self.rowDate.string(from: e.date),
                         detail: [e.duration, "\(e.speakers.count) speaker\(e.speakers.count == 1 ? "" : "s")"].filter { !$0.isEmpty }.joined(separator: " · "),
-                        badge: e.hasStats, active: selected == e.stamp && !controller.isRunning) { select(e.stamp) }
+                        badge: e.hasStats, summaryBadge: e.hasSummary, active: selected == e.stamp && !controller.isRunning) { select(e.stamp) }
                 }
             }
             .padding(Brand.s8)
@@ -158,9 +168,11 @@ struct MeetingView: View {
                     .accessibilityIdentifier("Start recording")
             }
             let noModel = controller.summaryChoice == SummaryChoice.none
-            let noSummary = viewingPast || controller.lines.isEmpty || controller.isRunning || controller.summarizing || noModel
-            PaperButton(title: controller.summarizing ? "Summarizing…" : "Summarize", role: .secondary) {
-                Task { await controller.summarize() }
+            let busy = viewingPast ? pastSummarizing : controller.summarizing
+            let hasSummary = viewingPast ? pastSummary != nil : controller.summary != nil
+            let noSummary = shownLines.isEmpty || controller.isRunning || busy || noModel
+            PaperButton(title: busy ? "Summarizing…" : (hasSummary ? "Re-summarize" : "Summarize"), role: .secondary) {
+                if viewingPast { Task { await summarizePast() } } else { Task { await controller.summarize() } }
             }
             .disabled(noSummary).opacity(noSummary ? 0.5 : 1)
             .help(noModel ? "Set up an AI model to summarise" : "Summarise this meeting")
@@ -168,6 +180,21 @@ struct MeetingView: View {
                 .disabled(shownLines.isEmpty).opacity(shownLines.isEmpty ? 0.5 : 1)
         }
         .padding(12)
+    }
+
+    private func summarizePast() async {
+        guard let stamp = selected, !pastLines.isEmpty, !pastSummarizing else { return }
+        pastSummarizing = true; pastError = nil
+        defer { pastSummarizing = false }
+        let transcript = pastLines.map { "\($0.speaker): \($0.text)" }.joined(separator: "\n")
+        let choice = await SummaryEngine.resolveLive(for: transcript)
+        guard choice != .none else { pastError = SummaryEngine.noModelReason(for: transcript) ?? "No AI model available."; return }
+        do {
+            let out = try await SummaryEngine.summarize(transcript: transcript, choice: choice)
+            MeetingArchive.saveSummary(out, for: MeetingArchive.fileURL(stamp: stamp))
+            if selected == stamp { pastSummary = out }
+            archive = MeetingArchive.list()
+        } catch { pastError = error.localizedDescription }
     }
 
     private func setupCard(title: String, line: String, ollamaLink: Bool = false) -> some View {
@@ -221,7 +248,17 @@ struct MeetingView: View {
             }
             Divider()
 
-            if !viewingPast, controller.summarizing {
+            if viewingPast, pastSummarizing {
+                HStack(spacing: Brand.s8) {
+                    ProgressView().controlSize(.small)
+                    Text("Summarising…").font(Brand.caption).foregroundStyle(Brand.muted)
+                }
+                .padding(Brand.s12).frame(maxWidth: .infinity, alignment: .leading)
+                Divider()
+            } else if viewingPast, let err = pastError {
+                setupCard(title: "Summary failed", line: err, ollamaLink: err.contains("ollama.com")).padding(Brand.s12)
+                Divider()
+            } else if !viewingPast, controller.summarizing {
                 HStack(spacing: Brand.s8) {
                     ProgressView().controlSize(.small)
                     Text("Summarising with \(controller.summarizingWith)…").font(Brand.caption).foregroundStyle(Brand.muted)
@@ -239,7 +276,7 @@ struct MeetingView: View {
                           ollamaLink: why != nil).padding(Brand.s12)
                 Divider()
             }
-            if !viewingPast, let summary = controller.summary {
+            if let summary = viewingPast ? pastSummary : controller.summary {
                 ScrollView {
                     Text(LocalizedStringKey(summary))
                         .textSelection(.enabled)
