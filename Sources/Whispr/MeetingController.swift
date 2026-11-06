@@ -77,6 +77,9 @@ final class MeetingController: ObservableObject {
     /// Shown once per meeting when no extension event arrives within 20 s of Start on a Meet window.
     @Published private(set) var meetHint: String?
     private var meetTimeline: RosterTimeline?
+    /// Set by AppController: id of the detected meeting window ("us.zoom.xos", "meet.google.com", …).
+    var meetingAppID: () -> String? = { nil }
+    private var screenNames: ScreenSpeakerReader?
     // ponytail: full floats in RAM ≈ 230MB/hour — fine for normal meetings; stream-to-disk if ever needed
     private var meetingFile: URL?
     private var diarSegments: [Diarizer.Segment] = []
@@ -199,6 +202,15 @@ final class MeetingController: ObservableObject {
                 return self.clock.time(forHost: CACurrentMediaTime())
             }
             meetTimeline = ms.timeline
+        }
+        screenNames?.stop(); screenNames = nil
+        if Settings.screenSpeakerNames, let id = meetingAppID() {
+            let sr = ScreenSpeakerReader(kind: .init(meetingID: id), clock: { [weak self] in
+                guard let self, self.isRunning, !self.isPaused else { return nil }
+                return self.clock.time(forHost: CACurrentMediaTime())
+            })
+            screenNames = sr
+            Task { await sr.start(meetingID: id) }
         }
         meetHint = nil
         if let ms = meetServer, isMeetWindow() {
@@ -412,15 +424,19 @@ final class MeetingController: ObservableObject {
         await flushPending()
         closeAudioWriters()
         roster?.stop()
+        screenNames?.stop()
         let segments = await applyDiarization()
         meetServer?.clock = { nil }
         if !segments.isEmpty {
             // Zoom and Meet never coexist: at most one of these is set.
-            let map = (roster?.timeline.names(forDiarized: segments) ?? [:])
+            var map = (roster?.timeline.names(forDiarized: segments) ?? [:])
                 .merging(meetTimeline?.names(forDiarized: segments) ?? [:]) { a, _ in a }
+            // Screen OCR only fills speakers (and names) the extension / AX paths left open.
+            for (sp, n) in screenNames?.timeline.names(forDiarized: segments) ?? [:]
+            where map[sp] == nil && !map.values.contains(n) { map[sp] = n }
             if !map.isEmpty { renameSpeakers(map) }
         }
-        roster = nil; meetTimeline = nil
+        roster = nil; meetTimeline = nil; screenNames = nil
         // The floor is calibrated on one room and one mic gain. A high drop count is the signal
         // to loosen `meetingSpeechFloor` — surfaced here so the user doesn't need Console.app.
         if floorDrops > 0 {

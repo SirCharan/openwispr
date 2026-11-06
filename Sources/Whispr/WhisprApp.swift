@@ -28,6 +28,7 @@ enum Whispr {
                 MeetingWindowDetector.selfTest()
                 ZoomRosterReader.selfTest()
                 RosterTimeline.selfTest()
+                ScreenSpeakerReader.selfTest()
                 await MeetRosterServer.selfTest()
                 MeetingController.selfTest()
                 await MeetingSegmenter.selfTest()
@@ -39,6 +40,13 @@ enum Whispr {
         }
         if let i = args.firstIndex(of: "--update-test"), i + 1 < args.count {
             UpdateProbe(feed: args[i + 1]).run()
+        }
+        if let i = args.firstIndex(of: "--ocr-test"), i + 1 < args.count {
+            let kind = i + 2 < args.count ? ScreenSpeakerReader.Kind(rawValue: args[i + 2]) ?? .meet : .meet
+            exit(MainActor.assumeIsolated { ScreenSpeakerReader.runOCRTest(path: args[i + 1], kind: kind) })
+        }
+        if let i = args.firstIndex(of: "--make-ocr-fixture"), i + 1 < args.count {
+            exit(MainActor.assumeIsolated { ScreenSpeakerReader.writeFixture(path: args[i + 1]) })
         }
         if let i = args.firstIndex(of: "--snap-panes"), i + 1 < args.count {
             MainActor.assumeIsolated { Snapshot.run(dir: args[i + 1], sample: args.contains("--sample")) }

@@ -141,6 +141,7 @@ final class AppController {
         meetingDetector = d
         meetingCtrl.isZoomMeeting = { [weak d] in d?.current?.id == "us.zoom.xos" }
         meetingCtrl.isMeetWindow = { [weak d] in d?.current?.id == "meet.google.com" }
+        meetingCtrl.meetingAppID = { [weak d] in d?.current?.id }
         let ms = MeetRosterServer()
         ms.onJoined = { [weak d] in d?.extensionJoined() }
         ms.onLeft = { [weak d] in d?.extensionLeft() }

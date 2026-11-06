@@ -28,6 +28,12 @@ enum Settings {
     }
 
     /// Offer to record when a Zoom / Meet / Teams meeting window appears.
+    /// Experimental: name meeting speakers by OCR of the meeting window (ScreenSpeakerReader).
+    static var screenSpeakerNames: Bool {
+        get { UserDefaults.standard.object(forKey: "screenSpeakerNames") as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: "screenSpeakerNames") }
+    }
+
     static var detectMeetings: Bool {
         get { UserDefaults.standard.object(forKey: "detectMeetings") as? Bool ?? true }
         set { UserDefaults.standard.set(newValue, forKey: "detectMeetings") }

@@ -6,6 +6,7 @@ struct MeetingView: View {
     @ObservedObject var controller: MeetingController
     var openAISettings: () -> Void = {}
     var lastSeenOverride: Date?   // snapshots only
+    @State private var screenNames = Settings.screenSpeakerNames
     @State private var screenRecOK = CGPreflightScreenCaptureAccess()
     @State private var renames: [String: String] = [:]
     @State private var archive: [MeetingArchive.Entry] = []
@@ -194,6 +195,9 @@ struct MeetingView: View {
                     if !st.connected { PaperButton(title: "Set up", role: .secondary) { MeetRosterServer.openSetup() } }
                 }
                 if !st.connected { Text(MeetRosterServer.setupSteps).font(Brand.caption).foregroundStyle(Brand.muted) }
+                Toggle("Read speaker names from the meeting window (experimental)", isOn: $screenNames)
+                    .toggleStyle(.checkbox).font(Brand.caption).foregroundStyle(Brand.muted)
+                    .onChange(of: screenNames) { _, v in Settings.screenSpeakerNames = v }
             }
             .padding(.horizontal, 12).padding(.bottom, 8)
         }
