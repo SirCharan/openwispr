@@ -1,0 +1,23 @@
+{
+  "sequences": [
+    {"name": "hold then release is push-to-talk", "doubleTap": true,
+     "events": [["down","0"],["up","1.2"]], "actions": ["holdStart","holdEnd"]},
+    {"name": "single tap opens a session, later tap stops it", "doubleTap": true,
+     "events": [["down","0"],["up","0.1"],["down","3"],["up","3.1"]], "actions": ["holdStart","toggle"]},
+    {"name": "double tap starts hands-free", "doubleTap": true,
+     "events": [["down","0"],["up","0.1"],["down","0.3"],["up","0.4"]], "actions": ["holdStart","handsFreeStart"]},
+    {"name": "hands-free ends on the next single tap", "doubleTap": true,
+     "events": [["down","0"],["up","0.1"],["down","0.3"],["up","0.4"],["down","5"],["up","5.1"]],
+     "actions": ["holdStart","handsFreeStart","handsFreeStop"]},
+    {"name": "hands-free ignores a long second press release", "doubleTap": true,
+     "events": [["down","0"],["up","0.1"],["down","0.3"],["up","2"]], "actions": ["holdStart","handsFreeStart"]},
+    {"name": "double tap off: quick second tap stops like before", "doubleTap": false,
+     "events": [["down","0"],["up","0.1"],["down","0.3"],["up","0.4"]], "actions": ["holdStart","toggle"]},
+    {"name": "second tap after the window is a plain stop", "doubleTap": true,
+     "events": [["down","0"],["up","0.1"],["down","0.6"],["up","0.7"]], "actions": ["holdStart","toggle"]},
+    {"name": "fn key-repeat downs are ignored", "doubleTap": true,
+     "events": [["down","0"],["down","0.03"],["down","0.06"],["down","0.5"],["up","1.0"]], "actions": ["holdStart","holdEnd"]},
+    {"name": "bounce inside the tap guard is ignored", "doubleTap": true,
+     "events": [["down","0"],["up","0.05"],["down","0.1"],["up","0.12"]], "actions": ["holdStart"]}
+  ]
+}

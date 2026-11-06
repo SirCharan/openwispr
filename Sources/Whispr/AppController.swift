@@ -285,27 +285,21 @@ final class AppController {
         }
     }
 
-    /// Hybrid trigger (Wispr Flow pattern): a quick tap toggles a session that stays open
-    /// until the next tap; press-and-hold is classic push-to-talk (release transcribes).
-    private static let holdThreshold: TimeInterval = 0.5
-    private var keyDownAt: Date?
+    /// Hybrid trigger (Wispr Flow pattern): a quick tap toggles a session that stays open until the
+    /// next tap; press-and-hold is push-to-talk; a double-tap starts hands-free (see HotkeyGesture).
+    private var gesture = HotkeyGesture()
 
-    /// Key-down: starts when idle; a tap while a session is open closes it.
-    private func handleKeyDown() {
-        if recorder.isRecording {
-            stopDictation()
-        } else {
-            keyDownAt = Date()
-            startDictation()
+    private func handleKeyDown() { perform(gesture.down(at: ProcessInfo.processInfo.systemUptime, isRecording: recorder.isRecording)) }
+    private func handleKeyUp() { perform(gesture.up(at: ProcessInfo.processInfo.systemUptime, isRecording: recorder.isRecording)) }
+
+    private func perform(_ action: HotkeyGesture.Action?) {
+        gesture.doubleTapEnabled = Settings.doubleTapHandsFree
+        switch action {
+        case .holdStart: startDictation()
+        case .holdEnd, .toggle, .handsFreeStop: stopDictation()
+        case .handsFreeStart: setStatus("hands-free — tap to stop")
+        case nil: break
         }
-    }
-
-    /// Key-up after a hold (>0.5s) is push-to-talk — stop and transcribe.
-    /// Key-up after a tap keeps the session open.
-    private func handleKeyUp() {
-        guard recorder.isRecording, let down = keyDownAt else { return }
-        keyDownAt = nil
-        if Date().timeIntervalSince(down) > Self.holdThreshold { stopDictation() }
     }
 
     // MARK: - Dictation flow (hold hotkey → record → release → transcribe → paste)

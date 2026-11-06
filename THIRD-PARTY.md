@@ -29,3 +29,4 @@ SOFTWARE.
 ## Files
 - `build_app.sh` (Sparkle framework copy + inside-out signing) ← Muesli `scripts/build_native_app.sh`
 - `Sources/Whispr/AppFormatting.swift` ← Muesli `DictationAppFormatting.swift`, `DictationPasteSpacing.swift`
+- `Sources/Whispr/HotkeyGesture.swift` ← Muesli `HotkeyMonitor.swift` (double-tap timing)

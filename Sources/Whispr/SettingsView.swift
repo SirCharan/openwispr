@@ -12,6 +12,7 @@ struct SettingsView: View {
     @AppStorage("removeFillers") private var removeFillers = true
     @AppStorage("cleanUp") private var cleanUp = true
     @AppStorage("soundCues") private var soundCues = true
+    @AppStorage("doubleTapHandsFree") private var doubleTapHandsFree = true
     @AppStorage("muteWhileDictating") private var muteWhileDictating = true
     @AppStorage("muteMode") private var muteMode = "mute"
     @AppStorage("showIdleWidget") private var showIdleWidget = true
@@ -54,6 +55,7 @@ struct SettingsView: View {
             PSection("Behavior") {
                 Toggle("Auto-paste at cursor (off = copy to clipboard only)", isOn: $autoPaste)
                 Toggle("Sound cues on record start/stop", isOn: $soundCues)
+                Toggle("Double-tap the trigger for hands-free dictation", isOn: $doubleTapHandsFree)
                 Toggle("Silence other audio while dictating", isOn: $muteWhileDictating)
                 if muteWhileDictating {
                     Picker("While dictating", selection: $muteMode) {

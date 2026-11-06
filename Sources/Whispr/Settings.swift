@@ -111,6 +111,12 @@ enum Settings {
         set { UserDefaults.standard.set(newValue, forKey: "soundCues") }
     }
 
+    /// Double-tap the trigger to dictate hands-free until the next tap.
+    static var doubleTapHandsFree: Bool {
+        get { UserDefaults.standard.object(forKey: "doubleTapHandsFree") as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: "doubleTapHandsFree") }
+    }
+
     /// Bundle IDs of apps where Whispr dictation is disabled.
     /// One-time (0.19): per-app lists used to hold display names; swap them for bundle IDs.
     static func migratePerAppLists() {
