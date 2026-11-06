@@ -1,5 +1,6 @@
 import Foundation
 import Network
+import AppKit
 
 /// Loopback-only HTTP listener. The Chrome extension in extensions/meet-names POSTs Meet rosters
 /// to http://127.0.0.1:47891/meet; they feed the same RosterTimeline the Zoom path uses.
@@ -17,6 +18,35 @@ final class MeetRosterServer {
     var onJoined: () -> Void = {}
     var onLeft: () -> Void = {}
     private(set) var lastJoined: Date?
+    /// Last valid event from the extension (any type). `everConnected` survives relaunches.
+    private(set) var lastEventAt: Date?
+    static var everConnected: Bool {
+        get { UserDefaults.standard.bool(forKey: "meetExtEverConnected") }
+        set { UserDefaults.standard.set(newValue, forKey: "meetExtEverConnected") }
+    }
+
+    /// Pure. Status line for the Meetings pane: connected only if an event arrived in the last 10 min.
+    nonisolated static func statusText(everConnected: Bool, lastEventAt: Date?, now: Date = Date()) -> (text: String, connected: Bool) {
+        if let t = lastEventAt, now.timeIntervalSince(t) < 600 {
+            let m = Int(now.timeIntervalSince(t) / 60)
+            return ("Connected (last seen \(m < 1 ? "just now" : "\(m) min ago"))", true)
+        }
+        return (everConnected ? "Not seen recently. Is Chrome open with the extension on?" : "Extension not loaded", false)
+    }
+
+    /// The three steps shown next to the Set up button and in the in-meeting hint.
+    static let setupSteps = "1. Turn on Developer mode. 2. Click Load unpacked. 3. Pick the meet-names folder that Finder shows."
+
+    /// Opens chrome://extensions and reveals the bundled extension folder.
+    static func openSetup() {
+        let cfg = NSWorkspace.OpenConfiguration()
+        if let chrome = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.google.Chrome") {
+            NSWorkspace.shared.open([URL(string: "chrome://extensions")!], withApplicationAt: chrome, configuration: cfg)
+        }
+        if let dir = Bundle.main.resourceURL?.appendingPathComponent("meet-names") {
+            NSWorkspace.shared.activateFileViewerSelecting([dir])
+        }
+    }
     var joinedRecently: Bool { lastJoined.map { Date().timeIntervalSince($0) < 60 } ?? false }
 
     private var listener: NWListener?
@@ -136,6 +166,7 @@ final class MeetRosterServer {
             Log.app.info("meet-ext: rejected undecodable body (\(body.count, privacy: .public) bytes)")
             return
         }
+        lastEventAt = Date(); Self.everConnected = true
         let ps = p.participants ?? []
         Log.app.info("meet-ext: \(p.event, privacy: .public) meeting=\(p.meeting ?? "-", privacy: .public) participants=\(ps.count, privacy: .public) speaking=\(ps.filter { $0.speaking == true }.count, privacy: .public)")
         switch p.event {
@@ -168,6 +199,10 @@ final class MeetRosterServer {
         precondition((pre as? HTTPURLResponse)?.value(forHTTPHeaderField: "Access-Control-Allow-Methods") == "POST", "preflight")
         if case .bad = parse(Data("POST /meet HTTP/1.1\r\nContent-Length: 70000\r\n\r\n".utf8)) {} else { preconditionFailure("oversize body") }
         s.stop()
+        let now = Date()
+        precondition(statusText(everConnected: false, lastEventAt: nil, now: now).text == "Extension not loaded", "status never")
+        precondition(statusText(everConnected: true, lastEventAt: now - 120, now: now) == ("Connected (last seen 2 min ago)", true), "status connected")
+        precondition(!statusText(everConnected: true, lastEventAt: now - 3600, now: now).connected, "status stale")
         print("MeetRosterServer.selfTest PASS")
     }
 }

@@ -74,6 +74,8 @@ final class MeetingController: ObservableObject {
     /// Set by AppController: is a browser Meet window detected right now?
     var isMeetWindow: () -> Bool = { false }
     var meetServer: MeetRosterServer?
+    /// Shown once per meeting when no extension event arrives within 20 s of Start on a Meet window.
+    @Published private(set) var meetHint: String?
     private var meetTimeline: RosterTimeline?
     // ponytail: full floats in RAM ≈ 230MB/hour — fine for normal meetings; stream-to-disk if ever needed
     private var meetingFile: URL?
@@ -197,6 +199,15 @@ final class MeetingController: ObservableObject {
                 return self.clock.time(forHost: CACurrentMediaTime())
             }
             meetTimeline = ms.timeline
+        }
+        meetHint = nil
+        if let ms = meetServer, isMeetWindow() {
+            let began = Date()
+            Task { [weak self] in
+                try? await Task.sleep(for: .seconds(20))
+                guard let self, self.isRunning, (ms.lastEventAt ?? .distantPast) < began else { return }
+                self.meetHint = "Speaker names for Google Meet need the OpenWispr Chrome extension. Click Set up on the Google Meet names row in Meetings."
+            }
         }
     }
 

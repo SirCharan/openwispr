@@ -42,6 +42,9 @@ enum Snapshot {
             write(MeetingView(controller: setup).background(Brand.bg), size: NSSize(width: 730, height: 560), appearance: appearance,
                   to: out.appendingPathComponent("\(tag)-meetings-setup.png"))
 
+            write(MeetingView(controller: setup, lastSeenOverride: Date().addingTimeInterval(-120)).background(Brand.bg), size: NSSize(width: 730, height: 560), appearance: appearance,
+                  to: out.appendingPathComponent("\(tag)-meetings-meetnames-connected.png"))
+
             for step in 0...OnboardingModel.Step.done.rawValue {
                 onboarding.step = OnboardingModel.Step(rawValue: step) ?? .welcome
                 write(OnboardingView(model: onboarding), size: NSSize(width: 520, height: 560), appearance: appearance,

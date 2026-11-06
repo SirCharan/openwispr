@@ -5,6 +5,7 @@ import AppKit
 struct MeetingView: View {
     @ObservedObject var controller: MeetingController
     var openAISettings: () -> Void = {}
+    var lastSeenOverride: Date?   // snapshots only
     @State private var screenRecOK = CGPreflightScreenCaptureAccess()
     @State private var renames: [String: String] = [:]
     @State private var archive: [MeetingArchive.Entry] = []
@@ -181,9 +182,31 @@ struct MeetingView: View {
         }
     }
 
+    private var meetNamesRow: some View {
+        TimelineView(.periodic(from: .now, by: 30)) { ctx in
+            let st = MeetRosterServer.statusText(everConnected: MeetRosterServer.everConnected || lastSeenOverride != nil,
+                                                 lastEventAt: lastSeenOverride ?? controller.meetServer?.lastEventAt, now: ctx.date)
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: Brand.s8) {
+                    Circle().fill(st.connected ? Brand.ok : Brand.warn).frame(width: 6, height: 6)
+                    Text("Google Meet names: \(st.text)").font(Brand.caption).foregroundStyle(Brand.muted)
+                    Spacer(minLength: 0)
+                    if !st.connected { PaperButton(title: "Set up", role: .secondary) { MeetRosterServer.openSetup() } }
+                }
+                if !st.connected { Text(MeetRosterServer.setupSteps).font(Brand.caption).foregroundStyle(Brand.muted) }
+            }
+            .padding(.horizontal, 12).padding(.bottom, 8)
+        }
+    }
+
     private var detail: some View {
         VStack(spacing: 0) {
             toolbar
+            meetNamesRow
+            if controller.isRunning, let hint = controller.meetHint {
+                Text(hint).font(Brand.caption).foregroundStyle(Brand.text)
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(8).background(Brand.warn.opacity(0.2))
+            }
             if let banner = controller.banner {
                 Text(banner)
                     .font(Brand.caption.bold())

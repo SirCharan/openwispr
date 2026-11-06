@@ -36,6 +36,16 @@ Local-first dictation and meeting transcription for macOS. Speech never leaves y
 - Raw audio is kept (mic + system, separately) for 7 days by default, so a bad transcript can be re-run offline.
 - Optional AI summary (Decisions / Action items) once the meeting ends, and optional on-device auto-cleanup through Ollama (off by default, per app, raw text kept with revert).
 
+### Google Meet speaker names
+
+Meet names come from a small Chrome extension bundled in the app. Chrome only loads it by hand:
+
+1. In Meetings, click **Set up** on the "Google Meet names" row. Chrome opens `chrome://extensions` and Finder shows the `meet-names` folder.
+2. Turn on **Developer mode** (top right of the extensions page).
+3. Click **Load unpacked** and pick the `meet-names` folder.
+
+The row turns green once Meet sends its first roster. Without the extension, Meet speakers stay Speaker A/B/C.
+
 ### Personalization
 
 - **Snippets** — a spoken trigger phrase expands to canned text (email, LinkedIn, signature). Several trigger phrases per snippet, since Whisper writes the same phrase more than one way.
