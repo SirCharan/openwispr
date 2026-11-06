@@ -15,3 +15,4 @@ windows/dist/
 
 # Tauri writes these per build host — regenerated, not source
 windows/src-tauri/gen/schemas/
+.grind.log
