@@ -54,12 +54,16 @@ final class MenuBarController: NSObject {
         let settings = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
         settings.target = self
         menu.addItem(settings)
+        let update = NSMenuItem(title: "Check for Updates…", action: #selector(checkUpdates), keyEquivalent: "")
+        update.target = self
+        menu.addItem(update)
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit OpenWispr", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         statusItem.menu = menu
     }
 
     @objc private func openSettings() { onSettings() }
+    @objc private func checkUpdates() { Updater.shared.checkForUpdates() }
     @objc private func openMeeting() { onMeeting() }
     @objc private func openImport() { onImport() }
     @objc private func openMain() { onOpen() }

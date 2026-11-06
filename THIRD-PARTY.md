@@ -27,4 +27,4 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ## Files
-
+- `build_app.sh` (Sparkle framework copy + inside-out signing) ← Muesli `scripts/build_native_app.sh`

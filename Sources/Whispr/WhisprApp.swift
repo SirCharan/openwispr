@@ -37,6 +37,9 @@ enum Whispr {
             }
             dispatchMain()
         }
+        if let i = args.firstIndex(of: "--update-test"), i + 1 < args.count {
+            UpdateProbe(feed: args[i + 1]).run()
+        }
         if let i = args.firstIndex(of: "--snap-panes"), i + 1 < args.count {
             MainActor.assumeIsolated { Snapshot.run(dir: args[i + 1], sample: args.contains("--sample")) }
             exit(0)

@@ -29,10 +29,19 @@ cp THIRD-PARTY.md "$APP_BUNDLE/Contents/Resources/THIRD-PARTY.md"
 [ -d extensions/meet-names ] && cp -R extensions/meet-names "$APP_BUNDLE/Contents/Resources/meet-names"
 printf 'APPL????' > "$APP_BUNDLE/Contents/PkgInfo"
 
+# Sparkle ships as a prebuilt framework; copy it in and sign it inside-out (see Muesli build_native_app.sh).
+SPARKLE_FW=".build/artifacts/sparkle/Sparkle/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework"
+mkdir -p "$APP_BUNDLE/Contents/Frameworks"
+ditto "$SPARKLE_FW" "$APP_BUNDLE/Contents/Frameworks/Sparkle.framework"
+
 # Prefer the stable "Whispr Dev" identity: TCC grants (mic/accessibility/screen) survive
 # rebuilds only when the designated requirement is stable — ad-hoc changes every build.
 if security find-identity -p codesigning 2>/dev/null | grep -q "Whispr Dev"; then
     echo "==> codesign (Whispr Dev)"
+    FW="$APP_BUNDLE/Contents/Frameworks/Sparkle.framework/Versions/B"
+    for x in "$FW"/XPCServices/*.xpc "$FW/Autoupdate" "$FW/Updater.app" "$APP_BUNDLE/Contents/Frameworks/Sparkle.framework"; do
+        codesign --force --sign "Whispr Dev" "$x"
+    done
     codesign --force --deep --sign "Whispr Dev" "$APP_BUNDLE"
 else
     echo "==> ad-hoc codesign (grants will NOT survive rebuilds)"

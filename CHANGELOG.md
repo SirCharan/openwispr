@@ -2,6 +2,9 @@
 
 Notable changes to OpenWispr (formerly Whispr), newest first.
 
+## 0.20.0 (unreleased)
+- Sparkle auto-update: "Check for Updates…" in the menu, an automatic-check toggle in Settings, signed update feed at openwispr.vercel.app/appcast.xml.
+
 ## [0.19.1] - 2026-11-04
 On-device meeting summaries.
 - Summarize works with no setup on Macs with Apple Intelligence (macOS 26): it uses the Apple on-device model when no other AI is configured. Order: your AI settings choice, then Ollama, then Apple.

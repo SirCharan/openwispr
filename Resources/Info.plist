@@ -17,7 +17,15 @@
 	<key>CFBundleShortVersionString</key>
 	<string>0.19.1</string>
 	<key>CFBundleVersion</key>
-	<string>1</string>
+	<string>2000</string>
+	<key>SUFeedURL</key>
+	<string>https://openwispr.vercel.app/appcast.xml</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
+	<key>SUPublicEDKey</key>
+	<string>9I9A9LNq3KvonwzVSRAMJrqlb413JFOaYtBc0JTOGYE=</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>14.0</string>
 	<key>LSUIElement</key>

@@ -25,6 +25,7 @@ struct SettingsView: View {
     @State private var launchAtLogin = LoginItem.isEnabled
     @State private var loginItemFailed = false
     @State private var accessibilityOK = Permissions.hasAccessibility
+    @State private var autoUpdate = Updater.shared.updater.automaticallyChecksForUpdates
 
     var body: some View {
         Form {
@@ -42,6 +43,13 @@ struct SettingsView: View {
                 }
                 Text("Tap the trigger to start — it keeps listening until you tap again. Or hold to talk and release to transcribe. Both always work.")
                     .font(Brand.caption).foregroundStyle(Brand.muted)
+            }
+            PSection("Updates") {
+                let v = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
+                Text("OpenWispr \(v)").font(Brand.caption).foregroundStyle(Brand.muted)
+                Toggle("Check for updates automatically", isOn: $autoUpdate)
+                    .onChange(of: autoUpdate) { _, on in Updater.shared.updater.automaticallyChecksForUpdates = on }
+                Button("Check for Updates…") { Updater.shared.checkForUpdates() }
             }
             PSection("Behavior") {
                 Toggle("Auto-paste at cursor (off = copy to clipboard only)", isOn: $autoPaste)
