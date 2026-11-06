@@ -15,6 +15,8 @@ final class AppState: ObservableObject {
 extension Notification.Name {
     static let whisprModelChanged = Notification.Name("whispr.modelChanged")
     static let whisprReloadModel = Notification.Name("whispr.reloadModel")
+    /// Retry a saved failed dictation; `object` is its `UUID`.
+    static let whisprRetryRecovery = Notification.Name("whispr.retryRecovery")
     /// Correction toast proposing vocabulary terms. `userInfo["terms"]` is `[String]`.
     /// The toast never writes to the dictionary itself — the user confirms in the Dictionary pane.
     static let whisprStageVocab = Notification.Name("whispr.stageVocab")
@@ -217,9 +219,12 @@ private struct DictationsPane: View {
     @State private var entries: [HistoryEntry] = []
     @State private var overview = Stats.overview()
     @State private var confirmClear = false
+    @State private var failed: [FailedDictation] = []
+    @State private var failedOpen = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: Brand.s16) {
+            if !failed.isEmpty { failedSection }
             if let err = state.modelError {
                 HStack(spacing: 10) {
                     Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Brand.coral)
@@ -271,7 +276,39 @@ private struct DictationsPane: View {
         } message: { Text("This removes every saved transcript. Your stats stay.") }
     }
 
-    private func refresh() { entries = HistoryStore.load(); overview = Stats.overview() }
+    private func refresh() {
+        entries = HistoryStore.load(); overview = Stats.overview()
+        failed = RecoveryStore.sampleOverride ?? RecoveryStore.standard.list()
+        if RecoveryStore.sampleOverride != nil { failedOpen = true }
+    }
+
+    /// Dictations whose transcription failed. The audio is kept (7 days, newest 20) until retried or deleted.
+    private var failedSection: some View {
+        DisclosureGroup(isExpanded: $failedOpen) {
+            VStack(alignment: .leading, spacing: Brand.s8) {
+                ForEach(failed) { f in
+                    HStack(spacing: Brand.s8) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("\(f.startedAt.formatted(date: .abbreviated, time: .shortened)) · \(Int(f.seconds.rounded())) s"
+                                 + (f.appBundleID.map { " · \(AppMonitor.name(for: $0))" } ?? ""))
+                                .font(Brand.body).foregroundStyle(Brand.text)
+                            Text(f.message).font(Brand.caption).foregroundStyle(Brand.muted).lineLimit(1)
+                        }
+                        Spacer()
+                        Button("Retry") { NotificationCenter.default.post(name: .whisprRetryRecovery, object: f.id) }
+                        Button("Delete", role: .destructive) { RecoveryStore.standard.discard(f); refresh() }
+                    }
+                }
+            }
+            .padding(.top, Brand.s8)
+        } label: {
+            Label("Failed (\(failed.count))", systemImage: "exclamationmark.triangle.fill")
+                .font(.system(size: 13, weight: .semibold)).foregroundStyle(Brand.coral)
+        }
+        .padding(12)
+        .background(RoundedRectangle(cornerRadius: 10).fill(Brand.coralSoft))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Brand.coral.opacity(0.4)))
+    }
 
     private var filtered: [HistoryEntry] {
         search.isEmpty ? entries : entries.filter { $0.text.localizedCaseInsensitiveContains(search) }

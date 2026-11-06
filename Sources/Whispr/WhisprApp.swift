@@ -18,6 +18,8 @@ enum Whispr {
             SnippetStore.selfTest()
             AppFormatting.selfTest()
             HotkeyGesture.selfTest()
+            RecoveryStore.selfTest()
+            MainActor.assumeIsolated { DictationHealth.selfTest() }
             Stats.selfTest()
             Transliterate.selfTest()
             SummaryEngine.selfTest()
@@ -39,6 +41,9 @@ enum Whispr {
                 exit(0)
             }
             dispatchMain()
+        }
+        if args.contains("--health-test") {
+            exit(MainActor.assumeIsolated { DictationHealth.runHealthTest() })
         }
         if let i = args.firstIndex(of: "--update-test"), i + 1 < args.count {
             UpdateProbe(feed: args[i + 1]).run()

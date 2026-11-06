@@ -37,6 +37,14 @@ enum Snapshot {
                       to: out.appendingPathComponent("\(tag)-\(slug(pane.rawValue)).png"))
             }
 
+            RecoveryStore.sampleOverride = [
+                FailedDictation(id: UUID(), startedAt: Date().addingTimeInterval(-600), seconds: 12, appBundleID: "com.apple.Notes",
+                                message: "Transcription failed: model not loaded", partialText: nil)]
+            state.pane = .dictations
+            write(HomeView(state: state, meetingController: meetings, importModel: importModel), size: NSSize(width: 960, height: 672),
+                  appearance: appearance, to: out.appendingPathComponent("\(tag)-dictations-failed.png"))
+            RecoveryStore.sampleOverride = nil
+
             let setup = MeetingController(transcriber: transcriber)
             setup.previewSummaryState(lines: [MeetingLine(speaker: "You", text: "Let's ship Thursday.", start: 0, end: 4)], choice: SummaryChoice.none)
             write(MeetingView(controller: setup).background(Brand.bg), size: NSSize(width: 730, height: 560), appearance: appearance,
@@ -55,6 +63,10 @@ enum Snapshot {
             pill.preview = "so the plan for Thursday is to ship the new"
             write(RecordingPill(model: pill, onCancel: {}, onStop: {}), size: nil, appearance: appearance,
                   to: out.appendingPathComponent("\(tag)-float-pill.png"))
+            let warn = PillModel()
+            warn.warning = DictationHealth.silentMessage
+            write(RecordingPill(model: warn, onCancel: {}, onStop: {}), size: nil, appearance: appearance,
+                  to: out.appendingPathComponent("\(tag)-float-pill-warning.png"))
             write(IdlePillView(onTap: {}, onHide: {}), size: nil, appearance: appearance,
                   to: out.appendingPathComponent("\(tag)-float-idle.png"))
             write(ToastView(pairs: [(from: "stratsy", to: "Stratzy")], onAdd: {}, onClose: {}).frame(width: 340),

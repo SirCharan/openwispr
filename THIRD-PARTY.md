@@ -30,3 +30,5 @@ SOFTWARE.
 - `build_app.sh` (Sparkle framework copy + inside-out signing) ← Muesli `scripts/build_native_app.sh`
 - `Sources/Whispr/AppFormatting.swift` ← Muesli `DictationAppFormatting.swift`, `DictationPasteSpacing.swift`
 - `Sources/Whispr/HotkeyGesture.swift` ← Muesli `HotkeyMonitor.swift` (double-tap timing)
+- `Sources/Whispr/DictationHealth.swift` ← Muesli `DictationStartupWatchdog.swift`, `DictationCaptureHealth.swift`
+- `Sources/Whispr/RecoveryStore.swift` ← Muesli `DictationRecoveryStore.swift`; Failed section in `HomeWindow.swift` ← `FailedDictationsView.swift`

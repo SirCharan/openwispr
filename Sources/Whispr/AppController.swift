@@ -27,8 +27,8 @@ final class AppController {
     private var previewTask: Task<Void, Never>?
     /// Mirrors the actor's readiness for synchronous UI guards.
     private var modelReady = false
-    /// Samples of the last dictation whose transcription failed — recoverable via "Retry".
-    private var failedSamples: [Float]?
+    private let health = DictationHealth()
+    private let recovery = RecoveryStore.standard
     /// Bundle id of the app being dictated into (captured at start, used for Insights per-app stats).
     private var dictatingInto: String?
     private let modelManager = ModelManager()
@@ -77,6 +77,10 @@ final class AppController {
                 self.modelManager.selectedModel = name
                 await self.loadSelectedModel()
             }
+        }
+        NotificationCenter.default.addObserver(forName: .whisprRetryRecovery, object: nil, queue: .main) { [weak self] note in
+            guard let id = note.object as? UUID else { return }
+            MainActor.assumeIsolated { if let rec = self?.recovery.list().first(where: { $0.id == id }) { self?.retry(rec) } }
         }
         NotificationCenter.default.addObserver(forName: .whisprReloadModel, object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor in await self?.loadSelectedModel() }
@@ -327,6 +331,8 @@ final class AppController {
             idleWidget.hide() // the recording pill takes its spot
             setStatus("listening…")
             startPreviewLoop()
+            health.start(sample: { [recorder] in (recorder.diagnostics.appends, recorder.tailRMS(1)) },
+                         onWarning: { [weak self] in self?.indicator.model.warning = $0 })
         } catch {
             setStatus("mic error")
             Log.audio.error("mic start failed: \(error.localizedDescription, privacy: .public)")
@@ -368,6 +374,7 @@ final class AppController {
     private func cancelDictation() {
         guard recorder.isRecording else { return }
         stopPreviewLoop()
+        health.stop()
         _ = recorder.stop()
         silencer.restore()
         menuBar.setRecording(false)
@@ -391,6 +398,7 @@ final class AppController {
     private func stopDictation() {
         guard recorder.isRecording else { return }
         stopPreviewLoop()
+        health.stop()
         let samples = recorder.stop()
         silencer.restore() // before the Tink, so the cue is audible again
         menuBar.setRecording(false)
@@ -403,13 +411,21 @@ final class AppController {
 
     /// Retry the last failed transcription (menu item).
     func retryLastTranscription() {
-        guard let samples = failedSamples else { setStatus("nothing to retry"); return }
-        failedSamples = nil
-        setStatus("retrying…")
-        transcribeAndDeliver(samples)
+        guard let rec = recovery.list().first else { setStatus("nothing to retry"); return }
+        retry(rec)
     }
 
-    private func transcribeAndDeliver(_ samples: [Float]) {
+    private func retry(_ rec: FailedDictation) {
+        guard let samples = recovery.samples(for: rec) else { recovery.discard(rec); setStatus("recording is gone"); return }
+        setStatus("retrying…")
+        dictatingInto = rec.appBundleID
+        transcribeAndDeliver(samples, recovering: rec)
+    }
+
+    /// `recovering` = a saved entry being retried: deleted on success, kept on failure.
+    private func transcribeAndDeliver(_ samples: [Float], recovering: FailedDictation? = nil) {
+        let startedAt = Date().addingTimeInterval(-Double(samples.count) / 16000)
+        let app = dictatingInto
         Task {
             do {
                 var raw = try await transcriber.transcribe(samples, language: Settings.languageCode)
@@ -436,8 +452,16 @@ final class AppController {
                 }
                 text = AppFormatting.apply(text, bundleID: dictatingInto)
                 if text.isEmpty {
+                    if let rec = recovering { recovery.discard(rec) }
+                    else if DictationHealth.hadSpeech(samples) {
+                        // Audible speech but no text: keep the audio so it can be retried.
+                        recovery.save(samples: samples, appBundleID: app, message: "No text was recognized", startedAt: startedAt)
+                        setStatus("no text recognized — recording saved, Retry from the menu")
+                        return
+                    }
                     setStatus("ready (no speech)")
                 } else {
+                    if let rec = recovering { recovery.discard(rec) }
                     Paster.deliver(text + AppFormatting.trailingSeparator(after: text), autoPaste: Settings.autoPaste)
                     let seconds = Double(samples.count) / 16000
                     HistoryStore.add(text, seconds: seconds, raw: text != rawText ? rawText : nil)
@@ -458,7 +482,9 @@ final class AppController {
                     }
                 }
             } catch {
-                failedSamples = samples // recoverable via Retry Last Transcription
+                if recovering == nil {
+                    recovery.save(samples: samples, appBundleID: app, message: error.localizedDescription, startedAt: startedAt)
+                }
                 setStatus("transcribe error — Retry from the menu")
                 NSLog("[Whispr] transcribe failed: \(error)")
             }

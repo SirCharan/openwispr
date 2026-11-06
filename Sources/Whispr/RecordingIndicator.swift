@@ -5,6 +5,8 @@ import SwiftUI
 @MainActor
 final class PillModel: ObservableObject {
     @Published var preview = ""
+    /// Mic-health warning (DictationHealth); recording continues.
+    @Published var warning: String?
 }
 
 /// Floating pill shown while recording: animated waveform + cancel (✕) and stop (■).
@@ -17,6 +19,7 @@ final class RecordingIndicator {
     func show(onCancel: @escaping () -> Void, onStop: @escaping () -> Void) {
         guard Date() >= Theme.pillHiddenUntil else { return } // user chose "Hide 1 hour"
         model.preview = ""
+        model.warning = nil
         if panel == nil {
             let host = NSHostingView(rootView: RecordingPill(model: model, onCancel: onCancel, onStop: onStop))
             host.frame = NSRect(x: 0, y: 0, width: 380, height: 76)
@@ -62,6 +65,11 @@ struct RecordingPill: View {
                     .buttonStyle(.plain)
                     .accessibilityElement(children: .ignore)
                     .accessibilityLabel("Stop recording")
+            }
+            if let w = model.warning {
+                Label(w, systemImage: "exclamationmark.triangle.fill")
+                    .font(Brand.caption)
+                    .foregroundStyle(Brand.coral)
             }
             if !model.preview.isEmpty {
                 Text(model.preview)
