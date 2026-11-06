@@ -8,6 +8,7 @@ Notable changes to OpenWispr (formerly Whispr), newest first.
 - Google Meet names: the Meetings pane now shows whether the Chrome extension is connected, with a Set up button and the three load-unpacked steps; a hint appears 20 s into a Meet recording if no names arrive.
 - Experimental: speaker names from the screen. During a Meet, Teams or Zoom recording OpenWispr captures the meeting window once a second, finds the highlighted active-speaker tile and reads its name label on-device. Extension and Zoom names still win. On by default, toggle in Meetings. Not yet tried on a live call.
 - Meeting summaries are now saved next to the transcript (`meeting-<stamp>.summary.md`), shown for past meetings, and past meetings can be summarised or re-summarised. `--summarize-file <f> --save` does it headlessly. Ollama with no model pulled is no longer picked as the summary provider.
+- Release tooling: `release.sh` builds the zip, DMG and Sparkle appcast item, and `packaging/openwispr.rb` is the Homebrew cask template.
 
 ## [0.19.1] - 2026-11-04
 On-device meeting summaries.

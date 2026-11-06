@@ -74,7 +74,9 @@ curl -fsSL https://openwispr.vercel.app/install.sh | sh
 3. First launch: macOS shows **"OpenWispr" Not Opened** (the build is not notarized). Click **Done**, open **System Settings → Privacy & Security**, scroll to "OpenWispr was blocked", click **Open Anyway**. Terminal alternative: `xattr -dr com.apple.quarantine /Applications/OpenWispr.app`.
 4. OpenWispr lives in the menu bar (mic icon), not the Dock. Clicking the app in Applications opens its home window. A setup wizard runs on first launch.
 
-**Not notarized, by choice.** Notarization needs a paid Apple Developer ID, which this project doesn't have — so there's no signed DMG and no Homebrew cask. `install.sh` clears the quarantine flag for you.
+**Not notarized, by choice.** Notarization needs a paid Apple Developer ID, which this project doesn't have — so the DMG is not Apple-signed. `install.sh` clears the quarantine flag for you.
+
+**Homebrew:** `brew install --cask SirCharan/openwispr/openwispr` (cask template in `packaging/openwispr.rb`).
 
 ## Permissions
 
@@ -116,6 +118,10 @@ Headless test gates (`build/OpenWispr.app/Contents/MacOS/OpenWispr <flag>`):
 ```
 
 Models cache under `~/Documents/huggingface/models/argmaxinc/whisperkit-coreml`. First model load takes ~1–2 min (CoreML compiles for the Neural Engine once, then caches). Builds are signed with a local self-signed identity so mic/Accessibility/Screen Recording grants survive rebuilds instead of re-prompting.
+
+## Releasing
+
+`./release.sh X.Y.Z --dry-run` bumps the version, builds, zips, makes the DMG, adds the Sparkle appcast item to `web/appcast.xml` and writes the zip sha256 into `packaging/openwispr.rb`. Without `--dry-run` it also commits, pushes, creates the GitHub release, deploys `web/` to Vercel, and prints the tap update step.
 
 ## Windows port
 
