@@ -440,10 +440,11 @@ final class AppController {
                         NSLog("[Whispr] cleanup failed, pasting raw: \(error)")
                     }
                 }
+                text = AppFormatting.apply(text, bundleID: dictatingInto)
                 if text.isEmpty {
                     setStatus("ready (no speech)")
                 } else {
-                    Paster.deliver(text, autoPaste: Settings.autoPaste)
+                    Paster.deliver(text + AppFormatting.trailingSeparator(after: text), autoPaste: Settings.autoPaste)
                     let seconds = Double(samples.count) / 16000
                     HistoryStore.add(text, seconds: seconds, raw: text != rawText ? rawText : nil)
                     Stats.record(words: text.split(separator: " ").count, seconds: seconds, appBundleID: dictatingInto)

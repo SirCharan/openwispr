@@ -16,6 +16,7 @@ enum Whispr {
             TextProcessor.selfTest()
             DictionaryStore.selfTest()
             SnippetStore.selfTest()
+            AppFormatting.selfTest()
             Stats.selfTest()
             Transliterate.selfTest()
             SummaryEngine.selfTest()

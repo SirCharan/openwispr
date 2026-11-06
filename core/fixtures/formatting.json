@@ -1,0 +1,25 @@
+{
+  "_comment": "AppFormatting.selfTest (Swift). capitalization: keep|lowercaseFirst, final_period: keep|drop.",
+  "format": [
+    { "text": "Hey Sam, I'll be there at 5.", "capitalization": "lowercaseFirst", "final_period": "drop", "expected": "hey Sam, I'll be there at 5" },
+    { "text": "Are you coming?", "capitalization": "lowercaseFirst", "final_period": "drop", "expected": "are you coming?" },
+    { "text": "Wow!", "capitalization": "keep", "final_period": "drop", "expected": "Wow!" },
+    { "text": "Wait...", "capitalization": "keep", "final_period": "drop", "expected": "Wait..." },
+    { "text": "", "capitalization": "lowercaseFirst", "final_period": "drop", "expected": "" },
+    { "text": "Done. ", "capitalization": "keep", "final_period": "drop", "expected": "Done " },
+    { "text": "  Hello there.", "capitalization": "lowercaseFirst", "final_period": "keep", "expected": "  hello there." },
+    { "text": "First. Second.", "capitalization": "keep", "final_period": "drop", "expected": "First. Second" },
+    { "text": "Keep it.", "capitalization": "keep", "final_period": "keep", "expected": "Keep it." },
+    { "text": ".", "capitalization": "keep", "final_period": "drop", "expected": "." }
+  ],
+  "spacing": [
+    { "text": "Hello there.", "expected": " " },
+    { "text": "Are you coming?", "expected": " " },
+    { "text": "She said \"hi.\"", "expected": " " },
+    { "text": "Already spaced. ", "expected": "" },
+    { "text": "no punctuation", "expected": "" },
+    { "text": "", "expected": "" },
+    { "text": "你好。", "expected": "" },
+    { "text": "यह एक वाक्य है।", "expected": " " }
+  ]
+}
