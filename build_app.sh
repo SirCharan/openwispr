@@ -25,6 +25,7 @@ cp Resources/Info.plist "$APP_BUNDLE/Contents/Info.plist"
 # Parity fixtures drive --selftest. They ship inside the bundle so the gate works on an
 # installed copy, not only from a checkout. The Rust core reads the same files.
 cp -R core/fixtures "$APP_BUNDLE/Contents/Resources/fixtures"
+cp THIRD-PARTY.md "$APP_BUNDLE/Contents/Resources/THIRD-PARTY.md"
 [ -d extensions/meet-names ] && cp -R extensions/meet-names "$APP_BUNDLE/Contents/Resources/meet-names"
 printf 'APPL????' > "$APP_BUNDLE/Contents/PkgInfo"
 

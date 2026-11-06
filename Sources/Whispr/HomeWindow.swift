@@ -480,6 +480,9 @@ private struct AboutPane: View {
             HStack(spacing: 16) {
                 Link("Website", destination: URL(string: "https://whispr-black-chi.vercel.app")!)
                 Link("GitHub", destination: URL(string: "https://github.com/SirCharan/whispr")!)
+                Button("Open-source credits") {
+                    if let u = Bundle.main.url(forResource: "THIRD-PARTY", withExtension: "md") { NSWorkspace.shared.open(u) }
+                }.buttonStyle(.link)
             }
             .tint(Brand.coral)
             .padding(.top, 4)
