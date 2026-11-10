@@ -15,17 +15,7 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.19.1</string>
-	<key>CFBundleVersion</key>
-	<string>2000</string>
-	<key>SUFeedURL</key>
-	<string>https://openwispr.vercel.app/appcast.xml</string>
-	<key>SUEnableAutomaticChecks</key>
-	<true/>
-	<key>SUScheduledCheckInterval</key>
-	<integer>86400</integer>
-	<key>SUPublicEDKey</key>
-	<string>9I9A9LNq3KvonwzVSRAMJrqlb413JFOaYtBc0JTOGYE=</string>
+	<string>0.20.0</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -37,6 +27,8 @@
 			</array>
 		</dict>
 	</array>
+	<key>CFBundleVersion</key>
+	<string>2000</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>14.0</string>
 	<key>LSUIElement</key>
@@ -45,5 +37,13 @@
 	<true/>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>OpenWispr records your microphone locally to transcribe speech on-device. Audio never leaves your Mac.</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUFeedURL</key>
+	<string>https://openwispr.vercel.app/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>9I9A9LNq3KvonwzVSRAMJrqlb413JFOaYtBc0JTOGYE=</string>
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
 </dict>
 </plist>

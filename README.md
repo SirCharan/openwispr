@@ -59,7 +59,7 @@ The row turns green once Meet sends its first roster. Without the extension, Mee
 - Transcription runs entirely on-device via WhisperKit. No audio or transcript is sent anywhere unless you turn on an AI feature.
 - The AI layer (rewrite styles, meeting summaries) is bring-your-own-key and fully opt-in: a local Ollama model, or an OpenAI-compatible key (OpenAI, OpenRouter). Off by default.
 
-## Install (unsigned build)
+## Install
 
 **Fastest — one line in Terminal (no security prompt):**
 
@@ -95,7 +95,7 @@ Settings not exposed in the UI, set via `defaults write org.openwispr.app <key> 
 | `meetingSpeechFloor` | `-float` | `0.015` | Loudest-half-second RMS a meeting chunk must clear before it's sent to Whisper. Lower it if quiet real speech is getting dropped; raise it if silence is producing hallucinated filler lines. |
 | `meetingAudioRetentionDays` | `-int` | `7` | Days to keep raw meeting audio (`~/Documents/OpenWispr/audio`, ~115 MB/hour/stream). `0` turns retention off. |
 
-## Development
+## Building from source
 
 ```bash
 git clone https://github.com/SirCharan/openwispr.git
@@ -133,9 +133,9 @@ openwispr dictation start|stop      openwispr meeting start|stop
 
 State changes go through the running app via URLs, which also work from Shortcuts ("Open URL") and scripts: `openwispr://dictation/start|stop`, `openwispr://meeting/start|stop`, `openwispr://open/Meetings`, `openwispr://dictionary/add?term=X&replace=Y`.
 
-## Pricing
+## Pricing and trial
 
-OpenWispr has a 7-day free trial, then $49 once for a lifetime license on up to 3 Macs, sold through Dodo Payments. The source stays MIT: you can build it yourself. After purchase, `web/thanks.html` shows the key and an "Activate in OpenWispr" link. To set up checkout, replace `DODO_PRODUCT_ID` in the `BUY_URL` constant at the bottom of `web/index.html`.
+The first launch after onboarding starts a 7-day trial with everything on. When it ends, dictation and meetings pause (history, transcripts and summaries stay usable) until you add a license. Then $49 once for a lifetime license on up to 3 Macs, sold through Dodo Payments. The source stays MIT: you can build it yourself. After purchase, `web/thanks.html` shows the key and an "Activate in OpenWispr" link. To set up checkout, replace `DODO_PRODUCT_ID` in the `BUY_URL` constant at the bottom of `web/index.html`.
 
 ## Releasing
 

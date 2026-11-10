@@ -2,15 +2,15 @@
 
 Notable changes to OpenWispr (formerly Whispr), newest first.
 
-## 0.20.0 (unreleased)
+## 0.20.0
 - Move to Applications offer when launched from a disk image or Downloads (strips quarantine, relaunches), and a What's New sheet on the first launch of each version; the first Developer ID build also notes the one-time Microphone, Accessibility and Screen Recording re-grant.
 - Agent skill: `openwispr skill install` copies the bundled `openwispr-agent` skill into `~/.claude/skills/` so Claude can read your history and meetings through the CLI.
 - Release builds can be signed with a Developer ID (hardened runtime) and notarized by `release.sh`; self-signed builds are marked NOT NOTARIZED.
-
 - Faster model load: prewarm runs only the first time a model loads on an OS build, so a warm turbo load drops from 1.9 s to 1.0 s. New `--load-test` reports load time, compute units and whether the ANE compile ran; a rebuild or a moved app does not recompile (the cache is keyed by OS build).
 - Launch at login is now on by default and re-registered at every launch unless you turn it off; a one-time hint points to System Settings → Login Items if macOS needs approval.
 - Landing page: pricing section ($49 once, 3 Macs, early-bird ladder), 0.20 features, honest signing note.
-- Thanks page after purchase (shows the license key, download, and one-click activate) and a Buy button on the landing page.- License core: 7-day trial, Dodo Payments activation with a 7-day re-check and 21-day offline grace, stored in the Keychain.
+- Thanks page after purchase (shows the license key, download, and one-click activate) and a Buy button on the landing page.
+- License core: 7-day trial, Dodo Payments activation with a 7-day re-check and 21-day offline grace, stored in the Keychain.
 - License pane, trial banner and onboarding step; dictation and meetings stop when the trial ends (everything already captured stays usable). `openwispr://license/activate?key=…` opens the pane with the key prefilled.
 - Sparkle auto-update: "Check for Updates…" in the menu, an automatic-check toggle in Settings, signed update feed at openwispr.vercel.app/appcast.xml.
 - Fix: meeting summaries on Hindi (and other languages Apple's on-device model can't read) now skip Apple, fall back to Ollama or a keyed provider, and otherwise explain exactly what to install. The Ollama hint now suggests `qwen3:8b`.
