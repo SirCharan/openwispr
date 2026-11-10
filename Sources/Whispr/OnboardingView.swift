@@ -7,7 +7,7 @@ import AVFoundation
 /// A returning install (stats survived in Application Support) gets a "welcome back" greeting instead.
 struct OnboardingView: View {
     @ObservedObject var model: OnboardingModel
-    @State private var launchAtLogin = false
+    @State private var launchAtLogin = Settings.launchAtLogin
     @State private var loginItemFailed = false
     @State private var typingHours = 2.0
     @AppStorage("hotkeyMode") private var hotkeyMode = "fn"
@@ -246,6 +246,10 @@ struct OnboardingView: View {
             body: "Hold \(Self.hotkeyLabel), speak, then release — words paste where the cursor is. OpenWispr lives in the menu bar (not the Dock).",
             primary: ("Start using OpenWispr", { model.onFinish() })
         ) {
+            Text("OpenWispr starts with your Mac so the model is warm before your first call.")
+                .font(Brand.caption)
+                .foregroundStyle(Brand.muted)
+                .multilineTextAlignment(.center)
             Text("Change the hotkey or model anytime in Settings")
                 .font(Brand.caption)
                 .foregroundStyle(Brand.muted)

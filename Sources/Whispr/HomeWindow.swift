@@ -77,6 +77,7 @@ struct HomeView: View {
             Rectangle().fill(Brand.line).frame(width: 1)
             VStack(spacing: 0) {
                 TrialBanner(license: license)
+                LoginHint()
                 detail
             }
         }

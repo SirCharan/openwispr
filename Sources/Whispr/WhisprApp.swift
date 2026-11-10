@@ -26,6 +26,7 @@ enum Whispr {
             Transliterate.selfTest()
             SummaryEngine.selfTest()
             License.selfTest()
+            LoginItem.selfTest()
             Task { @MainActor in
                 CorrectionsWatcher.selfTest()
                 AXEditWatcher.selfTest()

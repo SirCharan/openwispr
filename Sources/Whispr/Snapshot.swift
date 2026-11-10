@@ -74,6 +74,8 @@ enum Snapshot {
                   to: out.appendingPathComponent("\(tag)-onboarding-license.png"))
             lic.setPreview("active")
             state.pane = .dictations
+            write(LoginHint(forceShow: true).frame(width: 760), size: nil, appearance: appearance,
+                  to: out.appendingPathComponent("\(tag)-login-hint.png"))
 
             let pill = PillModel()
             pill.preview = "so the plan for Thursday is to ship the new"

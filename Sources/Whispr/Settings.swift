@@ -8,6 +8,12 @@ enum Settings {
         set { UserDefaults.standard.set(newValue, forKey: "autoPaste") }
     }
 
+    /// Start at login. Default on; only an explicit false (user toggled it off) opts out.
+    static var launchAtLogin: Bool {
+        get { UserDefaults.standard.object(forKey: "launchAtLogin") as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: "launchAtLogin") }
+    }
+
     /// First-run onboarding completed. When false, the wizard shows on launch.
     static var onboarded: Bool {
         get { UserDefaults.standard.bool(forKey: "onboarded") }

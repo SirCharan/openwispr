@@ -128,6 +128,7 @@ final class AppController {
             }
         }
         if Settings.onboarded {
+            LoginItem.ensure()
             LicenseManager.shared.launch()
             showMainWindow()
             Task { await bootModel() }
@@ -221,6 +222,7 @@ final class AppController {
         }
         vm.onFinish = { [weak self] in
             Settings.onboarded = true
+            LoginItem.ensure()
             LicenseManager.shared.launch()
             self?.attachHotkeys()
             self?.setStatus("ready — tap or hold \(Self.hotkeyHint)")

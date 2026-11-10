@@ -141,6 +141,29 @@ struct TrialBanner: View {
     }
 }
 
+/// One-time hint when macOS needs the user to approve the login item.
+struct LoginHint: View {
+    var forceShow = false
+    @State private var dismissed = false
+    var body: some View {
+        if (forceShow || LoginItem.needsApproval) && !dismissed {
+            HStack(spacing: Brand.s12) {
+                Image(systemName: "power").foregroundStyle(Brand.muted)
+                Text("Allow OpenWispr in System Settings → General → Login Items").font(Brand.body).foregroundStyle(Brand.text).lineLimit(2)
+                Spacer(minLength: 8)
+                PaperButton(title: "Open Settings", role: .primary) {
+                    NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension")!)
+                    dismissed = true
+                }
+                PaperButton(title: "Dismiss") { dismissed = true }
+            }
+            .padding(.horizontal, Brand.s16).padding(.vertical, Brand.s8)
+            .background(Brand.coralSoft)
+            .overlay(alignment: .bottom) { Rectangle().fill(Brand.line).frame(height: 1) }
+        }
+    }
+}
+
 /// Key field + Activate, reused by the pane and the onboarding step.
 struct LicenseKeyField: View {
     @ObservedObject var license: LicenseManager
