@@ -38,15 +38,33 @@ SPARKLE_FW=".build/artifacts/sparkle/Sparkle/Sparkle.xcframework/macos-arm64_x86
 mkdir -p "$APP_BUNDLE/Contents/Frameworks"
 ditto "$SPARKLE_FW" "$APP_BUNDLE/Contents/Frameworks/Sparkle.framework"
 
-# Prefer the stable "Whispr Dev" identity: TCC grants (mic/accessibility/screen) survive
-# rebuilds only when the designated requirement is stable — ad-hoc changes every build.
-if security find-identity -p codesigning 2>/dev/null | grep -q "Whispr Dev"; then
+# Identity: $SIGN_ID, else the first Developer ID Application, else the stable "Whispr Dev"
+# (TCC grants survive rebuilds only when the designated requirement is stable), else ad-hoc.
+FW="$APP_BUNDLE/Contents/Frameworks/Sparkle.framework/Versions/B"
+DEVID="$(security find-identity -v -p codesigning 2>/dev/null | sed -n 's/.*"\(Developer ID Application:[^"]*\)".*/\1/p' | head -1)"
+ID="${SIGN_ID:-$DEVID}"
+if [ -n "$ID" ]; then
+    # Hardened runtime, inside-out, app last with entitlements and no --deep (notarization-ready).
+    echo "==> codesign ($ID, hardened runtime)"
+    for x in "$FW"/XPCServices/*.xpc "$FW/Autoupdate" "$FW/Updater.app" "$APP_BUNDLE/Contents/Frameworks/Sparkle.framework" "$APP_BUNDLE/Contents/Helpers/openwispr"; do
+        codesign --force --options runtime --timestamp --sign "$ID" "$x"
+    done
+    ENT=Resources/OpenWispr.entitlements
+    case "$ID" in
+        "Developer ID Application:"*) ;;
+        *)  # A self-signed cert has no Team ID, so hardened library validation would reject Sparkle; test builds only.
+            ENT="$(mktemp -t ow-ent).plist"; cp Resources/OpenWispr.entitlements "$ENT"
+            /usr/libexec/PlistBuddy -c "Add :com.apple.security.cs.disable-library-validation bool true" "$ENT"
+            echo "==> NOT NOTARIZED (self-signed)";;
+    esac
+    codesign --force --options runtime --timestamp --entitlements "$ENT" --sign "$ID" "$APP_BUNDLE"
+elif security find-identity -p codesigning 2>/dev/null | grep -q "Whispr Dev"; then
     echo "==> codesign (Whispr Dev)"
-    FW="$APP_BUNDLE/Contents/Frameworks/Sparkle.framework/Versions/B"
     for x in "$FW"/XPCServices/*.xpc "$FW/Autoupdate" "$FW/Updater.app" "$APP_BUNDLE/Contents/Frameworks/Sparkle.framework"; do
         codesign --force --sign "Whispr Dev" "$x"
     done
     codesign --force --deep --sign "Whispr Dev" "$APP_BUNDLE"
+    echo "==> NOT NOTARIZED (self-signed)"
 else
     echo "==> ad-hoc codesign (grants will NOT survive rebuilds)"
     codesign --force --deep --sign - "$APP_BUNDLE"

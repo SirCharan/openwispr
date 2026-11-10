@@ -42,13 +42,12 @@ fi
 
 echo "==> done: $DMG ($(du -h "$DMG" | cut -f1))"
 
-# --- Notarization (activate later with a Developer ID) -----------------------
-# Prereqs: SIGN_IDENTITY="Developer ID Application: <name> (<TEAMID>)",
-#          notarytool keychain profile: xcrun notarytool store-credentials whispr \
-#              --apple-id <appleid> --team-id <TEAMID> --password <app-specific-pw>
-# Steps:
-#   codesign --force --deep --options runtime --sign "$SIGN_IDENTITY" "$APP"
-#   ./build_dmg.sh   # rebuild DMG from the signed app
-#   xcrun notarytool submit "$DMG" --keychain-profile whispr --wait
-#   xcrun stapler staple "$DMG"
-# ------------------------------------------------------------------------------
+# Developer ID builds: sign, notarize and staple the DMG (profile: xcrun notarytool store-credentials openwispr).
+ID="$(codesign -dv "$APP" 2>&1 | sed -n 's/^Authority=\(Developer ID Application:.*\)/\1/p' | head -1)"
+if [ -n "$ID" ]; then
+    codesign --force --timestamp --sign "$ID" "$DMG"
+    xcrun notarytool submit "$DMG" --keychain-profile openwispr --wait
+    xcrun stapler staple "$DMG"
+else
+    echo "NOT NOTARIZED (self-signed)"
+fi

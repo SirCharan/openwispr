@@ -141,6 +141,8 @@ OpenWispr has a 7-day free trial, then $49 once for a lifetime license on up to 
 
 `./release.sh X.Y.Z --dry-run` bumps the version, builds, zips, makes the DMG, adds the Sparkle appcast item to `web/appcast.xml` and writes the zip sha256 into `packaging/openwispr.rb`. Without `--dry-run` it also commits, pushes, creates the GitHub release, deploys `web/` to Vercel, and prints the tap update step.
 
+Signing: `build_app.sh` uses `$SIGN_ID`, else the first `Developer ID Application` identity, else `Whispr Dev`. A Developer ID build is signed with the hardened runtime and `Resources/OpenWispr.entitlements`, and `release.sh` then notarizes and staples the app and the DMG. Store the notary credentials once: `xcrun notarytool store-credentials openwispr --apple-id <id> --team-id <TEAMID> --password <app-specific-password>`. Self-signed builds print `NOT NOTARIZED`.
+
 ## Windows port
 
 In progress, under `windows/` — a Tauri + Rust app (`windows/src-tauri`) sharing the core dictation/text logic with a Rust crate at `core/`, held to the same fixtures (`core/fixtures/`) the Swift self-tests use. `whisper.cpp` is behind an `asr` feature flag so a contributor without CMake can still work on the rest. See `windows/TESTING.md` for the current manual test checklist — a global hotkey and paste-at-cursor can't be exercised on a headless CI runner, so that part is still checked by hand.

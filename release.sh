@@ -4,7 +4,9 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 VER="${1:?usage: release.sh X.Y.Z [--dry-run]}"; DRY="${2:-}"
-security find-identity -p codesigning | grep -q "Whispr Dev" || { echo "ERROR: Whispr Dev signing identity missing"; exit 1; }
+security find-identity -p codesigning | grep -q "Whispr Dev\|Developer ID Application" || { echo "ERROR: no Whispr Dev or Developer ID signing identity"; exit 1; }
+# Notarize only when the app is signed with a Developer ID (profile: xcrun notarytool store-credentials openwispr).
+is_devid() { codesign -dv build/OpenWispr.app 2>&1 | grep -q "Authority=Developer ID Application"; }
 IFS=. read -r MA MI PA <<<"$VER"; BUILD=$((MI*100+PA))
 PL=Resources/Info.plist
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VER" -c "Set :CFBundleVersion $BUILD" "$PL"
@@ -21,6 +23,15 @@ grep -q "^## \[\?$VER" CHANGELOG.md || printf '\n## %s\n- Release %s\n' "$VER" "
 build/OpenWispr.app/Contents/MacOS/OpenWispr --selftest
 rm -f build/OpenWispr.zip
 ditto -c -k --keepParent build/OpenWispr.app build/OpenWispr.zip
+if is_devid; then
+  xcrun notarytool submit build/OpenWispr.zip --keychain-profile openwispr --wait
+  xcrun stapler staple build/OpenWispr.app
+  spctl -a -vv -t install build/OpenWispr.app
+  rm -f build/OpenWispr.zip
+  ditto -c -k --keepParent build/OpenWispr.app build/OpenWispr.zip
+else
+  echo "NOT NOTARIZED (self-signed)"
+fi
 ./build_dmg.sh
 
 PFX="https://github.com/SirCharan/openwispr/releases/download/v$VER"
