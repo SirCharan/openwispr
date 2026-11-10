@@ -137,13 +137,24 @@ enum LLMClient {
             ],
         ]
         if let temperature { body["options"] = ["temperature": temperature] }
+        body["think"] = false
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
-        let (data, resp) = try await URLSession.shared.data(for: req)
+        var (data, resp) = try await URLSession.shared.data(for: req)
+        // Older Ollama rejects the `think` key: retry once without it.
+        if (resp as? HTTPURLResponse)?.statusCode == 400,
+           String(data: data, encoding: .utf8)?.contains("think") == true {
+            body.removeValue(forKey: "think")
+            req.httpBody = try JSONSerialization.data(withJSONObject: body)
+            (data, resp) = try await URLSession.shared.data(for: req)
+        }
         guard (resp as? HTTPURLResponse)?.statusCode == 200,
               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let msg = obj["message"] as? [String: Any],
-              let content = msg["content"] as? String else {
+              var content = msg["content"] as? String else {
             throw LLMError.badResponse(String(data: data.prefix(200), encoding: .utf8) ?? "unknown")
+        }
+        if let r = content.range(of: "<think>"), let e = content.range(of: "</think>"), r.lowerBound == content.startIndex || content[..<r.lowerBound].allSatisfy(\.isWhitespace) {
+            content.removeSubrange(content.startIndex..<e.upperBound)
         }
         return content.trimmingCharacters(in: .whitespacesAndNewlines)
     }
