@@ -77,6 +77,9 @@ enum Snapshot {
             write(LoginHint(forceShow: true).frame(width: 760), size: nil, appearance: appearance,
                   to: out.appendingPathComponent("\(tag)-login-hint.png"))
 
+            write(WhatsNewView(version: "0.20.1", notes: WhatsNew.changelogText().flatMap { WhatsNew.section("0.20.0", in: $0) } ?? "- sample", regrant: true),
+                  size: NSSize(width: 520, height: 520), appearance: appearance, to: out.appendingPathComponent("\(tag)-whats-new.png"))
+
             let pill = PillModel()
             pill.preview = "so the plan for Thursday is to ship the new"
             write(RecordingPill(model: pill, onCancel: {}, onStop: {}), size: nil, appearance: appearance,

@@ -14,6 +14,16 @@ enum Settings {
         set { UserDefaults.standard.set(newValue, forKey: "launchAtLogin") }
     }
 
+    /// Version whose "What's new" was last handled, and the signer ("selfSigned"/"developerID") of that build.
+    static var lastSeenVersion: String? {
+        get { UserDefaults.standard.string(forKey: "lastSeenVersion") }
+        set { UserDefaults.standard.set(newValue, forKey: "lastSeenVersion") }
+    }
+    static var lastSignerKind: String? {
+        get { UserDefaults.standard.string(forKey: "lastSignerKind") }
+        set { UserDefaults.standard.set(newValue, forKey: "lastSignerKind") }
+    }
+
     /// First-run onboarding completed. When false, the wizard shows on launch.
     static var onboarded: Bool {
         get { UserDefaults.standard.bool(forKey: "onboarded") }

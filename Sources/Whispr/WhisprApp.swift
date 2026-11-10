@@ -28,6 +28,8 @@ enum Whispr {
             SummaryEngine.selfTest()
             License.selfTest()
             LoginItem.selfTest()
+            WhatsNew.selfTest()
+            PostInstallChecker.selfTest()
             Task { @MainActor in
                 CorrectionsWatcher.selfTest()
                 AXEditWatcher.selfTest()

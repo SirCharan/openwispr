@@ -132,6 +132,8 @@ final class AppController {
             LicenseManager.shared.launch()
             showMainWindow()
             Task { await bootModel() }
+            PostInstallChecker.offerIfNeeded()
+            WhatsNew.maybeShow()
         } else {
             showOnboarding()
         }
@@ -222,6 +224,8 @@ final class AppController {
         }
         vm.onFinish = { [weak self] in
             Settings.onboarded = true
+            Settings.lastSeenVersion = WhatsNew.version // fresh install: nothing "new" to show
+            Settings.lastSignerKind = WhatsNew.signerKind
             LoginItem.ensure()
             LicenseManager.shared.launch()
             self?.attachHotkeys()
@@ -570,6 +574,10 @@ final class AppController {
             guard p.terminationStatus == 0 else {
                 NSLog("[Whispr] move failed: ditto exit \(p.terminationStatus)"); return
             }
+            let q = Process()
+            q.executableURL = URL(fileURLWithPath: "/usr/bin/xattr")
+            q.arguments = ["-dr", "com.apple.quarantine", dst]
+            try? q.run(); q.waitUntilExit()
             let config = NSWorkspace.OpenConfiguration()
             config.createsNewApplicationInstance = true
             NSWorkspace.shared.openApplication(at: URL(fileURLWithPath: dst), configuration: config) { _, _ in
