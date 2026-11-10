@@ -61,30 +61,11 @@ enum LLMClient {
     private static let keychainService = "com.ck.whispr.llm"
 
     static func setAPIKey(_ key: String, for provider: LLMProvider) {
-        let account = provider.rawValue
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: keychainService,
-            kSecAttrAccount as String: account,
-        ]
-        SecItemDelete(query as CFDictionary)
-        guard !key.isEmpty else { return }
-        var add = query
-        add[kSecValueData as String] = Data(key.utf8)
-        SecItemAdd(add as CFDictionary, nil)
+        Keychain.set(key, service: keychainService, account: provider.rawValue)
     }
 
     static func apiKey(for provider: LLMProvider) -> String? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: keychainService,
-            kSecAttrAccount as String: provider.rawValue,
-            kSecReturnData as String: true,
-        ]
-        var out: AnyObject?
-        guard SecItemCopyMatching(query as CFDictionary, &out) == errSecSuccess,
-              let data = out as? Data else { return nil }
-        return String(data: data, encoding: .utf8)
+        Keychain.get(service: keychainService, account: provider.rawValue)
     }
 
     // MARK: - Chat

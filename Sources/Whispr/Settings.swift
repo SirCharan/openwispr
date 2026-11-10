@@ -210,3 +210,11 @@ enum Settings {
         set { UserDefaults.standard.set(newValue, forKey: "rewriteStyle") }
     }
 }
+
+extension Settings {
+    /// Hidden: `defaults write <bundle id> licenseHost test` points licensing at Dodo's test host.
+    static var licenseHost: String {
+        get { UserDefaults.standard.string(forKey: "licenseHost") ?? "live" }
+        set { UserDefaults.standard.set(newValue, forKey: "licenseHost") }
+    }
+}

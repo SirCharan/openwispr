@@ -1,0 +1,29 @@
+{
+  "cases": [
+    {"name": "fresh install starts a 7-day trial", "event": "launch", "expect": "trial:7"},
+    {"name": "day 6", "trial_started_days_ago": 6, "event": "launch", "expect": "trial:1"},
+    {"name": "day 7 expires", "trial_started_days_ago": 7, "event": "launch", "expect": "trialExpired"},
+    {"name": "activate 200", "trial_started_days_ago": 9, "event": "activated", "expect": "active"},
+    {"name": "activate 404", "trial_started_days_ago": 9, "event": "http_404", "expect": "invalid"},
+    {"name": "activate 403", "trial_started_days_ago": 9, "event": "http_403", "expect": "revoked"},
+    {"name": "activate 422 leaves state, reports error", "trial_started_days_ago": 9, "event": "http_422", "expect": "trialExpired", "expect_error": true},
+    {"name": "validated 6 days ago, no call", "trial_started_days_ago": 30, "validated_days_ago": 6, "event": "launch", "expect": "active", "expect_due": false},
+    {"name": "validated 8 days ago, due", "trial_started_days_ago": 30, "validated_days_ago": 8, "event": "launch", "expect": "active", "expect_due": true},
+    {"name": "8 days ago + network error", "trial_started_days_ago": 30, "validated_days_ago": 8, "event": "network", "expect": "grace:13"},
+    {"name": "22 days ago + network error", "trial_started_days_ago": 30, "validated_days_ago": 22, "event": "network", "expect": "lapsed"},
+    {"name": "network error inside 7 days stays active", "trial_started_days_ago": 30, "validated_days_ago": 3, "event": "network", "expect": "active"},
+    {"name": "valid:false revokes", "trial_started_days_ago": 30, "validated_days_ago": 8, "event": "valid_false", "expect": "revoked"},
+    {"name": "valid:true refreshes", "trial_started_days_ago": 30, "validated_days_ago": 8, "event": "valid_true", "expect": "active", "expect_due": false},
+    {"name": "future lastValidatedAt is due now", "trial_started_days_ago": 30, "validated_days_ago": -3, "event": "launch", "expect": "active", "expect_due": true},
+    {"name": "deactivate returns to expired trial", "trial_started_days_ago": 30, "validated_days_ago": 1, "event": "deactivated", "expect": "trialExpired"}
+  ],
+  "gate": [
+    {"state": "trial:3", "dictate": true, "meet": true},
+    {"state": "trialExpired", "dictate": false, "meet": false},
+    {"state": "active", "dictate": true, "meet": true},
+    {"state": "grace:5", "dictate": true, "meet": true},
+    {"state": "lapsed", "dictate": false, "meet": false},
+    {"state": "revoked", "dictate": false, "meet": false},
+    {"state": "invalid", "dictate": false, "meet": false}
+  ]
+}

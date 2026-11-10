@@ -25,6 +25,7 @@ enum Whispr {
             Stats.selfTest()
             Transliterate.selfTest()
             SummaryEngine.selfTest()
+            License.selfTest()
             Task { @MainActor in
                 CorrectionsWatcher.selfTest()
                 AXEditWatcher.selfTest()
@@ -48,6 +49,15 @@ enum Whispr {
             let rest = Array(args[(i + 1)...])
             if rest.first == "transcribe", rest.count > 1 { runTranscribeFile(path: rest[1], cli: true) }
             exit(CLI.main(rest))
+        }
+        if let i = args.firstIndex(of: "--license-test"), i + 1 < args.count {
+            if args.contains("--test") { Settings.licenseHost = "test" }
+            let key = args[i + 1]
+            let sem = DispatchSemaphore(value: 0)
+            var code: Int32 = 1
+            Task.detached { code = await LicenseClient.runRoundTrip(key: key); sem.signal() }
+            sem.wait()
+            exit(code)
         }
         if args.contains("--health-test") {
             exit(MainActor.assumeIsolated { DictationHealth.runHealthTest() })
