@@ -10,7 +10,7 @@ extension Notification.Name {
 @MainActor
 final class LicenseManager: ObservableObject {
     static let shared = LicenseManager()
-    static let buyURL = URL(string: "https://openwispr.vercel.app/#pricing")!
+    static let buyURL = URL(string: "https://charandeepkapoor.com/openwispr#pricing")!
 
     @Published private(set) var state: LicenseState = .trial(daysLeft: License.trialDays)
     @Published var busy = false

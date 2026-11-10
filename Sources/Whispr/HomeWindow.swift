@@ -525,7 +525,7 @@ private struct AboutPane: View {
             Text("100% on-device via WhisperKit").font(Brand.caption).foregroundStyle(Brand.muted)
             Text("Source is MIT on GitHub; the signed build needs a license.").font(Brand.caption).foregroundStyle(Brand.muted)
             HStack(spacing: 16) {
-                Link("Website", destination: URL(string: "https://openwispr.vercel.app")!)
+                Link("Website", destination: URL(string: "https://charandeepkapoor.com/openwispr")!)
                 Link("GitHub", destination: URL(string: "https://github.com/SirCharan/whispr")!)
                 Button("Open-source credits") {
                     if let u = Bundle.main.url(forResource: "THIRD-PARTY", withExtension: "md") { NSWorkspace.shared.open(u) }

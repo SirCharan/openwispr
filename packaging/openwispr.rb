@@ -5,7 +5,7 @@ cask "openwispr" do
   url "https://github.com/SirCharan/openwispr/releases/download/v#{version}/OpenWispr.zip"
   name "OpenWispr"
   desc "On-device dictation and meeting notes for macOS"
-  homepage "https://openwispr.vercel.app"
+  homepage "https://charandeepkapoor.com/openwispr"
 
   auto_updates true
   depends_on arch: :arm64

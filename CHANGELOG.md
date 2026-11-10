@@ -3,6 +3,7 @@
 Notable changes to OpenWispr (formerly Whispr), newest first.
 
 ## 0.20.0
+- Canonical site is charandeepkapoor.com/openwispr.
 - Move to Applications offer when launched from a disk image or Downloads (strips quarantine, relaunches), and a What's New sheet on the first launch of each version; the first Developer ID build also notes the one-time Microphone, Accessibility and Screen Recording re-grant.
 - Agent skill: `openwispr skill install` copies the bundled `openwispr-agent` skill into `~/.claude/skills/` so Claude can read your history and meetings through the CLI.
 - Release builds can be signed with a Developer ID (hardened runtime) and notarized by `release.sh`; self-signed builds are marked NOT NOTARIZED.

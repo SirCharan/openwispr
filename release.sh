@@ -34,6 +34,7 @@ else
 fi
 ./build_dmg.sh
 
+# Sparkle feed (SUFeedURL) stays on openwispr.vercel.app; it can move to charandeepkapoor.com/openwispr/appcast.xml once that is confirmed to pass through after the first release.
 PFX="https://github.com/SirCharan/openwispr/releases/download/v$VER"
 SCRATCH="$(mktemp -d)"; trap 'rm -rf "$SCRATCH"' EXIT
 cp build/OpenWispr.zip "$SCRATCH/"; cp "$NOTES" "$SCRATCH/OpenWispr.md"

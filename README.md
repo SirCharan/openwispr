@@ -64,7 +64,7 @@ The row turns green once Meet sends its first roster. Without the extension, Mee
 **Fastest — one line in Terminal (no security prompt):**
 
 ```bash
-curl -fsSL https://openwispr.vercel.app/install.sh | sh
+curl -fsSL https://charandeepkapoor.com/openwispr/install.sh | sh
 ```
 
 **Or manually:**
