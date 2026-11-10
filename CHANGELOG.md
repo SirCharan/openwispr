@@ -3,6 +3,7 @@
 Notable changes to OpenWispr (formerly Whispr), newest first.
 
 ## 0.20.0 (unreleased)
+- Agent skill: `openwispr skill install` copies the bundled `openwispr-agent` skill into `~/.claude/skills/` so Claude can read your history and meetings through the CLI.
 - Release builds can be signed with a Developer ID (hardened runtime) and notarized by `release.sh`; self-signed builds are marked NOT NOTARIZED.
 
 - Faster model load: prewarm runs only the first time a model loads on an OS build, so a warm turbo load drops from 1.9 s to 1.0 s. New `--load-test` reports load time, compute units and whether the ANE compile ran; a rebuild or a moved app does not recompile (the cache is keyed by OS build).

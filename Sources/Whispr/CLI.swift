@@ -16,6 +16,7 @@ enum CLI {
         ("dictation stop", "dictation stop"),
         ("meeting start", "meeting start"),
         ("meeting stop", "meeting stop"),
+        ("skill install", "skill install"),
         ("spec", "spec"),
         ("info", "info"),
     ]
@@ -67,6 +68,17 @@ enum CLI {
             return (0, envelope("spec", data: ["commands": commands.map { ["name": $0.name, "usage": $0.usage] },
                                                "urlScheme": ["openwispr://dictation/start|stop", "openwispr://meeting/start|stop",
                                                              "openwispr://open/<pane>", "openwispr://dictionary/add?term=&replace="]]))
+        case "skill":
+            guard args.dropFirst().first == "install" else { return fail("usage: skill install") }
+            guard let src = Bundle.main.resourceURL?.appendingPathComponent("skills/openwispr-agent"),
+                  FileManager.default.fileExists(atPath: src.path) else { return fail("skill not bundled in this build") }
+            let dst = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".claude/skills/openwispr-agent")
+            do {
+                try FileManager.default.createDirectory(at: dst.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try? FileManager.default.removeItem(at: dst)
+                try FileManager.default.copyItem(at: src, to: dst)
+            } catch { return fail("could not install skill: \(error.localizedDescription)") }
+            return ok(["installed": dst.path])
         case "info":
             return (0, envelope("info", data: ["version": version, "appRunning": appRunning(),
                                                "historyEntries": HistoryStore.load().count,

@@ -33,3 +33,4 @@ SOFTWARE.
 - `Sources/Whispr/DictationHealth.swift` ← Muesli `DictationStartupWatchdog.swift`, `DictationCaptureHealth.swift`
 - `Sources/Whispr/RecoveryStore.swift` ← Muesli `DictationRecoveryStore.swift`; Failed section in `HomeWindow.swift` ← `FailedDictationsView.swift`
 - `Sources/Whispr/CLI.swift` ← Muesli `MuesliCLI.swift` (JSON envelope, `spec` command)
+- `Sources/Whispr/CLI.swift` `skill install` and `skills/openwispr-agent/` ← structure adapted from Muesli `skills/muesli-agent`

@@ -26,6 +26,7 @@ cp Resources/Info.plist "$APP_BUNDLE/Contents/Info.plist"
 # installed copy, not only from a checkout. The Rust core reads the same files.
 cp -R core/fixtures "$APP_BUNDLE/Contents/Resources/fixtures"
 cp THIRD-PARTY.md "$APP_BUNDLE/Contents/Resources/THIRD-PARTY.md"
+[ -d skills ] && cp -R skills "$APP_BUNDLE/Contents/Resources/skills"
 [ -d extensions/meet-names ] && cp -R extensions/meet-names "$APP_BUNDLE/Contents/Resources/meet-names"
 # CLI shim lives in Helpers: MacOS/openwispr would overwrite MacOS/OpenWispr on a case-insensitive disk.
 mkdir -p "$APP_BUNDLE/Contents/Helpers"
