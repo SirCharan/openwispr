@@ -388,6 +388,9 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
         Download the DMG
       </a>
+      <a class="btn" data-buy href="#pricing">
+        Buy OpenWispr · $49 once
+      </a>
       <span class="req">MIT licensed · macOS 14+ · Apple Silicon · also as <a href="https://github.com/SirCharan/openwispr/releases/latest/download/OpenWispr.zip">.zip</a></span>
     </div>
   </header>
@@ -1068,6 +1071,11 @@
 
     ScrollTrigger.refresh();
   });
+</script>
+<script>
+  // ponytail: single place for the Dodo checkout link; ck replaces DODO_PRODUCT_ID once.
+  const BUY_URL = 'https://checkout.dodopayments.com/buy/DODO_PRODUCT_ID?redirect_url=https://openwispr.vercel.app/thanks';
+  document.querySelectorAll('[data-buy]').forEach(a => a.href = BUY_URL);
 </script>
 </body>
 </html>

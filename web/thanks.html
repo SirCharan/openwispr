@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Thanks — OpenWispr</title>
+<meta name="robots" content="noindex" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #F4EFE6;
+    --surface: #ECE4D6;
+    --paper: #FBF8F1;
+    --line: #DCD2C0;
+    --text: #241F1A;
+    --muted: #6B5F4E;
+    --accent: #E2543E;
+    --accent-soft: rgba(226,84,62,.10);
+    --radius: 14px;
+    --shadow: 0 1px 2px rgba(66,50,32,.06), 0 8px 24px rgba(66,50,32,.07);
+    --sys: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    --serif: "Young Serif", Georgia, serif;
+    --mono: "Space Mono", ui-monospace, Menlo, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; overflow-x: hidden; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sys); line-height: 1.6; -webkit-font-smoothing: antialiased; overflow-x: hidden; max-width: 100%; }
+  img, svg { max-width: 100%; }
+  p, li { font-size: 15.5px; line-height: 1.7; }
+  .wrap { max-width: 1020px; margin: 0 auto; padding: 0 24px; }
+  a { color: inherit; }
+  .label { font-family: var(--mono); font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+
+  
+  .copy { background: none; border: 1px solid var(--line); border-radius: 8px; color: var(--muted);
+    font-size: 12px; letter-spacing: .1em; text-transform: uppercase; padding: 6px 12px; cursor: pointer; flex-shrink: 0; font-family: var(--mono); transition: color .2s, border-color .2s; }
+  .copy:hover { color: var(--accent); border-color: var(--accent); }
+  .btn { display: inline-flex; align-items: center; gap: 10px; background: var(--accent); color: var(--paper); text-decoration: none;
+    font-weight: 600; font-size: 15px; padding: 13px 26px; border-radius: 12px; box-shadow: var(--shadow);
+    transition: transform .15s ease, filter .2s ease; }
+  .btn:hover { transform: translateY(-2px); filter: brightness(1.05); }
+  .btn svg { width: 17px; height: 17px; }
+  .btn.ghost { background: var(--paper); color: var(--text); border: 1px solid var(--line); }
+  main { padding: 64px 0 80px; max-width: 640px; }
+  h1 { font-family: var(--serif); font-weight: 400; font-size: clamp(34px, 7vw, 56px); line-height: 1.05; letter-spacing: -1px; margin: 10px 0 18px; }
+  .keybox { display: flex; align-items: center; gap: 10px; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 13px 15px; box-shadow: var(--shadow); margin: 24px 0; }
+  .keybox code { font-family: var(--mono); font-size: 14px; word-break: break-all; flex: 1; }
+  .actions { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 36px; }
+  ol { padding-left: 22px; color: var(--muted); } li { margin-bottom: 6px; }
+  .hide { display: none; }
+</style>
+</head>
+<body>
+<div class="wrap"><main>
+  <p class="label">OpenWispr</p>
+  <h1>Thanks. You're in.</h1>
+  <div id="with-key" class="hide">
+    <p>Your license key (also in your email from Dodo Payments). It works on up to 3 Macs.</p>
+    <div class="keybox"><code id="key"></code><button class="copy" id="copy">Copy</button></div>
+  </div>
+  <p id="no-key" class="hide">We couldn't find a license key in this link. Check the email from Dodo Payments; the key is in there.</p>
+  <div class="actions">
+    <a class="btn" href="https://github.com/SirCharan/openwispr/releases/latest/download/OpenWispr.dmg">Download OpenWispr.dmg</a>
+    <a class="btn ghost hide" id="activate" href="#">Activate in OpenWispr</a>
+  </div>
+  <p class="label" style="margin-bottom:10px">Install in 3 steps</p>
+  <ol>
+    <li>Open the DMG and drag OpenWispr to Applications.</li>
+    <li>Launch it and follow setup. On the license step choose "I have a key" and paste it.</li>
+    <li>Or click "Activate in OpenWispr" above; the app opens with the key filled in.</li>
+  </ol>
+</div>
+<script>
+  const q = new URLSearchParams(location.search), key = (q.get('license_key') || '').trim();
+  const show = (id) => document.getElementById(id).classList.remove('hide');
+  if (key) {
+    document.getElementById('key').textContent = key;
+    document.getElementById('activate').href = 'openwispr://license/activate?key=' + encodeURIComponent(key);
+    show('with-key'); show('activate');
+    document.getElementById('copy').onclick = (e) => { navigator.clipboard.writeText(key); e.target.textContent = 'Copied'; };
+  } else show('no-key');
+</script>
+</body>
+</html>

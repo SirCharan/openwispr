@@ -133,6 +133,10 @@ openwispr dictation start|stop      openwispr meeting start|stop
 
 State changes go through the running app via URLs, which also work from Shortcuts ("Open URL") and scripts: `openwispr://dictation/start|stop`, `openwispr://meeting/start|stop`, `openwispr://open/Meetings`, `openwispr://dictionary/add?term=X&replace=Y`.
 
+## Pricing
+
+OpenWispr has a 7-day free trial, then $49 once for a lifetime license on up to 3 Macs, sold through Dodo Payments. The source stays MIT: you can build it yourself. After purchase, `web/thanks.html` shows the key and an "Activate in OpenWispr" link. To set up checkout, replace `DODO_PRODUCT_ID` in the `BUY_URL` constant at the bottom of `web/index.html`.
+
 ## Releasing
 
 `./release.sh X.Y.Z --dry-run` bumps the version, builds, zips, makes the DMG, adds the Sparkle appcast item to `web/appcast.xml` and writes the zip sha256 into `packaging/openwispr.rb`. Without `--dry-run` it also commits, pushes, creates the GitHub release, deploys `web/` to Vercel, and prints the tap update step.
