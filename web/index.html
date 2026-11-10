@@ -4,9 +4,9 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>OpenWispr — Talk. It types.</title>
-<meta name="description" content="Free open-source dictation and meeting transcription for macOS. 100% on-device Whisper. Hold fn, speak, and clean text pastes at your cursor." />
+<meta name="description" content="Private on-device dictation and meetings for Mac. 7-day free trial, $49 once. Hold fn, speak, and clean text pastes at your cursor." />
 <meta property="og:title" content="OpenWispr — Talk. It types." />
-<meta property="og:description" content="Open-source dictation that never leaves your Mac. On-device Whisper, meeting transcription, free and MIT licensed." />
+<meta property="og:description" content="Private on-device dictation and meetings for Mac. 7-day free trial, $49 once. MIT source." />
 <meta property="og:type" content="website" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23F4EFE6'/%3E%3Cg fill='%23E2543E'%3E%3Crect x='5' y='13' width='3' height='6' rx='1.5'/%3E%3Crect x='10' y='9' width='3' height='14' rx='1.5'/%3E%3Crect x='15' y='5' width='3' height='22' rx='1.5'/%3E%3Crect x='20' y='10' width='3' height='12' rx='1.5'/%3E%3Crect x='25' y='14' width='3' height='4' rx='1.5'/%3E%3C/g%3E%3C/svg%3E" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -117,6 +117,13 @@
   .kicker { color: var(--accent); font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; margin-bottom: 14px; }
   h2 { font-family: var(--serif); font-weight: 400; font-size: clamp(30px, 5.4vw, 46px); letter-spacing: -.8px; margin-bottom: 30px; }
   .sub { color: var(--muted); font-size: 16px; max-width: 560px; }
+
+  .price-card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 30px; max-width: 560px; }
+  .price-card .amt { font-family: var(--serif); font-size: clamp(44px, 8vw, 64px); line-height: 1; }
+  .price-card ul { margin: 18px 0; padding-left: 20px; color: var(--muted); }
+  .price-card .cta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
+  .price-card .tier { font-family: var(--mono); font-size: 13px; color: var(--accent); }
+  .price-why { margin-top: 18px; color: var(--muted); font-size: 14px; max-width: 560px; }
 
   /* ---------- stat strip ---------- */
   .stats { display: flex; justify-content: center; align-items: stretch; gap: 26px; flex-wrap: wrap; text-align: center; }
@@ -342,6 +349,7 @@
     <div class="nav-links">
       <a class="nav-link" href="#snippets">Snippets</a>
       <a class="nav-link" href="#meetings">Meetings</a>
+      <a class="nav-link" href="#pricing">Pricing</a>
       <a class="nav-link" href="#compare">Compare</a>
       <a class="nav-link" href="#faq">FAQ</a>
       <a class="nav-link" href="https://github.com/SirCharan/openwispr" target="_blank" rel="noopener">GitHub ↗</a>
@@ -349,7 +357,7 @@
   </nav>
 
   <header class="hero">
-    <span class="eyebrow">Free · Open Source · <b>On-device</b> <span class="ver">v0.19.0</span></span>
+    <span class="eyebrow">On-device · Pay once · Open source <span class="ver">v0.20.0</span></span>
     <h1>Talk.<br /><em>It types.</em></h1>
     <p class="lede">The fastest way to write on your Mac. <b>Private, on-device</b> dictation &amp; meeting notes. Talk in any language.</p>
 
@@ -640,7 +648,7 @@
 
   <section id="features">
     <div class="kicker">Features</div>
-    <h2>Six things, done right.</h2>
+    <h2>Ten things, done right.</h2>
     <div class="tracklist" id="tracklist">
       <ol class="tl-list">
         <li class="tl-item active" data-i="0" data-title="100% on-device Whisper">
@@ -666,6 +674,22 @@
         <li class="tl-item" data-i="5" data-title="Stats &amp; history">
           <span class="tl-no">06</span><span class="tl-name">Stats &amp; history</span>
           <p class="tl-body">Every dictation saved and searchable. An Insights page shows your pace, words per day and the apps you dictate into. Light and dark themes, plus per-app disable and sound cues where you want quiet.</p>
+        </li>
+        <li class="tl-item" data-i="6" data-title="Meeting summaries">
+          <span class="tl-no">07</span><span class="tl-name">Meeting summaries</span>
+          <p class="tl-body">Saved next to the transcript and shown for past meetings. Runs on Ollama or Apple's on-device model; Hindi and other languages Apple can't read fall back to Ollama.</p>
+        </li>
+        <li class="tl-item" data-i="7" data-title="Meet speaker names">
+          <span class="tl-no">08</span><span class="tl-name">Meet speaker names</span>
+          <p class="tl-body">A bundled Chrome extension names speakers on Google Meet. An experimental on-device screen read finds the active speaker on Meet, Teams and Zoom.</p>
+        </li>
+        <li class="tl-item" data-i="8" data-title="Recovery &amp; hands-free">
+          <span class="tl-no">09</span><span class="tl-name">Recovery &amp; hands-free</span>
+          <p class="tl-body">Failed dictations are saved and can be retried. The pill warns if your mic is silent. Double-tap the trigger key to dictate hands-free until the next tap.</p>
+        </li>
+        <li class="tl-item" data-i="9" data-title="CLI &amp; URLs">
+          <span class="tl-no">10</span><span class="tl-name">CLI &amp; URLs</span>
+          <p class="tl-body">An <code>openwispr</code> command transcribes files and searches history and meetings. <code>openwispr://</code> links start dictation from Shortcuts and scripts. Sparkle keeps the app up to date.</p>
         </li>
       </ol>
       <div class="tl-detail" aria-live="polite">
@@ -793,10 +817,29 @@
     </div>
   </section>
 
+  <section id="pricing">
+    <div class="kicker">Pricing</div>
+    <h2>$49. Once.</h2>
+    <div class="price-card">
+      <div class="amt">$49 <span class="req">one-time</span></div>
+      <ul>
+        <li>Works on up to 3 of your Macs</li>
+        <li>Lifetime updates</li>
+        <li>7-day free trial, no card needed</li>
+      </ul>
+      <p class="tier">Early-bird: <span data-tier>75% off the first 10 buyers with code EARLY10</span><br />Then 50% off the next 20 (EARLY20) and 25% off the next 50 (EARLY50).</p>
+      <div class="cta">
+        <a class="btn" href="https://github.com/SirCharan/openwispr/releases/latest/download/OpenWispr.dmg">Download free trial</a>
+        <a class="btn" data-buy href="#pricing">Buy · $49</a>
+      </div>
+    </div>
+    <p class="price-why">Why pay for open source? You get the signed build, automatic updates and support for the work. The source is MIT, and you can build it yourself.</p>
+  </section>
+
   <section id="compare">
     <div class="kicker">Compare</div>
     <h2>The honest table.</h2>
-    <p class="sub">Normal people don't want an API key or a monthly bill. OpenWispr cleans your words on your own Mac, for free.</p>
+    <p class="sub">Normal people don't want an API key or a monthly bill. OpenWispr cleans your words on your own Mac, for $49, once.</p>
     <div class="tbl-wrap">
     <div class="tbl-scroll">
       <table>
@@ -810,9 +853,9 @@
         </thead>
         <tbody>
           <tr><td>On-device</td><td class="us yes">✓</td><td class="no-x">✗ cloud</td><td class="yes">✓</td></tr>
-          <tr><td>Price</td><td class="us">Free</td><td>$15/mo Pro*</td><td>Free</td></tr>
+          <tr><td>Price</td><td class="us">$49 once (early-bird from $12)</td><td>$15/mo Pro*</td><td>Free</td></tr>
           <tr><td>Meetings</td><td class="us yes">✓</td><td class="no-x">✗</td><td class="yes">✓</td></tr>
-          <tr><td>AI cleanup</td><td class="us">Free, on-device*</td><td>Cloud</td><td>Your own API key</td></tr>
+          <tr><td>AI cleanup</td><td class="us">On-device*, included</td><td>Cloud</td><td>Your own API key</td></tr>
           <tr><td>Cleanup, zero setup</td><td class="us yes">✓</td><td class="no-x">✗ paid cloud</td><td class="no-x">✗ needs API key</td></tr>
           <tr><td>Open source</td><td class="us">MIT</td><td class="no-x">✗</td><td>MIT</td></tr>
           <tr><td>Works offline</td><td class="us yes">✓</td><td class="no-x">✗</td><td class="yes">✓</td></tr>
@@ -861,7 +904,7 @@
     </details>
     <details>
       <summary>Why does macOS warn me when I first open it?<span class="chev">›</span></summary>
-      <div class="a">OpenWispr isn’t notarized through a paid Apple Developer account, so Gatekeeper flags it like any unsigned open-source app. The install one-liner handles this for you. For the DMG: <b>System Settings → Privacy &amp; Security → Open Anyway</b>, one time only. The code is public on GitHub if you’d rather read it first.</div>
+      <div class="a">Releases are signed and notarized from the first Developer ID build. Until then macOS may ask you to confirm once: <b>System Settings → Privacy &amp; Security → Open Anyway</b>, or use the install one-liner. The source is MIT on GitHub, so you can read it or build it yourself.</div>
     </details>
     <details>
       <summary>How big is the download?<span class="chev">›</span></summary>
@@ -893,7 +936,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
         Download the DMG
       </a>
-      <span class="req">Free forever · MIT · macOS 14+ · Apple Silicon</span>
+      <span class="req">7-day trial · $49 lifetime · 3 Macs · MIT source · macOS 14+ · Apple Silicon</span>
     </div>
   </section>
 
@@ -1008,7 +1051,7 @@
     run();
   })();
 
-  // feature tracklist: click 01–06 → detail swaps; auto-advances ~4s, click/hover wins.
+  // feature tracklist: click 01–10 → detail swaps; auto-advances ~4s, click/hover wins.
   // Fallback (no JS): every .tl-body stays visible inline, so all six features read as a list.
   (function () {
     var tl = document.getElementById('tracklist');
