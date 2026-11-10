@@ -59,6 +59,22 @@ enum Snapshot {
                       to: out.appendingPathComponent("\(tag)-onboarding-\(step)-\(String(describing: onboarding.step)).png"))
             }
 
+            let lic = LicenseManager.shared
+            for (name, ls, pane) in [("license-trial", "trial:5", true), ("license-active", "active", true),
+                                      ("license-expired", "trialExpired", true), ("license-revoked", "revoked", true),
+                                      ("trial-banner", "trial:2", false)] {
+                lic.setPreview(ls)
+                state.pane = pane ? .license : .dictations
+                write(HomeView(state: state, meetingController: meetings, importModel: importModel), size: NSSize(width: 960, height: 672),
+                      appearance: appearance, to: out.appendingPathComponent("\(tag)-\(name).png"))
+            }
+            lic.setPreview("trial:7")
+            onboarding.step = .license
+            write(OnboardingView(model: onboarding), size: NSSize(width: 520, height: 560), appearance: appearance,
+                  to: out.appendingPathComponent("\(tag)-onboarding-license.png"))
+            lic.setPreview("active")
+            state.pane = .dictations
+
             let pill = PillModel()
             pill.preview = "so the plan for Thursday is to ship the new"
             write(RecordingPill(model: pill, onCancel: {}, onStop: {}), size: nil, appearance: appearance,

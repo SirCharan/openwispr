@@ -8,6 +8,8 @@ final class URLRouter {
         case dictationStart, dictationStop, meetingStart, meetingStop
         case open(String)
         case dictionaryAdd(term: String, replace: String?)
+        /// Opens the License pane with the key prefilled; never activates silently.
+        case licenseActivate(key: String)
     }
 
     var handler: (Action) -> Void = { _ in }
@@ -35,6 +37,7 @@ final class URLRouter {
         case ("meeting", "stop"): return .meetingStop
         case ("open", let pane) where !pane.isEmpty: return .open(pane)
         case ("dictionary", "add"): return q("term").flatMap { $0.isEmpty ? nil : .dictionaryAdd(term: $0, replace: q("replace")) }
+        case ("license", "activate"): return q("key").flatMap { $0.isEmpty ? nil : .licenseActivate(key: $0) }
         default: return nil
         }
     }
@@ -46,6 +49,8 @@ final class URLRouter {
         precondition(parse("openwispr://meeting/stop") == .meetingStop, "URLRouter meeting stop failed")
         precondition(parse("openwispr://open/Meetings") == .open("Meetings"), "URLRouter open failed")
         precondition(parse("openwispr://dictionary/add?term=Kubernetes&replace=k8s") == .dictionaryAdd(term: "Kubernetes", replace: "k8s"), "URLRouter dictionary failed")
+        precondition(parse("openwispr://license/activate?key=ABC-123") == .licenseActivate(key: "ABC-123"), "URLRouter license failed")
+        precondition(parse("openwispr://license/activate") == nil, "URLRouter license no key failed")
         precondition(parse("openwispr://dictionary/add") == nil && parse("https://x.com/dictation/start") == nil
                      && parse("openwispr://bogus/x") == nil, "URLRouter rejection failed")
         print("URLRouter.selfTest PASS")

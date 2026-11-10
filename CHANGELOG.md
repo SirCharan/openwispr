@@ -3,7 +3,8 @@
 Notable changes to OpenWispr (formerly Whispr), newest first.
 
 ## 0.20.0 (unreleased)
-- License core: 7-day trial, Dodo Payments activation with a 7-day re-check and 21-day offline grace, stored in the Keychain (not yet enforced in the UI).
+- License core: 7-day trial, Dodo Payments activation with a 7-day re-check and 21-day offline grace, stored in the Keychain.
+- License pane, trial banner and onboarding step; dictation and meetings stop when the trial ends (everything already captured stays usable). `openwispr://license/activate?key=…` opens the pane with the key prefilled.
 - Sparkle auto-update: "Check for Updates…" in the menu, an automatic-check toggle in Settings, signed update feed at openwispr.vercel.app/appcast.xml.
 - Fix: meeting summaries on Hindi (and other languages Apple's on-device model can't read) now skip Apple, fall back to Ollama or a keyed provider, and otherwise explain exactly what to install. The Ollama hint now suggests `qwen3:8b`.
 - Google Meet names: the Meetings pane now shows whether the Chrome extension is connected, with a Set up button and the three load-unpacked steps; a hint appears 20 s into a Meet recording if no names arrive.

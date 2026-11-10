@@ -119,6 +119,7 @@ final class MeetingController: ObservableObject {
 
     func start() async {
         guard !isRunning, !starting else { return }
+        guard LicenseManager.shared.gate(.meet) else { return }
         starting = true // synchronous, before any await — a second tap during startup must bounce
         defer { starting = false }
         status = Settings.diarizationEnabled ? "preparing speaker model…" : "starting…"

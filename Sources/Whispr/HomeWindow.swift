@@ -33,6 +33,7 @@ enum HomePane: String, CaseIterable, Identifiable {
     case ai = "AI"
     case apps = "Apps"
     case settings = "Settings"
+    case license = "License"
     case about = "About"
 
     var id: String { rawValue }
@@ -48,6 +49,7 @@ enum HomePane: String, CaseIterable, Identifiable {
         case .ai: "sparkles"
         case .apps: "app.badge"
         case .settings: "gearshape"
+        case .license: "key.fill"
         case .about: "info.circle"
         }
     }
@@ -59,6 +61,7 @@ struct HomeView: View {
     let importModel: FileImportModel
 
     @State private var search = ""
+    @ObservedObject private var license = LicenseManager.shared
     /// Held in state so dismissing animates, rather than waiting for a view reload.
     @State private var showSnippetTip = Settings.onboarded && !Settings.snippetsTipSeen
     private var pane: HomePane { state.pane }
@@ -72,9 +75,13 @@ struct HomeView: View {
         HStack(spacing: 0) {
             sidebar
             Rectangle().fill(Brand.line).frame(width: 1)
-            detail
+            VStack(spacing: 0) {
+                TrialBanner(license: license)
+                detail
+            }
         }
         .background(Brand.bg)
+        .onAppear { license.refresh() }
         .frame(minWidth: 900, minHeight: 620)
     }
 
@@ -84,7 +91,7 @@ struct HomeView: View {
         ("Capture", [.dictations, .meetings, .importFile]),
         ("Learn", [.insights]),
         ("Personalize", [.dictionary, .snippets, .apps]),
-        ("System", [.models, .ai, .settings, .about]),
+        ("System", [.models, .ai, .settings, .license, .about]),
     ]
 
     private var statusColor: Color {
@@ -170,6 +177,7 @@ struct HomeView: View {
         case .ai: AISettingsView()
         case .apps: PerAppView()
         case .settings: SettingsPane()
+        case .license: LicensePane()
         case .about: AboutPane()
         }
     }
@@ -513,9 +521,10 @@ private struct AboutPane: View {
             Text("OpenWispr").font(Brand.serif(34)).foregroundStyle(Brand.text)
             Text("v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev") — local voice dictation & meeting transcription")
                 .foregroundStyle(Brand.muted)
-            Text("100% on-device via WhisperKit · MIT licensed").font(Brand.caption).foregroundStyle(Brand.muted)
+            Text("100% on-device via WhisperKit").font(Brand.caption).foregroundStyle(Brand.muted)
+            Text("Source is MIT on GitHub; the signed build needs a license.").font(Brand.caption).foregroundStyle(Brand.muted)
             HStack(spacing: 16) {
-                Link("Website", destination: URL(string: "https://whispr-black-chi.vercel.app")!)
+                Link("Website", destination: URL(string: "https://openwispr.vercel.app")!)
                 Link("GitHub", destination: URL(string: "https://github.com/SirCharan/whispr")!)
                 Button("Open-source credits") {
                     if let u = Bundle.main.url(forResource: "THIRD-PARTY", withExtension: "md") { NSWorkspace.shared.open(u) }

@@ -43,6 +43,7 @@ struct OnboardingView: View {
                     onContinue: { model.step = .practice }
                 )
                 case .practice: PracticeStep(model: model, hotkeyMode: hotkeyMode)
+                case .license: licenseStep
                 case .done: done
                 }
             }
@@ -217,6 +218,25 @@ struct OnboardingView: View {
             // Resume mid-wizard or if welcome didn't start the load
             model.startModelIfNeeded()
         }
+    }
+
+    @State private var showKeyEntry = false
+    @State private var onboardingKey = ""
+    @ObservedObject private var license = LicenseManager.shared
+
+    private var licenseStep: some View {
+        stepShell(
+            icon: "key.fill",
+            title: "Try it free for 7 days",
+            body: "Then it's $49 once for up to 3 Macs. Everything you capture stays yours either way.",
+            primary: ("Start 7-day trial", { license.startTrial(); model.step = .done }),
+            secondary: showKeyEntry ? nil : ("I have a key", { showKeyEntry = true })
+        ) {
+            if showKeyEntry {
+                LicenseKeyField(license: license, key: $onboardingKey).frame(maxWidth: 380)
+            }
+        }
+        .onChange(of: license.state) { _, s in if s == .active { model.step = .done } }
     }
 
     private var done: some View {
@@ -710,14 +730,14 @@ private struct PracticeStep: View {
                         .buttonStyle(.plain)
                         .font(Brand.body.weight(.medium))
                         .foregroundStyle(Brand.muted)
-                    Button("Continue") { model.step = .done }
+                    Button("Continue") { model.step = .license }
                         .buttonStyle(PrimaryButtonStyle())
                         .keyboardShortcut(.defaultAction)
                 }
             }
 
             if case .result = model.practice {} else {
-                Button("Skip") { model.step = .done }
+                Button("Skip") { model.step = .license }
                     .buttonStyle(.plain)
                     .font(Brand.caption)
                     .foregroundStyle(Brand.muted)

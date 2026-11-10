@@ -8,7 +8,7 @@ final class OnboardingModel: ObservableObject {
     enum PracticeState { case idle, recording, transcribing, result(String) }
 
     enum Step: Int, Comparable {
-        case welcome, personalize, move, permissions, download, trigger, practice, done
+        case welcome, personalize, move, permissions, download, trigger, practice, license, done
         static func < (a: Step, b: Step) -> Bool { a.rawValue < b.rawValue }
     }
 

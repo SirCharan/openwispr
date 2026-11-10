@@ -6,6 +6,7 @@ import AppKit
 final class MenuBarController: NSObject {
     private let statusItem: NSStatusItem
     private let statusMenuItem: NSMenuItem
+    private let licenseMenuItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
     private let onSettings: () -> Void
     private let onMeeting: () -> Void
     private let onImport: () -> Void
@@ -32,6 +33,9 @@ final class MenuBarController: NSObject {
 
         let menu = NSMenu()
         menu.addItem(statusMenuItem)
+        licenseMenuItem.target = self
+        licenseMenuItem.action = #selector(openLicense)
+        menu.addItem(licenseMenuItem)
         menu.addItem(.separator())
         let openItem = NSMenuItem(title: "Open OpenWispr", action: #selector(openMain), keyEquivalent: "o")
         openItem.target = self
@@ -60,6 +64,23 @@ final class MenuBarController: NSObject {
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit OpenWispr", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
         statusItem.menu = menu
+        refreshLicense()
+        NotificationCenter.default.addObserver(forName: NSMenu.didBeginTrackingNotification, object: menu, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.refreshLicense() }
+        }
+    }
+
+    @objc private func openLicense() { LicenseManager.openPane() }
+
+    /// "Trial: N days left" / "Licensed" / a prompt when it lapsed. Called whenever the menu is about to be used.
+    func refreshLicense() {
+        let l = LicenseManager.shared
+        l.refresh()
+        switch l.state {
+        case .trial(let d): licenseMenuItem.title = "Trial: \(d) day\(d == 1 ? "" : "s") left"
+        case .active, .grace: licenseMenuItem.title = "Licensed"
+        default: licenseMenuItem.title = "Trial ended — buy a license"
+        }
     }
 
     @objc private func openSettings() { onSettings() }

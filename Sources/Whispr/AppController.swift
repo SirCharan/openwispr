@@ -115,10 +115,20 @@ final class AppController {
                     self.state.pane = p
                     self.showMainWindow()
                 }
+            case .licenseActivate(let key): LicenseManager.openPane(key: key)
             case .dictionaryAdd(let term, let replace): CLI.addToDictionary(term: term, replace: replace)
             }
         }
+        NotificationCenter.default.addObserver(forName: .whisprOpenLicense, object: nil, queue: .main) { [weak self] n in
+            let key = n.userInfo?["key"] as? String
+            Task { @MainActor in
+                LicensePane.pendingKey = key
+                self?.state.pane = .license
+                self?.showMainWindow()
+            }
+        }
         if Settings.onboarded {
+            LicenseManager.shared.launch()
             showMainWindow()
             Task { await bootModel() }
         } else {
@@ -211,6 +221,7 @@ final class AppController {
         }
         vm.onFinish = { [weak self] in
             Settings.onboarded = true
+            LicenseManager.shared.launch()
             self?.attachHotkeys()
             self?.setStatus("ready — tap or hold \(Self.hotkeyHint)")
             self?.idleWidget.show() // first-run: pill appears now, not after the first dictation
@@ -326,6 +337,7 @@ final class AppController {
 
     private func startDictation() {
         guard modelReady, !recorder.isRecording else { return }
+        guard LicenseManager.shared.gate(.dictate) else { return }
         if let front = AppMonitor.frontmostBundleID(), Settings.disabledApps.contains(front) {
             setStatus("disabled for \(AppMonitor.name(for: front))")
             return
