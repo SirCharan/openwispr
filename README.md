@@ -119,6 +119,20 @@ Headless test gates (`build/OpenWispr.app/Contents/MacOS/OpenWispr <flag>`):
 
 Models cache under `~/Documents/huggingface/models/argmaxinc/whisperkit-coreml`. First model load takes ~1–2 min (CoreML compiles for the Neural Engine once, then caches). Builds are signed with a local self-signed identity so mic/Accessibility/Screen Recording grants survive rebuilds instead of re-prompting.
 
+## Command line and URL scheme
+
+The app bundle ships a CLI: `/Applications/OpenWispr.app/Contents/Helpers/openwispr <command>`. Output is JSON (`{ok, command, data, meta, error}`); `transcribe` prints plain text unless you pass `--format json`. Run `openwispr spec` for the full list.
+
+```
+openwispr transcribe clip.wav [--model M] [--lang hi]
+openwispr history list --limit 5 | get <id> | search <text>
+openwispr meetings list | get <stamp>
+openwispr dictionary add Kubernetes --replace k8s
+openwispr dictation start|stop      openwispr meeting start|stop
+```
+
+State changes go through the running app via URLs, which also work from Shortcuts ("Open URL") and scripts: `openwispr://dictation/start|stop`, `openwispr://meeting/start|stop`, `openwispr://open/Meetings`, `openwispr://dictionary/add?term=X&replace=Y`.
+
 ## Releasing
 
 `./release.sh X.Y.Z --dry-run` bumps the version, builds, zips, makes the DMG, adds the Sparkle appcast item to `web/appcast.xml` and writes the zip sha256 into `packaging/openwispr.rb`. Without `--dry-run` it also commits, pushes, creates the GitHub release, deploys `web/` to Vercel, and prints the tap update step.

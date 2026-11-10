@@ -10,6 +10,7 @@ Notable changes to OpenWispr (formerly Whispr), newest first.
 - Meeting summaries are now saved next to the transcript (`meeting-<stamp>.summary.md`), shown for past meetings, and past meetings can be summarised or re-summarised. `--summarize-file <f> --save` does it headlessly. Ollama with no model pulled is no longer picked as the summary provider.
 - Double-tap the trigger key to dictate hands-free until the next tap (Settings toggle, on by default); fn key-repeat events are ignored.
 - Mic health: three seconds into a dictation the pill warns "Mic is silent" if no audio is arriving, and warns if the input device disappears. Failed or empty-after-speech dictations are saved (audio, 20 entries / 7 days) and can be retried or deleted from a new Failed section in the Dictations pane or the menu.
+- Command line and URL scheme: `openwispr` (inside the app bundle) transcribes files, lists and searches history and meetings, adds dictionary terms and starts or stops dictation and meetings, with JSON output; `openwispr spec` lists everything. `openwispr://dictation/start|stop`, `meeting/start|stop` and `open/<pane>` work from Shortcuts, scripts and the browser.
 - Release tooling: `release.sh` builds the zip, DMG and Sparkle appcast item, and `packaging/openwispr.rb` is the Homebrew cask template.
 
 ## [0.19.1] - 2026-11-04

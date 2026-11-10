@@ -26,6 +26,17 @@
 	<integer>86400</integer>
 	<key>SUPublicEDKey</key>
 	<string>9I9A9LNq3KvonwzVSRAMJrqlb413JFOaYtBc0JTOGYE=</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>org.openwispr.app</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>openwispr</string>
+			</array>
+		</dict>
+	</array>
 	<key>LSMinimumSystemVersion</key>
 	<string>14.0</string>
 	<key>LSUIElement</key>

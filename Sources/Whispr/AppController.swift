@@ -40,6 +40,7 @@ final class AppController {
     private var onboarding: OnboardingWindowController?
     private var meetingDetector: MeetingWindowDetector?
     private var meetRosterServer: MeetRosterServer?
+    private let urlRouter = URLRouter()
 
     func start() {
         Log.app.notice("launch v\(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev", privacy: .public) onboarded=\(Settings.onboarded, privacy: .public) model=\(self.modelManager.selectedModel, privacy: .public)")
@@ -100,6 +101,21 @@ final class AppController {
             Task { @MainActor in
                 self?.showMainWindow()
                 NSApp.activate()
+            }
+        }
+        urlRouter.handler = { [weak self] action in
+            guard let self else { return }
+            switch action {
+            case .dictationStart: self.startDictation()
+            case .dictationStop: self.stopDictation()
+            case .meetingStart: Task { await self.meetingCtrl.start() }
+            case .meetingStop: Task { await self.meetingCtrl.stop() }
+            case .open(let pane):
+                if let p = HomePane.allCases.first(where: { $0.rawValue.caseInsensitiveCompare(pane) == .orderedSame }) {
+                    self.state.pane = p
+                    self.showMainWindow()
+                }
+            case .dictionaryAdd(let term, let replace): CLI.addToDictionary(term: term, replace: replace)
             }
         }
         if Settings.onboarded {

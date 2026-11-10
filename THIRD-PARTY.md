@@ -32,3 +32,4 @@ SOFTWARE.
 - `Sources/Whispr/HotkeyGesture.swift` ← Muesli `HotkeyMonitor.swift` (double-tap timing)
 - `Sources/Whispr/DictationHealth.swift` ← Muesli `DictationStartupWatchdog.swift`, `DictationCaptureHealth.swift`
 - `Sources/Whispr/RecoveryStore.swift` ← Muesli `DictationRecoveryStore.swift`; Failed section in `HomeWindow.swift` ← `FailedDictationsView.swift`
+- `Sources/Whispr/CLI.swift` ← Muesli `MuesliCLI.swift` (JSON envelope, `spec` command)

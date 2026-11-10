@@ -27,6 +27,10 @@ cp Resources/Info.plist "$APP_BUNDLE/Contents/Info.plist"
 cp -R core/fixtures "$APP_BUNDLE/Contents/Resources/fixtures"
 cp THIRD-PARTY.md "$APP_BUNDLE/Contents/Resources/THIRD-PARTY.md"
 [ -d extensions/meet-names ] && cp -R extensions/meet-names "$APP_BUNDLE/Contents/Resources/meet-names"
+# CLI shim lives in Helpers: MacOS/openwispr would overwrite MacOS/OpenWispr on a case-insensitive disk.
+mkdir -p "$APP_BUNDLE/Contents/Helpers"
+printf '#!/bin/sh\nexec "$(dirname "$0")/../MacOS/OpenWispr" --cli "$@"\n' > "$APP_BUNDLE/Contents/Helpers/openwispr"
+chmod +x "$APP_BUNDLE/Contents/Helpers/openwispr"
 printf 'APPL????' > "$APP_BUNDLE/Contents/PkgInfo"
 
 # Sparkle ships as a prebuilt framework; copy it in and sign it inside-out (see Muesli build_native_app.sh).

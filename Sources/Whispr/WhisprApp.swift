@@ -19,6 +19,8 @@ enum Whispr {
             AppFormatting.selfTest()
             HotkeyGesture.selfTest()
             RecoveryStore.selfTest()
+            CLI.selfTest()
+            URLRouter.selfTest()
             MainActor.assumeIsolated { DictationHealth.selfTest() }
             Stats.selfTest()
             Transliterate.selfTest()
@@ -41,6 +43,11 @@ enum Whispr {
                 exit(0)
             }
             dispatchMain()
+        }
+        if let i = args.firstIndex(of: "--cli") {
+            let rest = Array(args[(i + 1)...])
+            if rest.first == "transcribe", rest.count > 1 { runTranscribeFile(path: rest[1], cli: true) }
+            exit(CLI.main(rest))
         }
         if args.contains("--health-test") {
             exit(MainActor.assumeIsolated { DictationHealth.runHealthTest() })
@@ -310,7 +317,7 @@ enum Whispr {
     ///   --transcribe-file clip.wav --model large-v3 --lang hi
     ///
     /// Drives the main queue via `dispatchMain()` so the @MainActor work runs (never block main with a semaphore).
-    private static func runTranscribeFile(path: String) {
+    private static func runTranscribeFile(path: String, cli: Bool = false) {
         Task { @MainActor in
             let mm = ModelManager()
             let model = flagValue("--model") ?? mm.selectedModel
@@ -324,13 +331,20 @@ enum Whispr {
                 var text = try await transcriber.transcribeFile(path, language: language)
                 if Settings.outputMode == "roman" { text = Transliterate.toLatin(text) }
                 let elapsed = Date().timeIntervalSince(loaded)
-                print("""
-                    transcribe-file: model=\(model) lang=\(language ?? "auto") \
-                    load=\(String(format: "%.1f", loaded.timeIntervalSince(started)))s \
-                    transcribe=\(String(format: "%.1f", elapsed))s
-                    "\(text)"
-                    """)
+                if cli {
+                    print(flagValue("--format") == "json"
+                          ? CLI.envelope("transcribe", data: ["file": path, "model": model, "text": text])
+                          : text)
+                } else {
+                    print("""
+                        transcribe-file: model=\(model) lang=\(language ?? "auto") \
+                        load=\(String(format: "%.1f", loaded.timeIntervalSince(started)))s \
+                        transcribe=\(String(format: "%.1f", elapsed))s
+                        "\(text)"
+                        """)
+                }
             } catch {
+                if cli { print(CLI.envelope("transcribe", error: "\(error)")); exit(1) }
                 print("transcribe-file FAIL (model=\(model)): \(error)")
             }
             exit(0)

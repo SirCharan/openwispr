@@ -12,7 +12,7 @@ cask "openwispr" do
   depends_on macos: ">= :sonoma"
 
   app "OpenWispr.app"
-  binary "#{appdir}/OpenWispr.app/Contents/MacOS/openwispr"
+  binary "#{appdir}/OpenWispr.app/Contents/Helpers/openwispr"
 
   postflight do
     system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{appdir}/OpenWispr.app"]
