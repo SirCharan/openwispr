@@ -33,16 +33,44 @@ actor Transcriber {
         let compiled = (try? fm.contentsOfDirectory(atPath: folder.path))?.filter { $0.hasSuffix(".mlmodelc") } ?? []
         Log.app.info("model load start: \(model, privacy: .public) folderExists=\(fm.fileExists(atPath: folder.path)) mlmodelc=\(compiled.count)")
         let t0 = Date()
+        let warmKey = "\(model)|\(Self.osBuild)"
+        let prewarm = Self.needsPrewarm(warmKey: warmKey, lastWarm: UserDefaults.standard.string(forKey: Self.lastWarmKey))
         let pipe = try await WhisperKit(
             modelFolder: folder.path,
             verbose: false,
-            prewarm: true,
+            prewarm: prewarm,
             load: true,
             download: false
         )
         self.pipe = pipe
         self.loadedModel = model
-        Log.app.info("model load done: \(model, privacy: .public) in \(String(format: "%.1f", Date().timeIntervalSince(t0)))s")
+        UserDefaults.standard.set(warmKey, forKey: Self.lastWarmKey)
+        Log.app.info("model load done: \(model, privacy: .public) prewarm=\(prewarm) in \(String(format: "%.1f", Date().timeIntervalSince(t0)))s")
+    }
+
+    /// Prewarm (load-unload-load per component) caps peak memory while Core ML specialises a
+    /// model for the ANE, but doubles a cache-hit load (turbo: 1.9 s vs 1.0 s measured with
+    /// --load-test). The specialised cache is keyed by OS build (~/Library/Caches/<bundle id>/
+    /// com.apple.e5rt.e5bundlecache/<build>), not by code signature or app path — a rebuild or a
+    /// moved copy did not recompile. So prewarm only for a model never loaded on this OS build.
+    static let lastWarmKey = "lastWarmModel"
+    static func needsPrewarm(warmKey: String, lastWarm: String?) -> Bool { warmKey != lastWarm }
+
+    static var osBuild: String {
+        var size = 0
+        sysctlbyname("kern.osversion", nil, &size, nil, 0)
+        var buf = [CChar](repeating: 0, count: max(size, 1))
+        sysctlbyname("kern.osversion", &buf, &size, nil, 0)
+        return String(cString: buf)
+    }
+
+    static func selfTest() {
+        precondition(needsPrewarm(warmKey: "turbo|25E253", lastWarm: nil), "first load prewarms")
+        precondition(!needsPrewarm(warmKey: "turbo|25E253", lastWarm: "turbo|25E253"), "same model+OS skips prewarm")
+        precondition(needsPrewarm(warmKey: "turbo|25F10", lastWarm: "turbo|25E253"), "OS update prewarms")
+        precondition(needsPrewarm(warmKey: "base|25E253", lastWarm: "turbo|25E253"), "model switch prewarms")
+        precondition(!osBuild.isEmpty, "kern.osversion readable")
+        print("Transcriber prewarm selftest: 4 cases PASS (osBuild=\(osBuild))")
     }
 
     /// Dictation is a few seconds of one close voice; a meeting chunk is up to 30 s of

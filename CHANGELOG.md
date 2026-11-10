@@ -4,6 +4,7 @@ Notable changes to OpenWispr (formerly Whispr), newest first.
 
 ## 0.20.0 (unreleased)
 
+- Faster model load: prewarm runs only the first time a model loads on an OS build, so a warm turbo load drops from 1.9 s to 1.0 s. New `--load-test` reports load time, compute units and whether the ANE compile ran; a rebuild or a moved app does not recompile (the cache is keyed by OS build).
 - Launch at login is now on by default and re-registered at every launch unless you turn it off; a one-time hint points to System Settings → Login Items if macOS needs approval.
 - Landing page: pricing section ($49 once, 3 Macs, early-bird ladder), 0.20 features, honest signing note.
 - Thanks page after purchase (shows the license key, download, and one-click activate) and a Buy button on the landing page.- License core: 7-day trial, Dodo Payments activation with a 7-day re-check and 21-day offline grace, stored in the Keychain.

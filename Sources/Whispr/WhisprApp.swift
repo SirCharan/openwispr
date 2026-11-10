@@ -18,6 +18,7 @@ enum Whispr {
             SnippetStore.selfTest()
             AppFormatting.selfTest()
             HotkeyGesture.selfTest()
+            Transcriber.selfTest()
             RecoveryStore.selfTest()
             CLI.selfTest()
             URLRouter.selfTest()
@@ -128,6 +129,10 @@ enum Whispr {
         if let i = args.firstIndex(of: "--diarize-test"), i + 1 < args.count {
             runDiarizeTest(path: args[i + 1])
             exit(0)
+        }
+        if args.contains("--load-test") {
+            LoadTest.run(model: flagValue("--model") ?? MainActor.assumeIsolated { ModelManager().selectedModel },
+                         prewarm: !args.contains("--no-prewarm"))
         }
         if args.contains("--mute-test") {
             runMuteTest()
