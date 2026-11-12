@@ -107,7 +107,8 @@ final class MeetingWindowDetector {
     }
 
     private func offer(_ m: Meeting) {
-        switch UserDefaults.standard.string(forKey: "meetingAutoStart.\(m.id)") ?? "ask" {
+        let key = "meetingAutoStart.\(m.id == "meet-extension" ? "meet.google.com" : m.id)"
+        switch UserDefaults.standard.string(forKey: key) ?? "ask" {
         case "always": startRecording()
         case "never": break
         default:
@@ -115,7 +116,7 @@ final class MeetingWindowDetector {
                 ("Start", { [weak self] in self?.startRecording() }),
                 ("Not now", {}),
                 ("Always for \(m.name)", { [weak self] in
-                    UserDefaults.standard.set("always", forKey: "meetingAutoStart.\(m.id)")
+                    UserDefaults.standard.set("always", forKey: key)
                     self?.startRecording()
                 }),
             ])

@@ -28,7 +28,7 @@ final class CorrectionToast {
             },
             onClose: { [weak self] in self?.hide() }
         )
-        present(NSHostingView(rootView: view), size: NSSize(width: 340, height: CGFloat(64 + shown.count * 24)), ttl: 10)
+        present(FirstClickHostingView(rootView: view), size: NSSize(width: 340, height: CGFloat(64 + shown.count * 24)), ttl: 10)
     }
 
     /// Generic yes/no style prompt: a message plus one button per action (each action also closes it).
@@ -38,12 +38,12 @@ final class CorrectionToast {
             actions[i].1()
             self?.hide()
         }
-        present(NSHostingView(rootView: view), size: NSSize(width: 340, height: 92), ttl: 20)
+        present(FirstClickHostingView(rootView: view), size: NSSize(width: 340, height: 92), ttl: 20)
     }
 
     private func present(_ host: NSView, size: NSSize, ttl: TimeInterval) {
         host.frame = NSRect(origin: .zero, size: size)
-        let p = NSPanel(contentRect: host.frame,
+        let p = PromptPanel(contentRect: host.frame,
                         styleMask: [.borderless, .nonactivatingPanel],
                         backing: .buffered, defer: false)
         p.isFloatingPanel = true
@@ -150,4 +150,14 @@ struct PromptView: View {
         .padding(14)
         .panelStyle()
     }
+}
+
+/// Hosting view that handles the click that arrives while the app is inactive (otherwise it only activates).
+final class FirstClickHostingView<V: View>: NSHostingView<V> {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+}
+
+/// Borderless panels refuse key status by default, which swallows button clicks.
+final class PromptPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
 }
