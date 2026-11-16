@@ -178,6 +178,7 @@ final class AppController {
         let ms = MeetRosterServer()
         ms.onJoined = { [weak d] in d?.extensionJoined() }
         ms.onLeft = { [weak d] in d?.extensionLeft() }
+        ms.onAutoStop = { [weak self] in Task { @MainActor in await self?.meetingCtrl.stop() } }
         meetingCtrl.meetServer = ms
         meetRosterServer = ms
         applyMeetExtension()

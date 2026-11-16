@@ -75,7 +75,7 @@ enum LLMClient {
         let provider = chosen ?? self.provider
         switch provider {
         case .ollama:
-            return try await ollamaChat(system: system, user: user)
+            return try await ollamaChat(system: system, user: user, numCtx: ollamaContext(for: system + user))
         case .openai:
             return try await openAIChat(base: "https://api.openai.com/v1", provider: provider, system: system, user: user)
         case .openrouter:
@@ -98,8 +98,15 @@ enum LLMClient {
         try await ollamaChat(system: cleanupPrompt, user: text, model: model, timeout: timeout, temperature: 0)
     }
 
+    /// Ollama's default window is small (4096 tokens on most setups) and silently truncates long prompts.
+    /// ~3 chars per token plus room for the reply, in 2048 steps, capped at 16384.
+    static func ollamaContext(for text: String) -> Int {
+        let need = text.count / 3 + 2048
+        return min(16384, max(4096, (need + 2047) / 2048 * 2048))
+    }
+
     private static func ollamaChat(system: String, user: String, model override: String? = nil,
-                                   timeout: TimeInterval = 120, temperature: Double? = nil) async throws -> String {
+                                   timeout: TimeInterval = 120, temperature: Double? = nil, numCtx: Int? = nil) async throws -> String {
         guard await ollamaAlive() else { throw LLMError.notConfigured }
         var name = override ?? model
         let local = await ollamaModels()
@@ -117,7 +124,10 @@ enum LLMClient {
                 ["role": "user", "content": user],
             ],
         ]
-        if let temperature { body["options"] = ["temperature": temperature] }
+        var options: [String: Any] = [:]
+        if let temperature { options["temperature"] = temperature }
+        if let numCtx { options["num_ctx"] = numCtx }
+        if !options.isEmpty { body["options"] = options }
         body["think"] = false
         req.httpBody = try JSONSerialization.data(withJSONObject: body)
         var (data, resp) = try await URLSession.shared.data(for: req)

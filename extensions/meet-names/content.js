@@ -15,10 +15,38 @@ const SILENT_CLASS = "gjg47c"; // level classes rotate; only the silent class is
 
 const meeting = () => (location.href.match(/meet\.google\.com\/(?:meet\/)?([a-z]{3}-[a-z]{4}-[a-z]{3})/) || [])[1] || "";
 
-const isSpeaking = (root) => {
+// Speaking detectors. Each is small and independent so one renamed class cannot zero out detection.
+// None of these has been checked against the live Meet DOM since the 2026-11-03 selector pass.
+const ACTIVE_TILE = '[data-is-speaking="true"], [data-active-speaker="true"]'; // guess, unverified
+const ACTIVITY_WINDOW_MS = 1500;
+const seen = new WeakMap(); // leaf element -> { sig, changedAt }
+
+// 1. The known level indicator: present and not carrying the silent class.
+const speakingByIndicator = (root) => {
   const el = root.querySelector(SELECTORS.SPEAKING);
   return !!el && el.matches(SELECTORS.SPEAKING) && !el.classList.contains(SILENT_CLASS);
 };
+
+// 2. Any empty leaf inside the tile whose class list or inline style changed in the last 1.5 s
+//    (the audio-level bars animate). The first sighting of an element never counts.
+const speakingByActivity = (root, now = Date.now()) => {
+  let active = false;
+  for (const el of root.querySelectorAll("div, span")) {
+    if (el.children.length || el.textContent.trim()) continue;
+    const sig = `${el.getAttribute("class") || ""}|${el.getAttribute("style") || ""}`;
+    const prev = seen.get(el);
+    if (!prev) { seen.set(el, { sig, changedAt: 0 }); continue; }
+    if (prev.sig !== sig) { prev.sig = sig; prev.changedAt = now; }
+    if (now - prev.changedAt < ACTIVITY_WINDOW_MS) active = true;
+  }
+  return active;
+};
+
+// 3. The tile itself (or an ancestor) is flagged as the active speaker.
+const speakingByActiveTile = (root) => !!root.closest?.(ACTIVE_TILE) || !!root.querySelector?.(ACTIVE_TILE);
+
+const isSpeaking = (root, now = Date.now()) =>
+  speakingByIndicator(root) || speakingByActivity(root, now) || speakingByActiveTile(root);
 
 function tileName(tile) {
   const n = tile.querySelector(SELECTORS.NAME)?.textContent.trim();
@@ -34,7 +62,10 @@ function tileName(tile) {
   return best;
 }
 
-function collect() {
+// The local user is always sent as "You"; `self: true` marks it explicitly for the app.
+const withSelf = (p, self) => (self ? { ...p, self: true } : p);
+
+function collect(now = Date.now()) {
   const out = new Map(); // participant-id -> {name, speaking}
   const rows = document.querySelectorAll(SELECTORS.PEOPLE_ROW);
   if (rows.length) {
@@ -42,19 +73,23 @@ function collect() {
       const id = row.getAttribute("data-participant-id");
       const self = [...row.querySelectorAll("span")].some((s) => s.textContent.trim() === "(You)");
       const name = self ? "You" : (row.getAttribute("aria-label") || "").trim();
-      if (name && !out.has(id)) out.set(id, { name, speaking: isSpeaking(row) });
+      if (name && !out.has(id)) out.set(id, withSelf({ name, speaking: isSpeaking(row, now) }, self));
     }
   } else {
     for (const tile of document.querySelectorAll(SELECTORS.TILE)) {
       const id = tile.getAttribute("data-participant-id");
-      const name = tile.matches(SELECTORS.SELF_TILE) ? "You" : tileName(tile);
-      if (name && !out.has(id)) out.set(id, { name, speaking: isSpeaking(tile) });
+      const self = tile.matches(SELECTORS.SELF_TILE);
+      const name = self ? "You" : tileName(tile);
+      if (name && !out.has(id)) out.set(id, withSelf({ name, speaking: isSpeaking(tile, now) }, self));
     }
   }
   return [...out.values()];
 }
 
-if (typeof window !== "undefined") globalThis.__owCollect = collect;
+if (typeof window !== "undefined") {
+  globalThis.__owCollect = collect;
+  globalThis.__owDetectors = { speakingByIndicator, speakingByActivity, speakingByActiveTile };
+}
 
 function post(event, participants = []) {
   fetch(ENDPOINT, {
@@ -86,7 +121,9 @@ function tick() {
   const participants = collect();
   console.debug(`[OpenWispr] roster n=${participants.length}`);
   const body = JSON.stringify(participants);
-  if (body === lastBody && now - lastSent < 5000) return; // debounce identical payloads
+  // Debounce identical payloads, but keep 1/s while someone speaks: the app weighs speaking samples.
+  const anySpeaking = participants.some((p) => p.speaking);
+  if (body === lastBody && now - lastSent < (anySpeaking ? 900 : 5000)) return;
   lastBody = body; lastSent = now;
   post("roster", participants);
 }
