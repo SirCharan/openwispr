@@ -141,6 +141,14 @@ extension License {
         }
     }
 
+    /// Fail-safe: only an explicit `OWSourceBuild = true` in Info.plist exempts a build. Missing or false enforces.
+    /// `build_app.sh` writes it for local builds; `release.sh` builds with OPENWISPR_RELEASE=1 and asserts it is absent.
+    static func isSourceBuild(_ info: [String: Any]?) -> Bool { (info?["OWSourceBuild"] as? Bool) == true }
+
+    static func allows(_ action: LicenseAction, in state: LicenseState, info: [String: Any]?) -> Bool {
+        isSourceBuild(info) || allows(action, in: state)
+    }
+
     // MARK: - Persistence (Keychain is the source of truth; UserDefaults mirrors it)
 
     private static let service = "org.openwispr.license"
@@ -225,6 +233,12 @@ extension License {
             Fixtures.expectEqual(allows(.dictate, in: st), g.dictate, "gate dictate \(g.state)")
             Fixtures.expectEqual(allows(.meet, in: st), g.meet, "gate meet \(g.state)")
         }
+        let expired = LicenseState.trialExpired
+        Fixtures.expectEqual(allows(.meet, in: expired, info: ["OWSourceBuild": true]), true, "source build allows expired trial")
+        Fixtures.expectEqual(allows(.dictate, in: expired, info: ["OWSourceBuild": false]), false, "OWSourceBuild=false blocks expired trial")
+        Fixtures.expectEqual(allows(.dictate, in: expired, info: nil), false, "absent marker blocks expired trial")
+        Fixtures.expectEqual(allows(.dictate, in: expired, info: ["OWSourceBuild": "true"]), false, "non-bool marker blocks")
+        Fixtures.expectEqual(allows(.meet, in: .active, info: nil), true, "absent marker allows active license")
         LicenseClient.selfTest()
         print("License.selfTest ok (\(f.cases.count) cases)")
     }

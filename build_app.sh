@@ -20,6 +20,8 @@ rm -rf "$APP_BUNDLE"
 mkdir -p "$APP_BUNDLE/Contents/MacOS" "$APP_BUNDLE/Contents/Resources"
 cp "$BIN" "$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 cp Resources/Info.plist "$APP_BUNDLE/Contents/Info.plist"
+# Local source builds skip the license gate; only release.sh (OPENWISPR_RELEASE=1) leaves the marker out.
+[ "${OPENWISPR_RELEASE:-}" = "1" ] || /usr/libexec/PlistBuddy -c "Add :OWSourceBuild bool true" "$APP_BUNDLE/Contents/Info.plist"
 [ -f Resources/AppIcon.icns ] && cp Resources/AppIcon.icns "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
 
 # Parity fixtures drive --selftest. They ship inside the bundle so the gate works on an

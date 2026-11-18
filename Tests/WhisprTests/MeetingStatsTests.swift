@@ -100,3 +100,14 @@ final class MeetingCaptureHealthTests: XCTestCase {
         XCTAssertTrue(MeetingController.shouldLogSysFailure(attempt: 20))
     }
 }
+
+final class LicenseGateTests: XCTestCase {
+    func testSourceBuildMarkerAllowsExpiredTrial() {
+        XCTAssertTrue(License.allows(.meet, in: .trialExpired, info: ["OWSourceBuild": true]))
+    }
+    func testMissingOrFalseMarkerEnforces() {
+        XCTAssertFalse(License.allows(.dictate, in: .trialExpired, info: nil))
+        XCTAssertFalse(License.allows(.dictate, in: .trialExpired, info: ["OWSourceBuild": false]))
+        XCTAssertTrue(License.allows(.dictate, in: .active, info: nil))
+    }
+}
