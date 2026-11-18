@@ -34,7 +34,7 @@ enum SummaryEngine {
     Rules:
     - Never write general sentences such as "a range of topics were covered" or "action items were assigned". Every bullet must contain a concrete fact from the transcript.
     - Owner is a name or speaker label that appears in the transcript, otherwise "Unassigned".
-    - Due is the date or deadline stated, otherwise "Not stated". If the user message gives the meeting date, write a relative deadline as the actual date followed by the original words in brackets, e.g. 20 Nov 2026 (by Friday).
+    - Due is the date or deadline stated, otherwise "Not stated". If the user message gives the meeting date, look a relative deadline up in the date table and write that date followed by the original words in brackets, e.g. 18 Nov 2026 (by Wednesday). If the phrase is not in the table or is ambiguous, keep the speaker's words unchanged. Never compute a date yourself.
     - Never guess an owner or a date.
     """
     static let partPrompt = """
@@ -43,7 +43,7 @@ enum SummaryEngine {
     Reply with bullets only, under three headings, no preamble. Write in English; keep proper nouns as spoken.
     Topics: **Short topic title** [mm:ss] (speaker): one or two sentences in your own words with the names, numbers, products and dates involved. Group related remarks; no long quotes.
     Decisions: only where a choice was settled (agreed, decided, going with, will not), with who decided and [mm:ss]. Otherwise "None".
-    Tasks: only where someone commits ("I will", "we need to", "let's") or is asked ("can you", "please", an imperative at a person). A remark, question or description is not a task. Write a short imperative with Owner (name or Unassigned), Due (the deadline in the speaker's own words, or Not stated) and [mm:ss]. Otherwise "None".
+    Tasks: only where someone commits ("I will", "we need to", "let's") or is asked ("can you", "please", an imperative at a person). A remark, question or description is not a task. Write a short imperative with Owner (name or Unassigned), Due (the deadline in the speaker's own words, unconverted, or Not stated) and [mm:ss]. Otherwise "None".
     """
     static let mergePrompt = """
     You merge notes taken from consecutive parts of one meeting. Combine them into one set of notes with the same bullets-only layout (Topics, Decisions, Tasks). Remove duplicates and merge bullets about the same topic, but keep every distinct decision and task with its owner, due date and [mm:ss], and every name, number and date. Do not add anything and do not turn specifics into general statements. Keep any "Not a meeting" notes. No preamble.
@@ -141,7 +141,23 @@ enum SummaryEngine {
         let f = DateFormatter()
         f.locale = Locale(identifier: "en_US_POSIX")
         f.dateFormat = "EEEE, d MMMM yyyy"
-        return "Meeting date: \(f.string(from: date))."
+        return "Meeting date: \(f.string(from: date)). Date table: \(dateTable(date))."
+    }
+
+    /// "today = Mon 16 Nov 2026; tomorrow = Tue 17 Nov 2026; Tue = 17 Nov 2026; ... next Mon = 23 Nov 2026" for the 13 days after `date`.
+    static func dateTable(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.calendar = Calendar(identifier: .gregorian)
+        let cal = f.calendar!
+        func fmt(_ d: Date, _ pattern: String) -> String { f.dateFormat = pattern; return f.string(from: d) }
+        var out = ["today = \(fmt(date, "EEE d MMM yyyy"))"]
+        for n in 1...13 {
+            guard let d = cal.date(byAdding: .day, value: n, to: date) else { continue }
+            if n == 1 { out.append("tomorrow = \(fmt(d, "EEE d MMM yyyy"))") }
+            out.append("\(n >= 7 ? "next " : "")\(fmt(d, "EEE")) = \(fmt(d, "d MMM yyyy"))")
+        }
+        return out.joined(separator: "; ")
     }
 
     /// "[m:ss] Speaker: text" lines, the shape the prompts expect.
@@ -182,7 +198,7 @@ enum SummaryEngine {
             while notes.count > 1, notes.reduce(0, { $0 + wordCount($1) }) > maxWords, rounds < 4 {
                 var merged: [String] = []
                 for g in group(notes, maxWords: maxWords) {
-                    merged.append(g.count == 1 ? g[0] : try await call(choice, system: mergePrompt, user: g.joined(separator: "\n\n")))
+                    merged.append(g.count == 1 ? g[0] : try await call(choice, system: mergePrompt, user: head + g.joined(separator: "\n\n")))
                 }
                 notes = merged; rounds += 1
             }
@@ -236,7 +252,11 @@ enum SummaryEngine {
         precondition(order.count == 3 && order == order.sorted(), "heading order")
         precondition(!systemPrompt.contains("Markdown table"), "table instruction still in prompt")
         let fixed = Calendar.current.date(from: DateComponents(year: 2026, month: 11, day: 16, hour: 12))!
-        precondition(dateLine(fixed) == "Meeting date: Monday, 16 November 2026.", "dateLine got \(dateLine(fixed))")
+        precondition(dateLine(fixed).hasPrefix("Meeting date: Monday, 16 November 2026."), "dateLine got \(dateLine(fixed))")
+        let table = dateTable(fixed)
+        for k in ["tomorrow = Tue 17 Nov 2026", "Wed = 18 Nov 2026", "Fri = 20 Nov 2026", "next Mon = 23 Nov 2026"] { precondition(table.contains(k), "dateTable missing \(k)") }
+        let keys = table.components(separatedBy: "; ").map { $0.components(separatedBy: " = ")[0] }
+        precondition(Set(keys).count == keys.count, "dateTable duplicate keys")
         let ml = [MeetingLine(speaker: "You", text: "hi", start: 65, end: 66)]
         precondition(transcriptText(ml) == "[1:05] You: hi", "transcriptText got \(transcriptText(ml))")
         let items = (0..<7).map { "Part \($0) " + Array(repeating: "w", count: 40 + $0).joined(separator: " ") }
