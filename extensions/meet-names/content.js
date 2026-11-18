@@ -76,9 +76,13 @@ function collect(now = Date.now()) {
       if (name && !out.has(id)) out.set(id, withSelf({ name, speaking: isSpeaking(row, now) }, self));
     }
   } else {
-    for (const tile of document.querySelectorAll(SELECTORS.TILE)) {
+    const tiles = [...document.querySelectorAll(SELECTORS.TILE)];
+    // Live Meet (2026-11-18) puts SELF_TILE's jsname on every tile root, so it only identifies
+    // the local user when exactly one tile carries it. Otherwise nobody is flagged as self.
+    const selfTrusted = tiles.filter((t) => t.matches(SELECTORS.SELF_TILE)).length === 1 && tiles.length > 1;
+    for (const tile of tiles) {
       const id = tile.getAttribute("data-participant-id");
-      const self = tile.matches(SELECTORS.SELF_TILE);
+      const self = selfTrusted && tile.matches(SELECTORS.SELF_TILE);
       const name = self ? "You" : tileName(tile);
       if (name && !out.has(id)) out.set(id, withSelf({ name, speaking: isSpeaking(tile, now) }, self));
     }
