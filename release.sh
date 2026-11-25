@@ -19,7 +19,9 @@ if [ ! -f "$NOTES" ]; then  # CHANGELOG section for this version
 fi
 grep -q "^## \[\?$VER" CHANGELOG.md || printf '\n## %s\n- Release %s\n' "$VER" "$VER" >> CHANGELOG.md
 
-./build_app.sh
+OPENWISPR_RELEASE=1 ./build_app.sh
+# The release build must enforce the license: fail if the source-build marker leaked in.
+[ "$(/usr/libexec/PlistBuddy -c "Print :OWSourceBuild" build/OpenWispr.app/Contents/Info.plist 2>/dev/null || echo false)" != "true" ] || { echo "ERROR: release build carries OWSourceBuild=true"; exit 1; }
 build/OpenWispr.app/Contents/MacOS/OpenWispr --selftest
 rm -f build/OpenWispr.zip
 ditto -c -k --keepParent build/OpenWispr.app build/OpenWispr.zip

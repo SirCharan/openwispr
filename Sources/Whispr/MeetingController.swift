@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 import QuartzCore
 import FluidAudio
 
@@ -9,6 +10,10 @@ struct MeetingLine: Identifiable, Codable {
     var text: String
     var start: Double = 0 // stream-timeline seconds (system stream for remote lines)
     var end: Double = 0
+    /// Which stream captured the line. Set once at ingest, never rewritten, so renaming `speaker`
+    /// to a Meet name cannot turn a mic line into a "remote" one. nil in data saved before it existed.
+    var origin: Origin?
+    enum Origin: String, Codable { case mic, system }
 }
 
 /// Records a meeting from two streams — mic ("You") and system audio (remote) — rotating
@@ -33,8 +38,10 @@ final class MeetingController: ObservableObject {
     /// Per-stream capture health, shown in MeetingView so a dead stream never reads as a quiet room.
     @Published private(set) var micHealthy = true
     @Published private(set) var systemHealthy = true
-    /// Persistent warning shown by MeetingView (unlike `status`, nothing overwrites it).
-    @Published private(set) var banner: String?
+    /// Persistent warnings shown by MeetingView (unlike `status`, nothing overwrites it).
+    /// Each condition sets and clears on its own, so several can show at once.
+    @Published private(set) var banners: [String] = []
+    private var bannerSet = BannerSet() { didSet { banners = bannerSet.lines } }
     /// Per-meeting language override ("auto" = follow the global setting). Read per chunk, editable live.
     @Published var meetingLanguage = "auto"
 
@@ -77,6 +84,9 @@ final class MeetingController: ObservableObject {
     /// Shown once per meeting when no extension event arrives within 20 s of Start on a Meet window.
     @Published private(set) var meetHint: String?
     private var meetTimeline: RosterTimeline?
+    /// Host time of the last transcribed line (or start/resume); drives the 10-minute silence stop.
+    private var lastSpeechHost = CACurrentMediaTime()
+    private let idleStopSeconds = 600.0
     /// Set by AppController: id of the detected meeting window ("us.zoom.xos", "meet.google.com", …).
     var meetingAppID: () -> String? = { nil }
     private var screenNames: ScreenSpeakerReader?
@@ -91,13 +101,20 @@ final class MeetingController: ObservableObject {
 
     // liveness tracking (buffer arrival, not energy)
     private let stallTicks = 5            // seconds of no buffers before a stream is called dead
-    private let maxSysRestarts = 8
     private var lastMicAppends = 0
     private var lastSysAppends = 0
     private var micQuietTicks = 0
     private var sysQuietTicks = 0
     private var sysRestartAttempts = 0
     private var sysRestartCooldown = 0
+    private var sysRestarting = false
+    /// The in-flight `system.restart()`; stop/pause cancel and await it so no stream outlives them.
+    private var restartTask: Task<Void, Error>?
+    /// Meeting-clock spans where the system stream was down or silent, for the mic-echo relabel.
+    private var sysQuietSpans: [(Double, Double)] = []
+    private var screenObservers: [(NotificationCenter, NSObjectProtocol)] = []
+    // others-silent watchdog: mic has speech but the call side delivers nothing for 5 minutes
+    private var othersWatchdog = OthersSilenceWatchdog()
 
     // mic-dead watchdog: buffers arrive but carry no signal (VPIO + another app on the input)
     private var micWatchdog = MicDeadWatchdog()
@@ -176,10 +193,12 @@ final class MeetingController: ObservableObject {
         openAudioWriters(dir: dir, stamp: stamp)
         micHealthy = true
         systemHealthy = true
-        banner = nil
+        bannerSet = BannerSet()
+        othersWatchdog = OthersSilenceWatchdog()
         lastMicAppends = 0; lastSysAppends = 0
         micQuietTicks = 0; sysQuietTicks = 0
-        sysRestartAttempts = 0; sysRestartCooldown = 0
+        sysRestartAttempts = 0; sysRestartCooldown = 0; sysRestarting = false; restartTask = nil
+        sysQuietSpans = []
         micWatchdog = MicDeadWatchdog(); micWatchdogTripped = false
         micDeadRestarts = 0; micLost = false
         Log.app.info("meeting: start voiceProcessing=\(self.micVoiceProcessing, privacy: .public)")
@@ -194,14 +213,15 @@ final class MeetingController: ObservableObject {
             rr.start()
             roster = rr
         }
-        meetServer?.clock = { nil }
+        meetServer?.detach()
         meetTimeline = nil
-        if let ms = meetServer, isMeetWindow() || ms.joinedRecently {
-            ms.timeline.reset()
-            ms.clock = { [weak self] in
+        lastSpeechHost = CACurrentMediaTime()
+        if let ms = meetServer {
+            // Always wired, whatever window is frontmost; seeded with the last ~60 s of roster posts.
+            ms.attach(clock: { [weak self] in
                 guard let self, self.isRunning, !self.isPaused else { return nil }
                 return self.clock.time(forHost: CACurrentMediaTime())
-            }
+            }, toClock: { [clock = self.clock] in clock.time(forHost: $0) }, onMeetWindow: isMeetWindow())
             meetTimeline = ms.timeline
         }
         screenNames?.stop(); screenNames = nil
@@ -288,12 +308,13 @@ final class MeetingController: ObservableObject {
             micWatchdogTripped = false
             if micDeadRestarts < maxMicDeadRestarts {
                 micDeadRestarts += 1
-                Log.audio.error("meeting mic dead for 10 s, restarting without voice processing (attempt \(self.micDeadRestarts)/\(self.maxMicDeadRestarts))")
+                let how = micVoiceProcessing ? "without voice processing" : "(voice processing already off)"
+                Log.audio.error("meeting mic silent for \(Int(MicDeadWatchdog.limit)) s, restarting \(how, privacy: .public) (attempt \(self.micDeadRestarts)/\(self.maxMicDeadRestarts))")
                 Task { await self.restartMicWithoutVoiceProcessing() }
             } else if !micLost {
                 micLost = true
                 Log.audio.error("meeting mic dead again after \(self.maxMicDeadRestarts) restarts — giving up")
-                banner = Self.micLostBanner
+                bannerSet.set(.micLost, true)
             }
         }
 
@@ -303,21 +324,21 @@ final class MeetingController: ObservableObject {
             sysQuietTicks += 1
             if sysQuietTicks == stallTicks {
                 systemHealthy = false
+                bannerSet.set(.systemLost, true)
                 Log.audio.error("others: no buffers for \(self.stallTicks)s — stream stalled")
-                Task { await self.restartSystemAudio() }
             }
+            // Keep trying for as long as the recording runs; restartSystemAudio enforces the backoff.
+            if sysQuietTicks >= stallTicks { Task { await self.restartSystemAudio() } }
         } else {
             if !systemHealthy {
                 Log.audio.info("others: buffers resumed")
                 status = "recording"
             }
             sysQuietTicks = 0; systemHealthy = true; sysRestartAttempts = 0
-            banner = micLost ? Self.micLostBanner : nil
+            bannerSet.set(.systemLost, false)
         }
         lastSysAppends = sysAppends
     }
-
-    static let micLostBanner = "Mic audio lost"
 
     /// Restart the mic engine with AEC off. The clock is untouched: `feed` zero-fills the gap by
     /// host time, so the mic WAV stays aligned with the system stream.
@@ -344,30 +365,67 @@ final class MeetingController: ObservableObject {
         }
         micHealthy = false
         status = "your microphone stopped delivering audio"
-        banner = Self.micLostBanner
+        bannerSet.set(.micLost, true)
         micLost = true
     }
 
-    /// Reconnect the system-audio tap with exponential backoff, keeping buffered audio.
+    /// Reconnect the system-audio tap for as long as the meeting runs (a slept or unplugged display
+    /// must not end capture), with capped exponential backoff, keeping buffered audio.
     private func restartSystemAudio() async {
-        guard isRunning, !isPaused, sysRestartCooldown == 0 else { return }
-        guard sysRestartAttempts < maxSysRestarts else {
-            status = "the other side's audio is unavailable — this transcript will be mic-only"
-            banner = "System audio lost, recording mic only"
-            return
-        }
+        guard isRunning, !isPaused, !transitioning, sysRestartCooldown == 0, !sysRestarting else { return }
+        sysRestarting = true
+        defer { sysRestarting = false }
         sysRestartAttempts += 1
-        let backoff = min(30, Int(pow(2.0, Double(sysRestartAttempts - 1))))
+        let attempt = sysRestartAttempts
+        let backoff = Self.sysBackoff(attempt: attempt)
         sysRestartCooldown = backoff
         sysQuietTicks = 0
-        Log.audio.info("others: restart attempt \(self.sysRestartAttempts)/\(self.maxSysRestarts), next retry in \(backoff)s")
+        bannerSet.set(.systemLost, true)
+        let task = Task { @MainActor [system] in try await system.restart() }
+        restartTask = task
+        defer { restartTask = nil }
         do {
-            try await system.restart()
+            try await task.value
+            // Stop/pause cancelled the restart and own the teardown (finishStreams stops the stream).
+            guard isRunning, !isPaused else { return }
             status = "recording"
+            Log.audio.info("others: restart attempt \(attempt) succeeded")
         } catch {
-            Log.audio.error("others: restart failed: \(error.localizedDescription, privacy: .public)")
+            guard isRunning, !isPaused else { return }
+            if Self.shouldLogSysFailure(attempt: attempt) {
+                Log.audio.error("others: restart attempt \(attempt) failed (next in \(backoff)s): \(error.localizedDescription, privacy: .public)")
+            }
             status = "reconnecting the other side's audio…"
         }
+    }
+
+    /// Seconds to wait after restart attempt `attempt` (1-based): 1, 2, 4, 8, 16, then 30 forever.
+    nonisolated static func sysBackoff(attempt: Int) -> Int { min(30, 1 << max(0, min(attempt - 1, 5))) }
+
+    /// Log the first few failures, then every 10th, so a long sleep does not flood the log.
+    nonisolated static func shouldLogSysFailure(attempt: Int) -> Bool { attempt <= 3 || attempt % 10 == 0 }
+
+    /// Wake / display change: try the tap again now instead of waiting out the backoff.
+    private func installScreenObservers() {
+        guard screenObservers.isEmpty else { return }
+        let handler: @Sendable (Notification) -> Void = { [weak self] _ in
+            Task { @MainActor in
+                guard let self, self.isRunning, !self.isPaused else { return }
+                guard !self.systemHealthy || !self.system.isRecording else { return }
+                self.sysRestartCooldown = 0
+                await self.restartSystemAudio()
+            }
+        }
+        let ws = NSWorkspace.shared.notificationCenter, nc = NotificationCenter.default
+        screenObservers = [
+            (ws, ws.addObserver(forName: NSWorkspace.screensDidWakeNotification, object: nil, queue: nil, using: handler)),
+            (nc, nc.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: nil, using: handler)),
+        ]
+    }
+
+    private func removeScreenObservers() {
+        for (center, token) in screenObservers { center.removeObserver(token) }
+        screenObservers = []
     }
 
     /// Pause: transcribe what's buffered, stop both engines. Resume restarts them; timeline stays cumulative.
@@ -407,6 +465,7 @@ final class MeetingController: ObservableObject {
         lastSysAppends = system.diagnostics.appends
         micQuietTicks = 0; sysQuietTicks = 0
         micWatchdog = MicDeadWatchdog(); micWatchdogTripped = false
+        lastSpeechHost = CACurrentMediaTime()
         startTimer()
     }
 
@@ -427,7 +486,8 @@ final class MeetingController: ObservableObject {
         roster?.stop()
         screenNames?.stop()
         let segments = await applyDiarization()
-        meetServer?.clock = { nil }
+        applyLineNames()
+        meetServer?.detach()
         if !segments.isEmpty {
             // Zoom and Meet never coexist: at most one of these is set.
             var map = (roster?.timeline.names(forDiarized: segments) ?? [:])
@@ -464,7 +524,7 @@ final class MeetingController: ObservableObject {
             let segments = try await diarizer.diarize(audio)
             guard !segments.isEmpty else { return [] }
             diarSegments = segments
-            for i in lines.indices where lines[i].speaker == "Others" {
+            for i in lines.indices where lines[i].origin == .system && lines[i].speaker == "Others" {
                 if let who = Diarizer.assign(start: lines[i].start, end: lines[i].end, segments: segments) {
                     lines[i].speaker = who
                 }
@@ -473,6 +533,22 @@ final class MeetingController: ObservableObject {
         } catch {
             Log.audio.error("diarization failed, keeping Others: \(error.localizedDescription, privacy: .public)")
             return []
+        }
+    }
+
+    /// Per-line Meet names. Remote lines ("Others"/"Speaker X") get the participant Meet showed speaking for a
+    /// clear majority of the line; mic lines get a remote name only when they look like an echo of the call.
+    /// Ambiguous windows are left alone so the diarizer mapping at Stop can still name them.
+    private func applyLineNames(from lo: Double = -.infinity, to hi: Double = .infinity) {
+        guard let tl = meetTimeline else { return }
+        let remote = lines.filter { $0.origin == .system }.map { ($0.start, $0.end) }
+        for i in lines.indices where lines[i].end >= lo && lines[i].end <= hi {
+            let sp = lines[i].speaker
+            let mic = lines[i].origin == .mic
+            guard (mic && sp == youLabel) || (lines[i].origin == .system && (sp == "Others" || sp.hasPrefix("Speaker "))) else { continue }
+            let echo = mic && RosterTimeline.micLineLooksEcho(start: lines[i].start, end: lines[i].end, quietSpans: sysQuietSpans,
+                                                              systemLines: remote)
+            if let n = tl.label(start: lines[i].start, end: lines[i].end, mic: mic, echoLikely: echo) { lines[i].speaker = n }
         }
     }
 
@@ -490,9 +566,11 @@ final class MeetingController: ObservableObject {
     }
 
     /// Stats segments: diarized remote speakers plus the mic ("You") lines, which are not diarized.
-    /// Without diarization every line stands in as a segment.
+    /// Without diarization every line stands in as a segment; after it, remote lines no diarized segment overlaps still count.
     private func refreshStats() {
-        let mine = lines.filter { diarSegments.isEmpty || $0.speaker == youLabel }
+        let mine = lines.filter { l in
+            diarSegments.isEmpty || l.speaker == youLabel || !diarSegments.contains { $0.start < l.end && l.start < $0.end }
+        }
             .map { Diarizer.Segment(speaker: $0.speaker, start: $0.start, end: $0.end) }
         let s = MeetingStats.compute(segments: diarSegments + mine, lines: lines, date: lines.first?.date ?? Date(), you: youLabel)
         stats = s
@@ -519,6 +597,7 @@ final class MeetingController: ObservableObject {
     // MARK: - Capture pump (VAD segmentation on the shared clock)
 
     private func startTimer() {
+        installScreenObservers()
         tick = 0
         timer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.onTick() }
@@ -529,18 +608,37 @@ final class MeetingController: ObservableObject {
         guard isRunning, !isPaused else { return }
         tick += 1
         if tick % 4 == 0 { checkHealth() }
+        if tick % 40 == 0, Settings.meetingAutoStop,
+           Self.shouldIdleStop(idle: CACurrentMediaTime() - lastSpeechHost, limit: idleStopSeconds,
+                               systemDown: !systemHealthy || sysRestarting || !system.isRecording,
+                               rosterSpokeAgo: meetServer?.lastSpeakingAt.map { Date().timeIntervalSince($0) }) {
+            Log.app.info("meeting: no speech for 10 min, stopping")
+            Task { await stop() }
+        }
         guard pumpTask == nil else { return }
         pumpTask = Task { @MainActor in
             await feed(mic.drain(), stream: .mic)
+            // Mic first, system second; `feed` also zero-fills the system side while it is down.
             await feed(system.drain(), stream: .system)
             pumpTask = nil
         }
     }
 
+    /// Pure. Idle auto-stop: only after `limit` s without a transcribed line or queued speech segment, never while
+    /// the system stream is down or restarting (a listen-only call is silent on the mic), nor within 60 s of
+    /// the Meet roster showing someone speaking.
+    nonisolated static func shouldIdleStop(idle: Double, limit: Double, systemDown: Bool, rosterSpokeAgo: Double?) -> Bool {
+        idle > limit && !systemDown && !(rosterSpokeAgo.map { $0 < 60 } ?? false)
+    }
+
     /// Stop both streams and push everything left (tails plus the segmenters' open speech) to the queue.
     private func finishStreams() async {
         timer?.invalidate(); timer = nil
+        removeScreenObservers()
         await pumpTask?.value
+        // A restart in flight must finish (or unwind) before the stream is stopped, else it comes up after.
+        restartTask?.cancel()
+        _ = try? await restartTask?.value
         let micTail = mic.stop()
         let sysTail = await system.stop()
         await feed(micTail, stream: .mic)
@@ -552,23 +650,45 @@ final class MeetingController: ObservableObject {
     /// One drained slice: zero-fill any dropout so index == clock time, write the raw audio,
     /// run VAD, queue finished speech segments.
     private func feed(_ samples: [Float], stream: Stream) async {
-        guard !samples.isEmpty else { return }
         let raw = stream == .mic ? micRaw : sysRaw
         let now = clock.time(forHost: CACurrentMediaTime())
         var data = samples
         let gap = (now - Double(samples.count) / 16000) - Double(raw) / 16000
-        if gap > gapFillSeconds {
+        if samples.isEmpty {
+            // Others stream is down: keep its WAV on the meeting clock, like a mic gap, so both files
+            // stay the same length. Stay half a second behind so resumed audio never overlaps.
+            guard stream == .system, !systemHealthy, gap > 2 * gapFillSeconds else { return }
+            data = [Float](repeating: 0, count: Int((gap - gapFillSeconds) * 16000))
+        } else if gap > gapFillSeconds {
             Log.audio.info("\(stream == .mic ? "mic" : "others", privacy: .public): \(gap, format: .fixed(precision: 1), privacy: .public)s dropout zero-filled")
             data = [Float](repeating: 0, count: Int(gap * 16000)) + samples
         }
         let start = Double(raw) / 16000
         switch stream {
         case .mic:
-            if micWatchdog.observe(rms: ResamplingBuffer.rms(samples), seconds: Double(samples.count) / 16000) {
+            let rms = ResamplingBuffer.rms(samples)
+            if micWatchdog.observe(rms: rms, seconds: Double(samples.count) / 16000) {
                 micWatchdogTripped = true
             }
+            if micLost, rms >= MicDeadWatchdog.threshold { // signal is back: the banner was wrong or the mic recovered
+                micLost = false; micDeadRestarts = 0
+                bannerSet.set(.micLost, false)
+            }
+            othersWatchdog.observeMic(rms: rms)
             micRaw += data.count; micWav?.append(data)
         case .system:
+            let seconds = Double(data.count) / 16000
+            let quiet = !systemHealthy || ResamplingBuffer.rms(samples) < OthersSilenceWatchdog.othersThreshold
+            if quiet {
+                if let l = sysQuietSpans.last, abs(l.1 - start) < 0.01 { sysQuietSpans[sysQuietSpans.count - 1].1 = start + seconds }
+                else { sysQuietSpans.append((start, start + seconds)) }
+            }
+            // Zero-fill while the stream is down is not "no call audio": that is the system-lost banner's job.
+            let silent = othersWatchdog.observeOthers(rms: ResamplingBuffer.rms(samples), seconds: seconds, systemHealthy: systemHealthy)
+            if silent != bannerSet.contains(.noCallAudio) {
+                if silent { Log.audio.error("others: no audio for \(Int(OthersSilenceWatchdog.limit)) s while the mic has speech") }
+                bannerSet.set(.noCallAudio, silent)
+            }
             sysRaw += data.count; sysWav?.append(data)
             fullSysAudio.append(contentsOf: data) // kept for stop-time diarization
         }
@@ -594,6 +714,7 @@ final class MeetingController: ObservableObject {
     /// consumer instead: ordered, and drained to completion before the transcript is finished.
     private func enqueue(_ seg: MeetingSegmenter.Segment, speaker: String, stream: Stream) {
         guard !seg.samples.isEmpty else { return }
+        lastSpeechHost = CACurrentMediaTime() // a VAD speech segment on either channel is activity
         pending.append(PendingChunk(samples: seg.samples, start: seg.start, speaker: speaker, stream: stream))
         if pending.count > 8 {
             Log.audio.error("transcription backlog \(self.pending.count) chunks — inference is slower than capture")
@@ -632,10 +753,11 @@ final class MeetingController: ObservableObject {
     /// means the mic leaked a remote speaker: the You line goes, the Others line stays. Returns the
     /// new line set, or nil when `new` itself is the dropped You line.
     nonisolated static func applyEcho(_ lines: [MeetingLine], adding new: MeetingLine) -> [MeetingLine]? {
-        if new.speaker == "Others" {
-            return lines.filter { !($0.speaker == "You" && isEchoOf(new, you: $0)) } + [new]
+        // By stream origin, not label: live naming may already have renamed either side.
+        if new.origin == .system {
+            return lines.filter { !($0.origin == .mic && isEchoOf(new, you: $0)) } + [new]
         }
-        if new.speaker == "You", lines.contains(where: { $0.speaker == "Others" && isEchoOf($0, you: new) }) { return nil }
+        if new.origin == .mic, lines.contains(where: { $0.origin == .system && isEchoOf($0, you: new) }) { return nil }
         return lines + [new]
     }
 
@@ -668,12 +790,33 @@ final class MeetingController: ObservableObject {
         precondition(!isEchoOf(line("yeah okay right", 7, 9), you: line("yeah okay right", 7, 9)), "3-token pair matched")
         precondition(isEchoOf(line("हम कल मीटिंग में बात करेंगे", 7, 12), you: line("हम कल मीटिंग में बात करेंगे।", 7, 12)), "hindi not matched")
         precondition(tokens("हम कल मीटिंग").count == 3, "hindi tokenisation")
-        func spk(_ who: String, _ s: String, _ t: Double) -> MeetingLine { MeetingLine(speaker: who, text: s, start: t, end: t + 5) }
+        func spk(_ who: String, _ s: String, _ t: Double, _ o: MeetingLine.Origin? = nil) -> MeetingLine {
+            MeetingLine(speaker: who, text: s, start: t, end: t + 5, origin: o ?? (who == "You" ? .mic : .system))
+        }
         let txt = "we should add a card for delta"
         let oFirst = applyEcho([spk("Others", txt, 7)], adding: spk("You", txt, 8))
         precondition(oFirst == nil, "You twin not dropped")
         let yFirst = applyEcho([spk("You", txt, 8)], adding: spk("Others", txt, 7))
         precondition(yFirst?.count == 1 && yFirst?.first?.speaker == "Others", "Others not kept / enqueued You not removed")
+        // Live naming may have renamed the remote line before its mic twin arrives: origin, not label, decides.
+        precondition(applyEcho([spk("Rahul", txt, 7, .system)], adding: spk("You", txt, 8)) == nil, "renamed remote twin: You echo survived")
+        let renamedFirst = applyEcho([spk("You", txt, 8)], adding: spk("Rahul", txt, 7, .system))
+        precondition(renamedFirst?.count == 1 && renamedFirst?.first?.speaker == "Rahul", "renamed remote twin: You line not removed")
+        precondition(applyEcho([spk("Priya", txt, 7, .mic)], adding: spk("Others", txt, 8))?.count == 1, "mic line renamed to a remote name must still dedupe by origin")
+        precondition(applyEcho([spk("Rahul", txt, 7, .system)], adding: spk("You", "another thing entirely here now", 8))?.count == 2, "non-echo mic line kept")
+        let old = try! JSONDecoder().decode(MeetingLine.self, from: Data(#"{"id":"3F2504E0-4F89-11D3-9A0C-0305E82C3301","date":0,"speaker":"You","text":"hi","start":0,"end":1}"#.utf8))
+        precondition(old.origin == nil, "old persisted line decodes without origin")
+        // Idle stop: system down / restarting, or recent roster speech, blocks it.
+        precondition(shouldIdleStop(idle: 700, limit: 600, systemDown: false, rosterSpokeAgo: nil), "idle stop missed")
+        precondition(!shouldIdleStop(idle: 700, limit: 600, systemDown: true, rosterSpokeAgo: nil), "idle stop while system down")
+        precondition(!shouldIdleStop(idle: 700, limit: 600, systemDown: false, rosterSpokeAgo: 20), "idle stop with roster speech")
+        precondition(shouldIdleStop(idle: 700, limit: 600, systemDown: false, rosterSpokeAgo: 300), "stale roster speech blocked idle stop")
+        precondition(!shouldIdleStop(idle: 500, limit: 600, systemDown: false, rosterSpokeAgo: nil), "idle stop early")
+        // Others watchdog is not fed while the system stream is down.
+        var dw = OthersSilenceWatchdog()
+        dw.observeMic(rms: 0.05)
+        precondition(!dw.observeOthers(rms: 0, seconds: 400, systemHealthy: false), "watchdog fired during outage")
+        precondition(dw.silentSeconds == 0, "watchdog accumulated zero-fill during outage")
 
         // The speech floor must sit in the empty band between noise and speech. These are real
         // maxWindowRMS values from the 11 Aug 2026 meeting: the four chunks that produced
@@ -698,9 +841,27 @@ final class MeetingController: ObservableObject {
             for _ in 0..<48 where w.observe(rms: rms, seconds: 0.25) { n += 1 } // 12 s
             return n
         }
-        let silentFires = fires(0.0003), speechFires = fires(0.08)
-        precondition(silentFires == 1, "mic watchdog fired \(silentFires)x on 12 s of silence, want 1")
+        let silentFires = fires(0.0), speechFires = fires(0.08), quietRoomFires = fires(0.0003)
+        precondition(silentFires == 1, "mic watchdog fired \(silentFires)x on 12 s of digital silence, want 1")
         precondition(speechFires == 0, "mic watchdog fired on speech")
+        precondition(quietRoomFires == 0, "mic watchdog fired on a quiet room")
+        // Others-silence watchdog: needs mic speech AND 5 min of quiet others; clears when others returns.
+        var ow = OthersSilenceWatchdog()
+        precondition(!ow.observeOthers(rms: 0, seconds: 400), "others watchdog fired without mic speech")
+        ow.observeMic(rms: 0.05)
+        precondition(ow.observeOthers(rms: 0, seconds: 1), "others watchdog missed 5 min of silence with mic speech")
+        precondition(!ow.observeOthers(rms: 0.01, seconds: 1), "others watchdog did not clear")
+        precondition(!ow.observeOthers(rms: 0, seconds: 299), "others watchdog fired early")
+        // Banner set: three conditions coexist and clear independently, in a stable order.
+        var bs = BannerSet()
+        bs.set(.noCallAudio, true); bs.set(.micLost, true); bs.set(.systemLost, true)
+        precondition(bs.lines.count == 3 && bs.lines.first == "Mic audio lost", "banner set order/size")
+        bs.set(.systemLost, false)
+        precondition(bs.lines == ["Mic audio lost", "No audio from the call is being captured"], "banner clear not independent")
+        // Backoff 1,2,4,8,16 then 30 forever; failure logs are rate-limited.
+        precondition((1...8).map { sysBackoff(attempt: $0) } == [1, 2, 4, 8, 16, 30, 30, 30], "backoff schedule")
+        precondition(sysBackoff(attempt: 100_000) == 30, "backoff cap")
+        precondition(shouldLogSysFailure(attempt: 3) && !shouldLogSysFailure(attempt: 4) && shouldLogSysFailure(attempt: 10), "failure log rate limit")
         // Recorder restart: start -> stop -> start (plain path) must deliver buffers both times.
         // Skipped without an input device / mic permission.
         let rec = AudioRecorder()
@@ -712,8 +873,13 @@ final class MeetingController: ObservableObject {
                 counts.append(rec.diagnostics.appends)
                 rec.stop()
             }
-            precondition(counts.allSatisfy { $0 > 0 }, "AudioRecorder restart delivered no buffers: \(counts)")
-            print("AudioRecorder.restart PASS (appends=\(counts))")
+            if counts.allSatisfy({ $0 == 0 }) {
+                // No mic input on this Mac (no device buffers at all): not a restart regression.
+                print("AudioRecorder.restart SKIP (no mic buffers: \(counts))")
+            } else {
+                precondition(counts.allSatisfy { $0 > 0 }, "AudioRecorder restart delivered no buffers: \(counts)")
+                print("AudioRecorder.restart PASS (appends=\(counts))")
+            }
         } catch {
             print("AudioRecorder.restart SKIP (\(describeOSStatus(error)))")
         }
@@ -775,7 +941,8 @@ final class MeetingController: ObservableObject {
                     """)
                 return
             }
-            let line = MeetingLine(speaker: speaker, text: text, start: start, end: start + duration)
+            let line = MeetingLine(speaker: speaker, text: text, start: start, end: start + duration,
+                                   origin: stream == .mic ? .mic : .system)
             // Echo dedup. It was off while start times came from two drifting sample counters (it
             // deleted the whole mic stream). On the shared clock the test is tight: only the You
             // line is ever dropped (mic leaking a remote speaker), within ±1.5 s of its Others twin.
@@ -789,6 +956,10 @@ final class MeetingController: ObservableObject {
                 lines.append(line)
             }
             lines.sort { $0.start < $1.start } // interleave You/Others in spoken order
+            lastSpeechHost = CACurrentMediaTime()
+            // Name lines once the echo-dedup window (±1.5 s) has passed; Stop covers the rest.
+            let now = clock.time(forHost: CACurrentMediaTime())
+            applyLineNames(from: now - 120, to: now - 5)
             autosave() // live checkpoint
         } catch {
             Log.audio.error("""
@@ -806,7 +977,7 @@ final class MeetingController: ObservableObject {
         summaryChoice = await SummaryEngine.resolveLive(for: transcriptText)
     }
 
-    private var transcriptText: String { lines.map { "\($0.speaker): \($0.text)" }.joined(separator: "\n") }
+    private var transcriptText: String { SummaryEngine.transcriptText(lines) }
 
     /// Snapshot/preview only: put the pane into a given summarise state.
     func previewSummaryState(lines l: [MeetingLine], choice: SummaryChoice?, error: String? = nil) {
@@ -824,7 +995,7 @@ final class MeetingController: ObservableObject {
         guard choice != .none else { summaryError = SummaryEngine.noModelReason(for: transcript); return }
         summarizingWith = choice.label
         do {
-            summary = try await SummaryEngine.summarize(transcript: transcript, choice: choice)
+            summary = try await SummaryEngine.summarize(transcript: transcript, choice: choice, meetingDate: lines.first?.date)
             if let url = meetingFile, let summary { MeetingArchive.saveSummary(summary, for: url) }
             autosave()
         } catch {
@@ -862,9 +1033,10 @@ final class MeetingController: ObservableObject {
 private extension String { var nonEmpty: String? { isEmpty ? nil : self } }
 
 /// Pure mic-dead detector: fed the RMS of each mic slice, trips once after `limit` seconds of
-/// continuous sub-`threshold` audio (buffers arriving, no signal — VPIO with another app on the input).
+/// continuous digital silence (buffers arriving, effectively zero samples — VPIO with another app on
+/// the input). A quiet room sits well above `threshold` and never trips it.
 struct MicDeadWatchdog {
-    static let threshold: Float = 0.004
+    static let threshold: Float = 0.00005
     static let limit = 10.0
     private(set) var quietSeconds = 0.0
 
@@ -875,4 +1047,42 @@ struct MicDeadWatchdog {
         quietSeconds = 0
         return true
     }
+}
+
+/// Pure detector for "the call side is not being captured": the mic has had speech-level audio while
+/// the others channel stayed below `othersThreshold` for `limit` seconds. Clears when others returns.
+struct OthersSilenceWatchdog {
+    static let micThreshold: Float = 0.01
+    static let othersThreshold: Float = 0.0003
+    static let limit = 300.0
+    private(set) var silentSeconds = 0.0
+    private(set) var micSpoke = false
+
+    mutating func observeMic(rms: Float) { if rms >= Self.micThreshold { micSpoke = true } }
+
+    /// Returns true while the warning should show.
+    mutating func observeOthers(rms: Float, seconds: Double, systemHealthy: Bool = true) -> Bool {
+        guard systemHealthy else { return false }
+        if rms >= Self.othersThreshold { silentSeconds = 0; micSpoke = false; return false }
+        silentSeconds += seconds
+        return silentSeconds >= Self.limit && micSpoke
+    }
+}
+
+/// The set of capture warnings currently showing; each condition clears independently.
+struct BannerSet {
+    enum Condition: Int, CaseIterable {
+        case micLost, systemLost, noCallAudio
+        var text: String {
+            switch self {
+            case .micLost: return "Mic audio lost"
+            case .systemLost: return "System audio lost, recording mic only"
+            case .noCallAudio: return "No audio from the call is being captured"
+            }
+        }
+    }
+    private(set) var active: Set<Condition> = []
+    mutating func set(_ c: Condition, _ on: Bool) { if on { active.insert(c) } else { active.remove(c) } }
+    func contains(_ c: Condition) -> Bool { active.contains(c) }
+    var lines: [String] { Condition.allCases.filter(active.contains).map(\.text) }
 }

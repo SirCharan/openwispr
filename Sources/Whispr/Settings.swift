@@ -61,6 +61,12 @@ enum Settings {
         set { UserDefaults.standard.set(newValue, forKey: "meetExtensionEnabled") }
     }
 
+    /// Stop a meeting recording when the Meet call ends (10 s grace) or after 10 min with no speech.
+    static var meetingAutoStop: Bool {
+        get { UserDefaults.standard.object(forKey: "meetingAutoStop") as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: "meetingAutoStop") }
+    }
+
     /// Silence other audio while dictating, then put it back. Dictation only — meetings never
     /// touch the output, because the remote party's audio IS the system output we capture.
     static var muteWhileDictating: Bool {

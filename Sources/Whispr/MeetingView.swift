@@ -186,11 +186,11 @@ struct MeetingView: View {
         guard let stamp = selected, !pastLines.isEmpty, !pastSummarizing else { return }
         pastSummarizing = true; pastError = nil
         defer { pastSummarizing = false }
-        let transcript = pastLines.map { "\($0.speaker): \($0.text)" }.joined(separator: "\n")
+        let transcript = SummaryEngine.transcriptText(pastLines)
         let choice = await SummaryEngine.resolveLive(for: transcript)
         guard choice != .none else { pastError = SummaryEngine.noModelReason(for: transcript) ?? "No AI model available."; return }
         do {
-            let out = try await SummaryEngine.summarize(transcript: transcript, choice: choice)
+            let out = try await SummaryEngine.summarize(transcript: transcript, choice: choice, meetingDate: MeetingArchive.date(fromStamp: stamp))
             MeetingArchive.saveSummary(out, for: MeetingArchive.fileURL(stamp: stamp))
             if selected == stamp { pastSummary = out }
             archive = MeetingArchive.list()
@@ -211,9 +211,12 @@ struct MeetingView: View {
     }
 
     private var meetNamesRow: some View {
-        TimelineView(.periodic(from: .now, by: 30)) { ctx in
+        TimelineView(.periodic(from: .now, by: 5)) { ctx in
+            let ms = controller.meetServer
             let st = MeetRosterServer.statusText(everConnected: MeetRosterServer.everConnected || lastSeenOverride != nil,
-                                                 lastEventAt: lastSeenOverride ?? controller.meetServer?.lastEventAt, now: ctx.date)
+                                                 lastEventAt: lastSeenOverride ?? ms?.lastEventAt, now: ctx.date,
+                                                 participants: ms?.lastParticipants ?? 0, lastSpeakingAt: ms?.lastSpeakingAt,
+                                                 recording: controller.isRunning)
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: Brand.s8) {
                     Circle().fill(st.connected ? Brand.ok : Brand.warn).frame(width: 6, height: 6)
@@ -238,13 +241,15 @@ struct MeetingView: View {
                 Text(hint).font(Brand.caption).foregroundStyle(Brand.text)
                     .frame(maxWidth: .infinity, alignment: .leading).padding(8).background(Brand.warn.opacity(0.2))
             }
-            if let banner = controller.banner {
-                Text(banner)
-                    .font(Brand.caption.bold())
-                    .foregroundStyle(Brand.onAccent)
-                    .frame(maxWidth: .infinity)
-                    .padding(6)
-                    .background(Brand.danger)
+            if !controller.banners.isEmpty {
+                VStack(spacing: 2) {
+                    ForEach(controller.banners, id: \.self) { Text($0) }
+                }
+                .font(Brand.caption.bold())
+                .foregroundStyle(Brand.onAccent)
+                .frame(maxWidth: .infinity)
+                .padding(6)
+                .background(Brand.danger)
             }
             Divider()
 
@@ -278,10 +283,19 @@ struct MeetingView: View {
             }
             if let summary = viewingPast ? pastSummary : controller.summary {
                 ScrollView {
-                    Text(LocalizedStringKey(summary))
-                        .textSelection(.enabled)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(12)
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(Array(summary.split(separator: "\n", omittingEmptySubsequences: true).enumerated()), id: \.offset) { _, raw in
+                            let line = String(raw)
+                            if line.hasPrefix("## ") {
+                                Text(line.dropFirst(3)).font(Brand.heading).foregroundStyle(Brand.text).padding(.top, 4)
+                            } else {
+                                Text(LocalizedStringKey(line.hasPrefix("- ") ? "• " + line.dropFirst(2) : line))
+                            }
+                        }
+                    }
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(12)
                 }
                 .frame(maxHeight: 160)
                 .background(Brand.coral.opacity(0.06))
@@ -339,10 +353,14 @@ struct MeetingView: View {
     private func statsBlock(_ st: MeetingStats) -> some View {
         VStack(alignment: .leading, spacing: Brand.s12) {
             HStack(spacing: Brand.s12) {
-                StatTile(value: MeetingController.mmss(st.duration), label: "duration")
+                if let a = st.active, a > 0, abs(st.recorded - a) >= 0.1 * st.recorded {
+                    StatTile(value: MeetingController.mmss(a), label: "active", hint: "of \(MeetingController.mmss(st.recorded)) recorded")
+                } else {
+                    StatTile(value: MeetingController.mmss(st.duration), label: "duration")
+                }
                 StatTile(value: String(format: "%.1f", st.questionsPerHour), label: "questions/hr")
                 StatTile(value: String(format: "%.1f", st.fillersPerMinute), label: "fillers/min")
-                StatTile(value: "\(st.interruptions)", label: "interruptions")
+                StatTile(value: String(format: "%.1f", st.interruptionsPerHour), label: "interruptions/hr")
             }
             .fixedSize(horizontal: false, vertical: true)
             ForEach(st.speakers.filter { $0.talkSeconds > 0 }.sorted { $0.talkSeconds > $1.talkSeconds }, id: \.name) { sp in

@@ -16,6 +16,8 @@ final class LicenseManager: ObservableObject {
     @Published var busy = false
     @Published var error: String?
     private var preview: LicenseState?
+    /// Local source build (Info.plist `OWSourceBuild`): gate allows everything and nothing is written to trial/license storage.
+    let sourceBuild = License.isSourceBuild(Bundle.main.infoDictionary)
 
     var daysLeftText: String? {
         switch state {
@@ -34,7 +36,7 @@ final class LicenseManager: ObservableObject {
     /// Gate at start, never at delivery: nothing is recorded and then withheld.
     func allows(_ action: LicenseAction) -> Bool {
         refresh()
-        return License.allows(action, in: state)
+        return License.allows(action, in: state, info: sourceBuild ? ["OWSourceBuild": true] : nil)
     }
 
     /// Returns true when allowed; otherwise tells the user and opens the License pane.
@@ -52,12 +54,12 @@ final class LicenseManager: ObservableObject {
 
     /// First launch after onboarding starts the trial clock (idempotent), then validates if due.
     func launch() {
-        License.apply(.launch)
+        if !sourceBuild { License.apply(.launch) }
         refresh()
         validateIfDue()
     }
 
-    func startTrial() { License.apply(.launch); refresh() }
+    func startTrial() { if !sourceBuild { License.apply(.launch) }; refresh() }
 
     func validateIfDue() {
         let stored = License.load()
@@ -125,7 +127,7 @@ struct BuyCard: View {
 struct TrialBanner: View {
     @ObservedObject var license: LicenseManager
     var body: some View {
-        if !(license.state == .active) {
+        if !(license.state == .active) && !license.sourceBuild {
             HStack(spacing: Brand.s12) {
                 Image(systemName: license.state.isOK ? "clock" : "exclamationmark.triangle.fill")
                     .foregroundStyle(license.state.isOK ? Brand.muted : Brand.warn)
@@ -189,6 +191,9 @@ struct LicensePane: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Brand.s16) {
                 Text("License").font(Brand.display).foregroundStyle(Brand.text)
+                if license.sourceBuild {
+                    PaperCard { Text("Source build: license not required.").font(Brand.heading).foregroundStyle(Brand.text) }
+                } else {
                 PaperCard {
                     HStack(spacing: Brand.s12) {
                         Image(systemName: license.state.isOK ? "checkmark.seal.fill" : "exclamationmark.triangle.fill")
@@ -199,6 +204,7 @@ struct LicensePane: View {
                         }
                         Spacer()
                     }
+                }
                 }
                 if license.state == .active || { if case .grace = license.state { true } else { false } }() {
                     PaperCard {

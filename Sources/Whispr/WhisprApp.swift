@@ -90,14 +90,14 @@ enum Whispr {
                     let raw = try String(contentsOfFile: path, encoding: .utf8)
                     let body = raw.components(separatedBy: "\n").filter { $0.hasPrefix("[") }
                         .map { l -> String in
-                            // "[0:00] **Speaker C**: text" -> "Speaker C: text"
-                            l.replacingOccurrences(of: #"^\[[0-9:]+\] \*\*(.*?)\*\*:"#, with: "$1:", options: .regularExpression)
+                            // "[0:00] **Speaker C**: text" -> "[0:00] Speaker C: text"
+                            l.replacingOccurrences(of: #"^(\[[0-9:]+\]) \*\*(.*?)\*\*:"#, with: "$1 $2:", options: .regularExpression)
                         }.joined(separator: "\n")
                     print("language: \(SummaryEngine.dominantLanguage(body) ?? "unknown")")
                     let choice = await SummaryEngine.resolveLive(for: body)
                     print("provider: \(choice.label)")
                     guard choice != .none else { print(SummaryEngine.noModelReason(for: body) ?? "no provider available"); sem.signal(); return }
-                    let out = try await SummaryEngine.summarize(transcript: body, choice: choice)
+                    let out = try await SummaryEngine.summarize(transcript: body, choice: choice, meetingDate: MeetingArchive.date(fromStamp: URL(fileURLWithPath: path).deletingPathExtension().lastPathComponent.replacingOccurrences(of: "meeting-", with: "")))
                     print("summary (first 300 chars): \(out.prefix(300))")
                     if args.contains("--save") {
                         let u = URL(fileURLWithPath: path)

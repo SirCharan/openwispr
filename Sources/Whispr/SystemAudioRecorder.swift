@@ -1,7 +1,11 @@
 import ScreenCaptureKit
+import CoreGraphics
 import AVFoundation
 
-enum SystemAudioError: Error { case noDisplay }
+enum SystemAudioError: Error, LocalizedError {
+    case noDisplay
+    var errorDescription: String? { "no display available to capture (asleep or unplugged)" }
+}
 
 /// Captures system-output audio (the "Others" side of a meeting) via ScreenCaptureKit
 /// into a shared ResamplingBuffer. Requires the Screen Recording TCC permission
@@ -36,8 +40,10 @@ final class SystemAudioRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
     }
 
     private func begin() async throws {
-        let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
-        guard let display = content.displays.first else { throw SystemAudioError.noDisplay }
+        let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
+        // Any display will do (audio only); prefer the main one, else the first that is left.
+        let main = CGMainDisplayID()
+        guard let display = content.displays.first(where: { $0.displayID == main }) ?? content.displays.first else { throw SystemAudioError.noDisplay }
 
         let config = SCStreamConfiguration()
         config.capturesAudio = true
@@ -56,6 +62,11 @@ final class SystemAudioRecorder: NSObject, SCStreamOutput, SCStreamDelegate {
         let stream = SCStream(filter: filter, configuration: config, delegate: self)
         try stream.addStreamOutput(self, type: .audio, sampleHandlerQueue: DispatchQueue(label: "whispr.sysaudio"))
         try await stream.startCapture()
+        // Stop/pause cancelled us while the stream was coming up: do not leave it running.
+        if Task.isCancelled {
+            try? await stream.stopCapture()
+            throw CancellationError()
+        }
         self.stream = stream
         isRecording = true
         Log.audio.info("others: SCStream started (48000Hz 2ch, queueDepth 8)")

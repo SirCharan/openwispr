@@ -19,6 +19,7 @@ struct SettingsView: View {
     @AppStorage("diarizationEnabled") private var diarizationEnabled = true
     @AppStorage("detectMeetings") private var detectMeetings = true
     @AppStorage("meetExtensionEnabled") private var meetExtensionEnabled = true
+    @AppStorage("meetingAutoStop") private var meetingAutoStop = true
     @AppStorage("hotkeyMode") private var hotkeyMode = "fn"
     @AppStorage("rewriteStyle") private var rewriteStyle = "off"
     @AppStorage("accentHex") private var accentHex = "FF5D54"
@@ -70,6 +71,7 @@ struct SettingsView: View {
                 }
                 Toggle("Separate remote meeting speakers (A/B) by voice", isOn: $diarizationEnabled)
                 Toggle("Detect meetings and offer to record", isOn: $detectMeetings)
+                Toggle("Stop recording when the call ends or after 10 min of silence", isOn: $meetingAutoStop)
                 Toggle("Google Meet names (Chrome extension)", isOn: $meetExtensionEnabled)
                     .onChange(of: meetExtensionEnabled) { _, _ in NotificationCenter.default.post(name: .whisprMeetExtensionChanged, object: nil) }
                 Text("Load the extension from <repo>/extensions/meet-names in chrome://extensions")
