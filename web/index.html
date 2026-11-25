@@ -3,16 +3,24 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>OpenWispr — Talk. It types.</title>
-<meta name="description" content="Private on-device dictation and meetings for Mac. 7-day free trial, $15 once. Hold fn, speak, and clean text pastes at your cursor." />
-<meta property="og:title" content="OpenWispr — Talk. It types." />
-<meta property="og:description" content="Private on-device dictation and meetings for Mac. 7-day free trial, $15 once. MIT source." />
+<title>OpenWispr: Talk. It types.</title>
+<meta name="description" content="Private on-device dictation and meeting transcripts for Mac. Hold fn, speak, and the text pastes at your cursor. $15 once. MIT source." />
+<link rel="canonical" href="https://charandeepkapoor.com/openwispr" />
+<meta property="og:url" content="https://charandeepkapoor.com/openwispr" />
+<meta property="og:title" content="OpenWispr: Talk. It types." />
+<meta property="og:description" content="Private on-device dictation and meeting transcripts for Mac. $15 once. MIT source." />
 <meta property="og:type" content="website" />
+<meta property="og:image" content="https://charandeepkapoor.com/openwispr/shots/app-light-meetings.jpg" />
+<meta property="og:image:width" content="1600" />
+<meta property="og:image:height" content="1120" />
+<meta property="og:image:alt" content="The OpenWispr Meetings window with a transcript labelled by speaker and per-speaker talk share." />
+<meta name="twitter:card" content="summary" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23F4EFE6'/%3E%3Cg fill='%23E2543E'%3E%3Crect x='5' y='13' width='3' height='6' rx='1.5'/%3E%3Crect x='10' y='9' width='3' height='14' rx='1.5'/%3E%3Crect x='15' y='5' width='3' height='22' rx='1.5'/%3E%3Crect x='20' y='10' width='3' height='12' rx='1.5'/%3E%3Crect x='25' y='14' width='3' height='4' rx='1.5'/%3E%3C/g%3E%3C/svg%3E" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
 <style>
+  /* ---------- tokens: every colour on the page comes from here ---------- */
   :root {
     --bg: #F4EFE6;
     --surface: #ECE4D6;
@@ -20,408 +28,468 @@
     --line: #DCD2C0;
     --text: #241F1A;
     --muted: #6B5F4E;
-    --accent: #E2543E;
+    --accent: #E2543E;                       /* decoration and large display type only */
+    --accent-ink: #B23622;                   /* same hue, darker: small text and button fills (AA on bg, surface, paper) */
+    --accent-deep: #8F2A19;                  /* pressed / hover state of accent-ink */
     --accent-soft: rgba(226,84,62,.10);
+    --accent-line: rgba(226,84,62,.38);
+    --mascot: #F2B701;
     --radius: 14px;
-    --shadow: 0 1px 2px rgba(66,50,32,.06), 0 8px 24px rgba(66,50,32,.07);
+    --radius-s: 10px;
+    --shadow: 0 1px 0 rgba(66,50,32,.05), 0 12px 22px -16px rgba(66,50,32,.38);
     --sys: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
     --serif: "Young Serif", Georgia, serif;
     --mono: "Space Mono", ui-monospace, Menlo, monospace;
+    /* spacing scale */
+    --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px; --s8: 72px; --s9: 104px;
+    --measure: 62ch;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html { scroll-behavior: smooth; overflow-x: hidden; }
-  body { background: var(--bg); color: var(--text); font-family: var(--sys); line-height: 1.6; -webkit-font-smoothing: antialiased; overflow-x: hidden; max-width: 100%; }
+  [hidden] { display: none !important; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sys); font-size: 16px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
   img, svg { max-width: 100%; }
-  p, li { font-size: 15.5px; line-height: 1.7; }
-  .wrap { max-width: 1020px; margin: 0 auto; padding: 0 24px; }
+  .wrap { max-width: 1020px; margin: 0 auto; padding: 0 var(--s5); }
   a { color: inherit; }
-  .label { font-family: var(--mono); font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+  p a, li a, figcaption a { color: var(--accent-ink); text-underline-offset: 3px; }
+  p a:hover, li a:hover { color: var(--accent-deep); }
+  /* inline links get a 44px hit area without moving the line */
+  .tap { display: inline-block; padding: 12px 3px; margin: -12px -3px; }
+  code, kbd { font-family: var(--mono); }
+  :focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 2px; border-radius: 4px; }
+  .label { font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
 
-  /* ---------- nav ---------- */
-  nav { display: flex; align-items: center; justify-content: space-between; padding: 22px 0; border-bottom: 1px solid var(--line); flex-wrap: wrap; gap: 12px;
-    position: sticky; top: 0; z-index: 40; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
-  .brand { font-family: var(--serif); font-size: 25px; letter-spacing: .2px; text-decoration: none; }
+  /* ---------- top bar ---------- */
+  .top { position: sticky; top: 0; z-index: 40; border-bottom: 1px solid var(--line);
+    background: color-mix(in srgb, var(--bg) 90%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  nav { display: flex; align-items: center; justify-content: space-between; gap: var(--s4); min-height: 64px; }
+  .brand { font-family: var(--serif); font-size: 25px; letter-spacing: .2px; text-decoration: none; display: inline-flex; align-items: center; min-height: 44px; }
   .brand span { color: var(--accent); }
-  .nav-links { display: flex; gap: 4px; flex-wrap: wrap; }
-  .nav-link { color: var(--muted); text-decoration: none; font-size: 14px; transition: color .2s; padding: 8px 10px; border-radius: 8px; }
-  .nav-link:hover { color: var(--accent); }
-  .nav-link:focus-visible, .btn:focus-visible, .copy:focus-visible, summary:focus-visible {
-    outline: 2px solid var(--accent); outline-offset: 2px; }
+  .nav-links { display: flex; align-items: center; gap: 2px; }
+  .nav-link { display: inline-flex; align-items: center; min-height: 44px; padding: 0 11px; color: var(--muted); text-decoration: none;
+    font-size: 14.5px; border-radius: 8px; transition: color .15s, background-color .15s; white-space: nowrap; }
+  .nav-link:hover { color: var(--text); background: var(--surface); }
+  .nav-link.get { color: var(--accent-ink); font-weight: 600; }
 
   /* ---------- hero ---------- */
-  .hero { padding: 72px 0 56px; text-align: center; }
-  .eyebrow { display: inline-flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 12px; letter-spacing: .16em; text-transform: uppercase;
-    color: var(--muted); border: 1px solid var(--line); border-radius: 100px; padding: 7px 18px; margin-bottom: 36px; background: var(--surface); }
-  .eyebrow b { color: var(--accent); font-weight: 700; }
-  h1 { font-family: var(--serif); font-weight: 400; font-size: clamp(52px, 10vw, 108px); line-height: 1.02; letter-spacing: -2px; }
+  .hero { padding: clamp(44px, 6.5vw, 84px) 0 clamp(52px, 6.5vw, 88px); text-align: center; }
+  .hero-meta { font-family: var(--mono); font-size: 12.5px; letter-spacing: .06em; color: var(--muted); margin-bottom: var(--s5); }
+  .hero-meta b { color: var(--accent-ink); font-weight: 700; }
+  h1 { font-family: var(--serif); font-weight: 400; font-size: clamp(54px, 9.4vw, 104px); line-height: 1.02; letter-spacing: -2px; }
   h1 em { font-style: normal; color: var(--accent); }
-  .lede { color: var(--muted); font-size: clamp(16px, 2.4vw, 19px); line-height: 1.7; max-width: 540px; margin: 26px auto 0; }
+  .lede { color: var(--muted); font-size: clamp(16.5px, 2.2vw, 19px); line-height: 1.6; max-width: 31em; margin: var(--s5) auto 0; }
   .lede b { color: var(--text); font-weight: 600; }
 
-  /* the live "speak → text" scene */
-  .demo-stage { display: flex; justify-content: center; margin: 48px 0 8px; }
+  /* the live "speak, then text" scene */
+  .demo-stage { display: flex; justify-content: center; margin: var(--s7) 0 0; }
   .scene { display: flex; align-items: center; gap: clamp(14px, 4vw, 40px); max-width: 100%; }
   @keyframes blink { 0%,100% { opacity: 1 } 50% { opacity: 0 } }
   @keyframes pulse { 0%,100% { transform: scaleY(.28); opacity: .4 } 50% { transform: scaleY(1); opacity: 1 } }
   @keyframes chompTop { from { transform: rotate(0deg) } to { transform: rotate(-30deg) } }
   @keyframes chompBottom { from { transform: rotate(0deg) } to { transform: rotate(30deg) } }
 
-  /* speaker = Pac-Man chomping toward the field (yellow + espresso rim/mouth), coral sound-waves */
-  .speaker { position: relative; flex-shrink: 0; width: clamp(60px, 11vw, 80px); }
+  /* speaker mascot chomping toward the field, coral sound-waves */
+  .speaker { position: relative; flex-shrink: 0; width: clamp(64px, 11vw, 84px); }
   .speaker svg { width: 100%; height: auto; display: block; }
   .pac { transform: scaleX(-1); }   /* mouth faces right, toward the text field */
   .pac .jaw { transform-box: view-box; transform-origin: 60px 60px; }
   .pac .jaw.top { animation: chompTop .38s ease-in-out infinite alternate; }
   .pac .jaw.bottom { animation: chompBottom .38s ease-in-out infinite alternate; }
-  /* waves sit centered on the mouth line, just past the chin */
   .swaves { position: absolute; top: 50%; right: -13px; transform: translateY(-50%); display: flex; align-items: center; gap: 4px; }
   .swaves i { width: 3px; height: 16px; border-radius: 3px; background: var(--accent); animation: pulse 1.1s ease-in-out infinite; }
   .swaves i:nth-child(2) { animation-delay: .18s } .swaves i:nth-child(3) { animation-delay: .36s }
 
   /* text field the words land in */
-  .field { flex: 1; min-width: 0; max-width: 400px; background: var(--paper); border: 1px solid var(--line);
+  .field { flex: 1; min-width: 0; width: 420px; max-width: 100%; background: var(--paper); border: 1px solid var(--line);
     border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; text-align: left; }
   .field-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px;
-    padding: 8px 12px; background: var(--surface); border-bottom: 1px solid var(--line); }
-  .field-dots { display: flex; gap: 5px } .field-dots span { width: 8px; height: 8px; border-radius: 50%; background: var(--line) }
-  .lang-tag { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
-  .field-body { padding: 15px 16px; min-height: 88px; font-size: 16.5px; line-height: 1.5; color: var(--text); }
+    padding: 7px 14px; background: var(--surface); border-bottom: 1px solid var(--line); }
+  .lang-tag { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--accent-ink); }
+  .field-body { padding: 15px 16px; min-height: 84px; font-size: 16.5px; line-height: 1.5; color: var(--text); }
   .field-body .last { background: var(--accent-soft); border-radius: 3px; box-decoration-break: clone; -webkit-box-decoration-break: clone; padding: 0 1px; }
   .caret { display: inline-block; width: 2px; height: 1.05em; background: var(--accent); vertical-align: -3px; margin-left: 1px; animation: blink 1s step-end infinite; }
-  .field-cap { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; color: var(--muted); margin-top: 12px; text-align: center; }
-  .bar-left { display: flex; align-items: center; gap: 10px; }
-  .field-status { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); transition: color .2s; }
-  .field-status.clean { color: var(--accent); }
+  .field-status { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); transition: color .2s; }
+  .field-status.clean { color: var(--accent-ink); }
   .field-body.flash { animation: cleanflash .55s ease-out; }
   @keyframes cleanflash { 0% { background: var(--accent-soft) } 100% { background: transparent } }
+  .field-cap { color: var(--muted); font-size: 13.5px; line-height: 1.55; margin-top: var(--s3); }
 
-  /* install + download */
-  .cta { display: flex; flex-direction: column; align-items: center; gap: 16px; margin-top: 34px; }
-  .cmd-row { display: flex; align-items: flex-start; gap: 10px; background: var(--paper); border: 1px solid var(--line);
-    border-radius: 12px; padding: 13px 15px; max-width: 100%; box-shadow: var(--shadow); text-align: left; }
-  .cmd-row code { font-family: var(--mono); font-size: 12.5px; color: var(--text); white-space: pre-wrap; word-break: break-all; line-height: 1.5; }
-  .cmd-row code::before { content: "$ "; color: var(--accent); }
-  .copy { background: none; border: 1px solid var(--line); border-radius: 8px; color: var(--muted);
-    font-size: 12px; letter-spacing: .1em; text-transform: uppercase; padding: 6px 12px; cursor: pointer; flex-shrink: 0; font-family: var(--mono); transition: color .2s, border-color .2s; }
-  .copy:hover { color: var(--accent); border-color: var(--accent); }
-  .btn { display: inline-flex; align-items: center; gap: 10px; background: var(--accent); color: var(--paper); text-decoration: none;
-    font-weight: 600; font-size: 15px; padding: 13px 26px; border-radius: 12px; box-shadow: var(--shadow);
-    transition: transform .15s ease, filter .2s ease; }
-  .btn:hover { transform: translateY(-2px); filter: brightness(1.05); }
-  .btn svg { width: 17px; height: 17px; }
-  .req { color: var(--muted); font-size: 13px; }
-  .ver { font-family: var(--mono); font-size: 12px; color: var(--accent); border: 1px solid rgba(226,84,62,.35); border-radius: 100px; padding: 2px 10px; background: var(--accent-soft); }
+  /* ---------- actions: one filled button per view, everything else is quiet ---------- */
+  .cta { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--s3); margin-top: var(--s6); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 52px; padding: 0 26px;
+    background: var(--accent-ink); color: var(--paper); text-decoration: none; font-weight: 600; font-size: 16px; white-space: nowrap;
+    border-radius: 12px; box-shadow: 0 1px 0 var(--accent-deep), 0 10px 18px -12px var(--accent-deep); transition: background-color .15s ease; }
+  .btn:hover { background: var(--accent-deep); }
+  .btn svg { width: 17px; height: 17px; flex-shrink: 0; }
+  .cmd { display: flex; align-items: center; gap: var(--s2); min-width: 0; max-width: 100%; min-height: 52px; padding: 3px 3px 3px 16px;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 12px; text-align: left; }
+  .cmd code { flex: 1 1 auto; min-width: 0; overflow-x: auto; white-space: nowrap; font-size: 13px; line-height: 44px; color: var(--text);
+    scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .cmd code::-webkit-scrollbar { display: none; }
+  .cmd code::before { content: "$ "; color: var(--accent-ink); }
+  .copy { flex-shrink: 0; min-height: 44px; min-width: 84px; padding: 0 14px; background: var(--surface); border: 1px solid var(--line); border-radius: 9px;
+    color: var(--text); font-family: var(--mono); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; cursor: pointer;
+    transition: color .15s, border-color .15s, background-color .15s; }
+  .copy:hover { color: var(--accent-ink); border-color: var(--accent-ink); }
+  .copy.done { background: var(--text); border-color: var(--text); color: var(--bg); }
+  .quiet { flex-basis: 100%; color: var(--muted); font-size: 13.5px; line-height: 1.6; }
+  .ver-note { flex-basis: 100%; color: var(--muted); font-size: 13.5px; line-height: 1.6; max-width: 74ch; margin: 0 auto; text-wrap: balance; }
 
   /* ---------- sections ---------- */
-  section { padding: 72px 0; border-top: 1px solid var(--line); }
-  .kicker { color: var(--accent); font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; margin-bottom: 14px; }
-  h2 { font-family: var(--serif); font-weight: 400; font-size: clamp(30px, 5.4vw, 46px); letter-spacing: -.8px; margin-bottom: 30px; }
-  .sub { color: var(--muted); font-size: 16px; max-width: 560px; }
+  section { padding: var(--s8) 0; border-top: 1px solid var(--line); }
+  section.tight { padding: var(--s7) 0; }
+  section[id] { scroll-margin-top: 76px; }
+  .kicker { color: var(--accent-ink); font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; margin-bottom: var(--s3); }
+  h2 { font-family: var(--serif); font-weight: 400; font-size: clamp(28px, 4.2vw, 40px); line-height: 1.12; letter-spacing: -.5px; margin-bottom: var(--s4); text-wrap: balance; }
+  h2.xl { font-size: clamp(38px, 6.4vw, 60px); letter-spacing: -1.2px; line-height: 1.04; }
+  h2.sm { font-size: clamp(22px, 3vw, 26px); letter-spacing: -.2px; }
+  h3 { font-family: var(--serif); font-weight: 400; font-size: 19px; line-height: 1.25; }
+  .sub { color: var(--muted); font-size: 16.5px; line-height: 1.65; max-width: var(--measure); margin-bottom: var(--s6); }
+  .sub b { color: var(--text); font-weight: 600; }
+  .note { color: var(--muted); font-size: 14px; line-height: 1.6; max-width: var(--measure); }
+  .note b { color: var(--text); font-weight: 600; }
+  kbd { background: var(--surface); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; padding: 1px 7px; font-size: 13px; font-family: var(--sys); }
+  .soon { display: inline-block; font-family: var(--mono); font-size: 12px; letter-spacing: .04em; line-height: 1.5; color: var(--accent-ink);
+    border: 1px solid var(--accent-line); border-radius: 4px; padding: 0 6px; margin-left: 6px; vertical-align: 2px; white-space: nowrap; }
 
-  .price-card { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 30px; max-width: 560px; }
-  .price-card .amt { font-family: var(--serif); font-size: clamp(44px, 8vw, 64px); line-height: 1; }
-  .price-card ul { margin: 18px 0; padding-left: 20px; color: var(--muted); }
-  .price-card .cta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
-  .price-card .tier { font-family: var(--mono); font-size: 13px; color: var(--accent); }
-  .price-why { margin-top: 18px; color: var(--muted); font-size: 14px; max-width: 560px; }
-
-  /* ---------- stat strip ---------- */
-  .stats { display: flex; justify-content: center; align-items: stretch; gap: 26px; flex-wrap: wrap; text-align: center; }
-  .stat { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 30px 44px; box-shadow: var(--shadow); }
-  .stat .counter { font-family: var(--mono); font-weight: 700; font-size: clamp(44px, 8vw, 72px); line-height: 1; letter-spacing: .04em; font-variant-numeric: tabular-nums; }
+  /* ---------- proof strip: the math, and where it works ---------- */
+  .proof { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--s7); align-items: center; }
+  .stats { display: flex; align-items: baseline; gap: var(--s5); flex-wrap: wrap; }
+  .stat .counter { display: block; font-family: var(--mono); font-weight: 700; font-size: clamp(40px, 5.6vw, 56px); line-height: 1; letter-spacing: .02em; font-variant-numeric: tabular-nums; }
   .stat.speak .counter { color: var(--accent); }
-  .stat .unit { font-family: var(--mono); font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); margin-top: 12px; }
-  .stat-vs { align-self: center; font-family: var(--serif); font-size: 22px; color: var(--muted); }
-  .stat-note { color: var(--muted); font-size: 13.5px; margin-top: 22px; text-align: center; }
+  .stat .unit { display: block; font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-top: var(--s2); }
+  .stat-vs { font-family: var(--serif); font-size: 20px; color: var(--muted); align-self: center; }
+  .stats + .note { margin-top: var(--s4); }
+  .works .label { margin-bottom: var(--s4); }
 
-  /* ---------- app chips ---------- */
-  .chips { display: flex; flex-wrap: wrap; gap: 10px; }
-  .chip { font-family: var(--mono); font-size: 13px; background: var(--surface); border: 1px solid var(--line); border-radius: 100px; padding: 8px 18px; color: var(--text); }
-  .chip.more { background: var(--accent-soft); border-color: rgba(226,84,62,.35); color: var(--accent); }
-
-  /* ---------- real app logos — full-colour, auto-scrolling marquee ---------- */
+  /* real app logos: full-colour, auto-scrolling marquee that clips itself */
   .marquee { overflow: hidden; width: 100%;
-    -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
-    mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
-  .marquee-track { display: flex; align-items: center; gap: 44px; width: max-content;
-    animation: marquee 34s linear infinite; }
+    -webkit-mask-image: linear-gradient(90deg, transparent, black 8%, black 92%, transparent);
+    mask-image: linear-gradient(90deg, transparent, black 8%, black 92%, transparent); }
+  .marquee-track { display: flex; align-items: center; gap: 44px; width: max-content; animation: marquee 34s linear infinite; }
   .marquee:hover .marquee-track { animation-play-state: paused; }
   @keyframes marquee { from { transform: translateX(0) } to { transform: translateX(-50%) } }
-  .logo { flex-shrink: 0; display: inline-flex; align-items: center; opacity: .9; transition: opacity .2s ease, transform .2s ease; }
+  .logo { flex-shrink: 0; display: inline-flex; align-items: center; opacity: .92; }
   .logo svg { height: 30px; width: auto; display: block; }
-  .logo:hover { opacity: 1; transform: translateY(-2px); }
-  .logos-more { font-family: var(--mono); font-size: 12.5px; letter-spacing: .06em; color: var(--muted); text-align: center; margin-top: 22px; }
-  .logos-more b { color: var(--accent); font-weight: 400; }
 
-  /* ---------- cassette-label cards (from B, restyled Paper Light) ---------- */
-  .lc { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 26px 24px; box-shadow: var(--shadow); position: relative; transition: transform .25s ease, border-color .2s ease; }
+  /* ---------- cassette-label cards ---------- */
+  .lc { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-s); padding: 26px 24px 24px; box-shadow: var(--shadow); position: relative; }
   .lc::before { content: ""; position: absolute; top: -1px; left: 18px; right: 18px; height: 6px; border-radius: 0 0 3px 3px;
-    background: repeating-linear-gradient(90deg, var(--accent) 0 12px, transparent 12px 18px); opacity: .55; }
-  .lc:hover { transform: rotate(-.6deg) translateY(-3px); border-color: rgba(226,84,62,.4); }
-  .lc .tab { display: inline-block; font-family: var(--mono); font-size: 12px; letter-spacing: .2em; text-transform: uppercase;
+    background: repeating-linear-gradient(90deg, var(--accent) 0 12px, transparent 12px 18px); opacity: .5; }
+  .lc .tab { display: inline-block; font-family: var(--mono); font-size: 12px; letter-spacing: .16em; text-transform: uppercase;
     background: var(--text); color: var(--bg); padding: 3px 10px; border-radius: 3px; margin-bottom: 14px; font-style: normal; }
-  .lc .tab.hot { background: var(--accent); }
-  .lc h3 { font-family: var(--serif); font-weight: 400; font-size: 20px; margin-bottom: 10px; }
-  .lc p { color: var(--muted); font-size: 15px; line-height: 1.7; }
-  .lc p b { color: var(--text); font-weight: 600; }
-  kbd { background: var(--surface); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; padding: 1px 7px; font-size: 13px; font-family: var(--sys); }
+  .lc .tab.hot { background: var(--accent-ink); color: var(--paper); }
 
   /* ---------- before / after ---------- */
-  .ba { display: grid; grid-template-columns: 1fr auto 1fr; gap: 22px; align-items: center; }
-  .ba .lc.raw { background: var(--surface); box-shadow: none; color: var(--muted); font-style: italic; font-size: 15.5px; transform: rotate(-1.1deg); }
-  .ba .lc.master { border-color: rgba(226,84,62,.45); font-size: 15.5px; transform: rotate(.7deg); }
-  .ba .lc.raw::before, .ba .lc.master::before { opacity: .35; }
-  .ba .lc:hover { transform: rotate(0deg) translateY(-3px); }
+  .ba { display: grid; grid-template-columns: 1fr auto 1fr; gap: var(--s5); align-items: center; margin-bottom: var(--s5); }
+  .ba .lc { font-size: 16.5px; line-height: 1.6; }
+  .ba .lc.raw { background: var(--surface); box-shadow: none; color: var(--muted); font-style: italic; transform: rotate(-1deg); }
+  .ba .lc.master { border-color: var(--accent-line); transform: rotate(.6deg); }
+  .ba .lc.raw::before { opacity: .3; }
   .ba-arrow { color: var(--accent); font-size: 26px; text-align: center; }
-  .ba-note { color: var(--muted); font-size: 13.5px; margin-top: 20px; }
-  .ba-note b { color: var(--text); }
-
-  /* ---------- feature tracklist (cassette J-card) ---------- */
-  .tracklist { display: grid; grid-template-columns: minmax(200px, 280px) 1fr; gap: 26px; align-items: start; }
-  .tl-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
-  .tl-item { display: flex; align-items: baseline; gap: 12px; padding: 13px 12px; border-bottom: 1px solid var(--line); cursor: pointer; transition: background .15s ease, color .15s ease; }
-  .tl-no { font-family: var(--mono); font-size: 12px; color: var(--muted); letter-spacing: .1em; flex-shrink: 0; }
-  .tl-name { font-family: var(--serif); font-size: 17px; color: var(--text); }
-  .tracklist.js .tl-item:hover { background: var(--surface); }
-  .tracklist.js .tl-item.active { background: var(--accent-soft); }
-  .tracklist.js .tl-item.active .tl-no, .tracklist.js .tl-item.active .tl-name { color: var(--accent); }
-  .tl-body { display: block; color: var(--muted); font-size: 14px; line-height: 1.6; margin-top: 6px; flex-basis: 100%; }
-  .tracklist.js .tl-body { display: none; }
-  .tl-detail { position: relative; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 30px 30px 34px; overflow: hidden; display: none; min-height: 190px; }
-  .tracklist.js .tl-detail { display: block; }
-  .tl-counter { position: absolute; top: 4px; right: 20px; font-family: var(--mono); font-weight: 700; font-size: 92px; line-height: 1; color: var(--line); opacity: .55; pointer-events: none; user-select: none; }
-  .tl-badge { display: inline-block; position: relative; font-family: var(--mono); font-size: 11px; letter-spacing: .2em; text-transform: uppercase; background: var(--text); color: var(--bg); padding: 3px 10px; border-radius: 3px; margin-bottom: 14px; }
-  .tl-detail h3 { position: relative; font-family: var(--serif); font-weight: 400; font-size: 24px; margin-bottom: 12px; }
-  .tl-detail p { position: relative; color: var(--muted); font-size: 15.5px; line-height: 1.7; max-width: 44ch; }
 
   /* ---------- app screenshots (sample data only) ---------- */
-  .shots { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 28px; }
-  .shots figure { margin: 0; }
-  .shots img { display: block; width: 100%; height: auto; border-radius: var(--radius); border: 1px solid var(--line); box-shadow: var(--shadow); }
-  .shots figcaption { color: var(--muted); font-size: 14px; line-height: 1.6; margin-top: 12px; }
-  .shots figcaption b { color: var(--text); font-weight: 600; }
-  .shots-note { color: var(--muted); font-size: 13px; margin-top: 22px; }
+  .shot { margin: 0; }
+  .shot img { display: block; width: 100%; height: auto; border-radius: var(--radius); border: 1px solid var(--line); box-shadow: var(--shadow); background: var(--surface); }
+  .shot figcaption { color: var(--muted); font-size: 14px; line-height: 1.6; margin-top: var(--s3); max-width: var(--measure); }
+  .shot figcaption b { color: var(--text); font-weight: 600; }
+  .shots-2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s6); margin-top: var(--s6); }
+
+  /* ---------- feature tracklist: a cassette J-card with two sides ---------- */
+  .jcard { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: repeat(7, auto); column-gap: var(--s7); }
+  .side { display: grid; grid-template-rows: subgrid; grid-row: span 7; }
+  .side-h { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s3); padding-bottom: var(--s3); border-bottom: 2px solid var(--text);
+    font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .side-h b { color: var(--text); font-weight: 700; }
+  .tl-list { list-style: none; display: grid; grid-template-rows: subgrid; grid-row: span 6; }
+  .tl-item { display: grid; grid-template-columns: 30px 1fr; column-gap: var(--s3); align-content: start; padding: 15px 0 17px; border-bottom: 1px solid var(--line); }
+  .tl-no { font-family: var(--mono); font-size: 12px; color: var(--muted); letter-spacing: .06em; padding-top: 6px; }
+  .tl-name { font-family: var(--serif); font-size: 18.5px; line-height: 1.3; color: var(--text); }
+  .tl-body { grid-column: 2; color: var(--muted); font-size: 14.5px; line-height: 1.6; margin-top: 3px; }
+  .tl-body code, .pt code, .a code, .step code { font-size: .9em; color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: 5px; padding: 0 5px; overflow-wrap: anywhere; }
+
+  /* ---------- snippets (spoken phrase, then saved text) ---------- */
+  .snip { display: grid; grid-template-columns: 1fr minmax(240px, 320px); gap: var(--s7); align-items: start; }
+  .snip .field { width: auto; }
+  .snip-trigger { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+  .snip-list { list-style: none; border-top: 1px solid var(--line); }
+  .snip-row { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; padding: 11px 2px; border-bottom: 1px solid var(--line); }
+  .snip-say { font-family: var(--mono); font-size: 13px; color: var(--text); white-space: nowrap; }
+  .snip-get { font-size: 13.5px; color: var(--muted); text-align: right; overflow-wrap: anywhere; }
+  .snip .note { margin-top: var(--s4); }
+
+  /* ---------- point grids: short facts under one rule each, no boxes ---------- */
+  .points { list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s6) var(--s6); }
+  .pt { border-top: 2px solid var(--text); padding-top: var(--s3); color: var(--muted); font-size: 14.5px; line-height: 1.6; }
+  .pt b { display: block; font-family: var(--serif); font-weight: 400; font-size: 18px; line-height: 1.3; color: var(--text); margin-bottom: 4px; }
 
   /* ---------- meetings ---------- */
-  .meet { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; }
-  .meet ul { list-style: none; margin-top: 20px; }
-  .meet li { padding: 10px 0 10px 26px; position: relative; color: var(--muted); font-size: 15px; border-bottom: 1px dashed var(--line); }
-  .meet li::before { content: "●"; position: absolute; left: 4px; color: var(--accent); font-size: 9px; top: 15px; }
-  .meet li b { color: var(--text); font-weight: 600; }
-  .transcript { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); }
-  .t-head { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); padding-bottom: 14px; margin-bottom: 16px; }
-  .t-rec { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 12px; letter-spacing: .16em; color: var(--accent); }
-  .t-line { display: grid; grid-template-columns: 74px 1fr; gap: 12px; padding: 8px 0; font-size: 14px; }
-  .t-line .who { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); padding-top: 3px; }
-  .t-line.you .who { color: var(--accent); }
-  .t-line p { color: var(--text); }
-  .ornaments { display: flex; align-items: center; justify-content: flex-start; gap: 32px; margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--line); }
-  .reel { width: 54px; height: 54px; border-radius: 50%; border: 2px solid var(--text); position: relative; flex-shrink: 0;
+  .meet-head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--s6); }
+  .meet .shot { margin-bottom: var(--s7); }
+  .ornaments { display: flex; align-items: center; gap: var(--s5); margin-bottom: var(--s6); flex-shrink: 0; }
+  .reel { width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--text); position: relative; flex-shrink: 0;
     background: radial-gradient(circle at center, var(--bg) 26%, var(--text) 27%, var(--text) 34%, var(--bg) 35%);
     animation: spin 6s linear infinite; }
   .reel::before { content: ""; position: absolute; inset: 0; border-radius: 50%;
     background: conic-gradient(var(--text) 0 14deg, transparent 14deg 120deg, var(--text) 120deg 134deg, transparent 134deg 240deg, var(--text) 240deg 254deg, transparent 254deg);
-    -webkit-mask: radial-gradient(circle, transparent 36%, #000 37%, #000 62%, transparent 63%);
-    mask: radial-gradient(circle, transparent 36%, #000 37%, #000 62%, transparent 63%); }
+    -webkit-mask: radial-gradient(circle, transparent 36%, black 37%, black 62%, transparent 63%);
+    mask: radial-gradient(circle, transparent 36%, black 37%, black 62%, transparent 63%); }
   @keyframes spin { to { transform: rotate(360deg) } }
-  .vu svg { width: 140px; height: 80px; display: block; }
+  .vu svg { width: 124px; height: 72px; display: block; }
   .needle { transform-origin: 70px 72px; animation: sweep 3.2s ease-in-out infinite alternate; }
   @keyframes sweep { from { transform: rotate(-42deg) } to { transform: rotate(34deg) } }
-  .autosave { font-family: var(--mono); font-size: 12px; color: var(--muted); margin-top: 18px; }
-  .autosave code { color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: 5px; padding: 1px 7px; font-size: 12px; white-space: pre-wrap; word-break: break-all; }
+  .saved { margin-top: var(--s6); }
 
-  /* ---------- personas ---------- */
-  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  /* ---------- developers ---------- */
+  .dev { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: var(--s7); align-items: center; }
+  .dev .sub { margin-bottom: var(--s5); }
+  .dev-list { list-style: none; }
+  .dev-list li { padding: 12px 0; border-top: 1px solid var(--line); color: var(--muted); font-size: 14.5px; line-height: 1.6; }
+  .dev-list li b { color: var(--text); font-weight: 600; }
+  .term { background: var(--text); color: var(--bg); border-radius: var(--radius); padding: 22px 22px 24px; overflow-x: auto;
+    font-family: var(--mono); font-size: 13px; line-height: 1.75; box-shadow: var(--shadow); }
+  .term .c { color: var(--line); opacity: .8; }
+  .term .p { color: var(--mascot); }
 
-  /* ---------- comparison ---------- */
-  .tbl-wrap { position: relative; }
-  .tbl-wrap::after { content: ""; position: absolute; top: 1px; right: 1px; bottom: 1px; width: 36px; pointer-events: none;
-    background: linear-gradient(90deg, transparent, var(--paper)); border-radius: 0 var(--radius) var(--radius) 0; }
-  .tbl-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); background: var(--paper); }
-  table { border-collapse: collapse; width: 100%; min-width: 620px; font-size: 14px; }
-  th, td { padding: 14px 18px; text-align: left; border-bottom: 1px solid var(--line); }
-  th:first-child, td:first-child { position: sticky; left: 0; background: var(--paper); z-index: 1; }
-  tr:last-child td { border-bottom: none; }
-  thead th { font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); background: var(--surface); font-weight: 400; }
-  thead th.us { color: var(--accent); }
-  td:first-child { color: var(--muted); font-size: 13.5px; }
-  td.us { font-weight: 600; }
-  .yes { color: var(--accent); font-weight: 700; }
-  .no-x { color: var(--muted); }
-  .tbl-note { color: var(--muted); font-size: 12.5px; margin-top: 14px; }
+  /* ---------- who it is for ---------- */
+  .who { list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s6); }
+  .who li { color: var(--muted); font-size: 15px; line-height: 1.6; }
+  .who b { display: block; font-family: var(--mono); font-weight: 700; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--text); margin-bottom: 6px; }
 
-  /* ---------- install steps ---------- */
-  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
-  .step { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 26px 24px; box-shadow: var(--shadow); }
-  .step .n { font-family: var(--mono); font-weight: 700; font-size: 26px; color: var(--accent); display: block; margin-bottom: 12px; }
-  .step h3 { font-family: var(--serif); font-weight: 400; font-size: 19px; margin-bottom: 8px; }
-  .step p { color: var(--muted); font-size: 14px; }
-  .step .cmd-row { margin-top: 14px; box-shadow: none; flex-wrap: wrap; }
-  .alt-note { background: var(--surface); border: 1px dashed var(--line); border-radius: 12px; padding: 18px 22px; margin-top: 24px; color: var(--muted); font-size: 14px; }
+  /* ---------- pricing: a ticket with a tear-off stub ---------- */
+  .ticket { position: relative; display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); background: var(--paper); border: 1px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .t-main { padding: 36px 36px 34px; }
+  .t-stub { padding: 36px 36px 34px; border-left: 2px dashed var(--line); position: relative; }
+  /* the two punched notches where the stub tears off */
+  .t-stub::before, .t-stub::after { content: ""; position: absolute; left: -12px; width: 22px; height: 22px; border-radius: 50%; background: var(--bg); border: 1px solid var(--line); }
+  .t-stub::before { top: -12px; } .t-stub::after { bottom: -12px; }
+  .amt { font-family: var(--serif); font-size: clamp(64px, 10vw, 96px); line-height: .95; letter-spacing: -2px; }
+  .amt span { font-family: var(--mono); font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-left: 6px; }
+  .t-main > p { color: var(--muted); max-width: 34ch; margin-top: var(--s4); }
+  .t-main > .amt { color: var(--text); max-width: none; margin-top: 0; }
+  .t-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3) var(--s5); margin-top: var(--s5); }
+  .buy { display: inline-flex; align-items: center; min-height: 44px; color: var(--accent-ink); font-weight: 600; text-underline-offset: 4px; }
+  .buy:hover { color: var(--accent-deep); }
+  .t-main > .pending { font-size: 14px; margin-top: var(--s4); }
+  .codes { list-style: none; margin-top: var(--s3); border-top: 1px solid var(--line); }
+  .codes li { display: grid; grid-template-columns: auto 1fr auto; align-items: baseline; gap: var(--s3); padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 14.5px; color: var(--muted); }
+  .codes code { font-size: 13px; font-weight: 700; color: var(--text); letter-spacing: .04em; }
+  .codes b { font-family: var(--mono); font-size: 14px; color: var(--accent-ink); font-variant-numeric: tabular-nums; }
+  .incl { list-style: none; margin-top: var(--s5); color: var(--muted); font-size: 14.5px; }
+  .incl li { padding: 3px 0 3px 20px; position: relative; }
+  .incl li::before { content: ""; position: absolute; left: 2px; top: .72em; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+  .price-why { margin-top: var(--s5); }
+
+  /* ---------- comparison: the one full-width band on the page ---------- */
+  .band { border-top: 0; background: var(--surface); box-shadow: 0 0 0 100vmax var(--surface); clip-path: inset(0 -100vmax); padding: var(--s9) 0; }
+  .band + section { border-top: 0; }
+  .vs { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 0; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .vs th, .vs td { padding: 20px 24px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); font-size: 16px; line-height: 1.5; }
+  .vs tbody tr:last-child th, .vs tbody tr:last-child td { border-bottom: 0; }
+  .vs thead td { width: 24%; }
+  .vs thead th { width: 38%; font-family: var(--serif); font-weight: 400; font-size: 21px; padding-top: 22px; padding-bottom: 18px; }
+  .vs thead th.us { color: var(--accent-ink); }
+  .vs tbody th { width: 24%; font-family: var(--mono); font-weight: 400; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); padding-top: 24px; }
+  .vs td { width: 38%; color: var(--muted); }
+  .vs .us { background: color-mix(in srgb, var(--accent) 6%, var(--paper)); }
+  .vs td.us { color: var(--text); font-weight: 600; }
+  .vs td small { display: block; font-size: 14px; font-weight: 400; color: var(--muted); margin-top: 2px; }
+  .band .points { margin-top: var(--s7); }
+
+  /* ---------- install ---------- */
+  .cmd-wide { width: 100%; box-shadow: var(--shadow); padding-left: 20px; }
+  .cmd-wide code { font-size: 14px; }
+  .steps { list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); margin-top: var(--s5);
+    background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+  .step { padding: 26px 26px 28px; border-left: 1px solid var(--line); }
+  .step:first-child { border-left: 0; }
+  .step .n { font-family: var(--mono); font-weight: 700; font-size: 13px; letter-spacing: .1em; color: var(--accent-ink); display: block; margin-bottom: var(--s3); }
+  .step h3 { margin-bottom: var(--s2); }
+  .step p { color: var(--muted); font-size: 14.5px; line-height: 1.6; }
+  .alt-note { border: 1px dashed var(--line); border-radius: 12px; padding: 18px 22px; margin-top: var(--s5); color: var(--muted); font-size: 14.5px; line-height: 1.65; }
   .alt-note b { color: var(--text); }
 
   /* ---------- FAQ ---------- */
+  .faq { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: var(--s7); align-items: start; }
+  .faq-head { position: sticky; top: 96px; }
+  .faq-list { border-top: 1px solid var(--line); }
   .faq details { border-bottom: 1px solid var(--line); }
-  .faq summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 16px;
-    padding: 20px 4px; font-family: var(--serif); font-size: 18px; }
+  .faq summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: var(--s4);
+    min-height: 60px; padding: 14px 4px; font-family: var(--serif); font-size: 18px; line-height: 1.3; }
   .faq summary::-webkit-details-marker { display: none; }
-  .faq summary .chev { color: var(--accent); font-family: var(--mono); font-size: 18px; transition: transform .25s ease; flex-shrink: 0; }
+  .faq summary .chev { color: var(--accent-ink); font-family: var(--mono); font-size: 18px; transition: transform .2s ease; flex-shrink: 0; }
   .faq details[open] summary .chev { transform: rotate(90deg); }
-  .faq .a { color: var(--muted); font-size: 15.5px; line-height: 1.7; padding: 0 4px 22px; max-width: 680px; }
-  .faq .a b { color: var(--text); }
+  .faq .a { color: var(--muted); font-size: 15.5px; line-height: 1.7; padding: 0 4px 22px; max-width: var(--measure); }
+  .faq .a b { color: var(--text); font-weight: 600; }
 
   /* ---------- closing + footer ---------- */
-  .closing { text-align: center; }
-  .closing h2 { margin-bottom: 14px; }
+  .closing { text-align: center; padding: var(--s9) 0; }
   .closing h2 em { font-style: normal; color: var(--accent); }
-  footer { border-top: 1px solid var(--line); padding: 42px 0 56px; color: var(--muted); font-size: 13.5px;
-    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
-  footer a { color: var(--muted); text-decoration: none; }
-  footer a:hover { color: var(--accent); }
+  .closing .cta { margin-top: var(--s5); }
+  footer { border-top: 1px solid var(--line); padding: 30px 0 44px; color: var(--muted); font-size: 13.5px;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px 12px; }
+  footer a { color: var(--muted); text-decoration: none; display: inline-block; padding: 12px 2px; }
+  footer a:hover { color: var(--accent-ink); }
 
   /* ---------- scroll reveal (JS sets the hidden state via gsap.from; visible without JS) ---------- */
   .reveal { will-change: transform, opacity; }
 
-  /* ---------- snippets (spoken phrase → saved text) ---------- */
-  .snip { display: grid; grid-template-columns: 1fr minmax(220px, 300px); gap: 30px; align-items: start; }
-  .snip .field { max-width: 100%; }
-  .snip-trigger { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
-    color: var(--muted); margin-bottom: 10px; }
-  .snip-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
-  .snip-row { display: flex; align-items: baseline; justify-content: space-between; gap: 14px;
-    padding: 10px 2px; border-bottom: 1px solid var(--line); }
-  .snip-say { font-family: var(--mono); font-size: 12.5px; color: var(--text); white-space: nowrap; }
-  .snip-get { font-size: 13px; color: var(--muted); text-align: right; overflow-wrap: anywhere; }
-  .snip-note { color: var(--muted); font-size: 13.5px; line-height: 1.65; margin-top: 14px; }
-  .snip-cap { text-align: left; margin-top: 13px; }
-
-  /* ---------- responsive + motion ---------- */
-  @media (max-width: 720px) {
-    .grid-3, .steps { grid-template-columns: 1fr; }
-    /* tracklist → plain stacked list on mobile (the split panel is awkward narrow) */
-    .tracklist { grid-template-columns: 1fr; gap: 0; }
-    .tracklist.js .tl-body { display: block; }
-    .tracklist.js .tl-detail { display: none; }
-    .tracklist.js .tl-item { cursor: default; flex-wrap: wrap; }
-    .tracklist.js .tl-item.active { background: transparent; }
-    .tracklist.js .tl-item.active .tl-no, .tracklist.js .tl-item.active .tl-name { color: inherit; }
-    .ba { grid-template-columns: 1fr; }
-    .ba-arrow { transform: rotate(90deg); }
-    .meet { grid-template-columns: 1fr; gap: 32px; }
-    .shots { grid-template-columns: 1fr; }
-    .snip { grid-template-columns: 1fr; gap: 26px; }
-    .snip-row { gap: 10px; }
-    .snip-say { white-space: normal; }
-    .hero { padding: 56px 0 44px; }
-    .cmd-row { flex-wrap: wrap; }
-    .stats { gap: 14px; flex-direction: column; align-items: stretch; }
-    .stat { width: 100%; }
-    .stat-vs { align-self: center; padding: 2px 0; }
-    .stat { padding: 24px 28px; flex: 1; }
-    .scene { flex-direction: column; gap: 16px; }
-    .field { max-width: 100%; width: 100%; }
-    .swaves { display: none; }                       /* points sideways; field now stacks below */
-    .speaker { width: 78px; }
-    .eyebrow { white-space: normal; text-align: center; line-height: 1.7; font-size: 11px;
-      letter-spacing: .08em; padding: 6px 12px; gap: 6px; max-width: 100%; }
-    .cmd-row code { overflow-wrap: anywhere; word-break: break-word; }
-    .field-cap, .lede { overflow-wrap: anywhere; }
-    .hero { padding: 44px 0 40px; }
+  /* ---------- tablet ---------- */
+  @media (max-width: 900px) {
+    .nav-link.wide { display: none; }
+    .proof { grid-template-columns: 1fr; gap: var(--s6); }
+    .jcard { column-gap: var(--s6); }
+    .points { grid-template-columns: repeat(2, 1fr); }
+    .dev { grid-template-columns: 1fr; gap: var(--s6); }
+    .faq { grid-template-columns: 1fr; gap: var(--s4); }
+    .faq-head { position: static; }
+    .t-main, .t-stub { padding: 30px 28px; }
+    .vs th, .vs td { padding: 18px 18px; }
+    .step { padding: 22px 20px 24px; }
+    .snip { gap: var(--s6); }
+    .band { padding: var(--s8) 0; }
   }
+
+  /* ---------- phone ---------- */
+  @media (max-width: 640px) {
+    .wrap { padding: 0 20px; }
+    section { padding: 56px 0; }
+    section.tight { padding: 40px 0; }
+    .band, .closing { padding: 64px 0; }
+    .nav-link.mid { display: none; }
+    .nav-link { padding: 0 9px; }
+    h1 { letter-spacing: -1.5px; }
+    .hm-wide { display: none; }
+    .scene { flex-direction: column; gap: var(--s4); width: 100%; }
+    .field { width: 100%; flex: none; }
+    .swaves { display: none; }                       /* points sideways; the field now stacks below */
+    .speaker { width: 72px; }
+    .cta { flex-direction: column; align-items: stretch; }
+    .cmd { padding-left: 14px; }
+    .cmd code { -webkit-mask-image: linear-gradient(90deg, black 86%, transparent); mask-image: linear-gradient(90deg, black 86%, transparent); padding-right: 18px; }
+    .ba { grid-template-columns: 1fr; gap: var(--s3); }
+    .ba .lc.raw, .ba .lc.master { transform: none; }
+    .ba-arrow { transform: rotate(90deg); line-height: 1; }
+    .shots-2 { grid-template-columns: 1fr; gap: var(--s5); }
+    .jcard { display: block; }
+    .side { display: block; }
+    .side + .side { margin-top: var(--s6); }
+    .tl-list { display: block; }
+    .snip { grid-template-columns: 1fr; }
+    .snip-say { white-space: normal; }
+    .points, .who { grid-template-columns: 1fr; gap: var(--s5); }
+    .ornaments { display: none; }
+    .ticket { grid-template-columns: 1fr; }
+    .t-main, .t-stub { padding: 28px 22px; }
+    .t-stub { border-left: 0; border-top: 2px dashed var(--line); }
+    .t-stub::before, .t-stub::after { top: -12px; bottom: auto; }
+    .t-stub::before { left: -12px; } .t-stub::after { left: auto; right: -12px; }
+    .t-actions .btn { width: 100%; }
+    /* comparison: each row becomes a label with the two products side by side under it */
+    .vs thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+    .vs, .vs tbody { display: block; }
+    .vs tr { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--line); }
+    .vs tbody tr:last-child { border-bottom: 0; }
+    .vs tbody th { grid-column: 1 / -1; width: auto; padding: 16px 16px 10px; border-bottom: 0; }
+    .vs td { width: auto; padding: 12px 16px 16px; border-bottom: 0; font-size: 15px; }
+    .vs td::before { content: attr(data-who); display: block; font-family: var(--serif); font-size: 15px; font-weight: 400; color: var(--text); margin-bottom: 4px; }
+    .vs td.us::before { color: var(--accent-ink); }
+    .steps { grid-template-columns: 1fr; }
+    .step { border-left: 0; border-top: 1px solid var(--line); }
+    .step:first-child { border-top: 0; }
+    footer { flex-direction: column; align-items: flex-start; }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .pac .jaw, .swaves i, .caret, .reel, .needle, .marquee-track { animation: none; }
     .pac .jaw.top { transform: rotate(-20deg); } .pac .jaw.bottom { transform: rotate(20deg); }
     .swaves i { transform: scaleY(.6); opacity: .85; }
-    .lc:hover, .btn:hover { transform: none; }
     /* static, wrapped logo row; hide the duplicate set used for the seamless loop */
     .marquee { -webkit-mask-image: none; mask-image: none; }
-    .marquee-track { flex-wrap: wrap; justify-content: center; width: auto; row-gap: 20px; }
+    .marquee-track { flex-wrap: wrap; justify-content: flex-start; width: auto; gap: 20px 32px; }
     .logo[data-dup] { display: none; }
     html { scroll-behavior: auto; }
   }
 </style>
 </head>
 <body>
-<div class="wrap">
 
-  <nav>
+<header class="top">
+  <nav class="wrap" aria-label="Main">
     <a class="brand" href="#"><span>O</span>penWispr</a>
     <div class="nav-links">
-      <a class="nav-link" href="#snippets">Snippets</a>
-      <a class="nav-link" href="#meetings">Meetings</a>
+      <a class="nav-link wide" href="#features">Features</a>
+      <a class="nav-link wide" href="#meetings">Meetings</a>
+      <a class="nav-link wide" href="#developers">Developers</a>
       <a class="nav-link" href="#pricing">Pricing</a>
-      <a class="nav-link" href="#compare">Compare</a>
+      <a class="nav-link mid" href="#compare">Compare</a>
       <a class="nav-link" href="#faq">FAQ</a>
       <a class="nav-link" href="https://github.com/SirCharan/openwispr" target="_blank" rel="noopener">GitHub ↗</a>
     </div>
   </nav>
+</header>
+
+<div class="wrap">
 
   <header class="hero">
-    <span class="eyebrow">On-device · Pay once · Open source <span class="ver">v0.20.0</span></span>
+    <p class="hero-meta"><b>v0.19.0</b> · on-device · pay once<span class="hm-wide"> · MIT source</span></p>
     <h1>Talk.<br /><em>It types.</em></h1>
-    <p class="lede">The fastest way to write on your Mac. <b>Private, on-device</b> dictation &amp; meeting notes. Talk in any language.</p>
+    <p class="lede">Hold a key, speak, and the text lands at your cursor. <b>Dictation and meeting transcripts that run on your Mac.</b></p>
 
     <div class="demo-stage">
       <div class="scene">
         <div class="speaker" aria-hidden="true">
           <svg class="pac" viewBox="0 0 120 120">
-            <circle cx="60" cy="60" r="47" fill="var(--text)"/>
-            <path class="jaw top" d="M14 60 A46 46 0 0 0 106 60 L60 60 Z" fill="#F2B701"/>
-            <path class="jaw bottom" d="M14 60 A46 46 0 0 1 106 60 L60 60 Z" fill="#F2B701"/>
-            <circle class="eye" cx="60" cy="34" r="5.5" fill="var(--text)"/>
+            <circle cx="60" cy="60" r="47" style="fill: var(--text)"/>
+            <path class="jaw top" d="M14 60 A46 46 0 0 0 106 60 L60 60 Z" style="fill: var(--mascot)"/>
+            <path class="jaw bottom" d="M14 60 A46 46 0 0 1 106 60 L60 60 Z" style="fill: var(--mascot)"/>
+            <circle class="eye" cx="60" cy="34" r="5.5" style="fill: var(--text)"/>
           </svg>
           <span class="swaves"><i></i><i></i><i></i></span>
         </div>
 
-        <div class="field" role="img" aria-label="OpenWispr transcribing speech to clean text on-device">
+        <div class="field" role="img" aria-label="OpenWispr turning spoken words into tidy text on-device">
           <div class="field-bar">
-            <span class="bar-left">
-              <span class="field-dots"><span></span><span></span><span></span></span>
-              <span class="field-status clean" id="fieldStatus">✓ cleaned</span>
-            </span>
+            <span class="field-status clean" id="fieldStatus">✓ cleaned</span>
             <span class="lang-tag" id="langTag">EN</span>
           </div>
           <div class="field-body" id="fieldWrap"><span id="fieldType">I think we should ship the update on Thursday.</span><span class="caret"></span></div>
         </div>
       </div>
     </div>
-    <p class="field-cap">Cleanup is opt-in. Turn it on and filler, grammar and spelling are tidied on-device before the text pastes. An AI rewrite for deeper polish is optional too.</p>
 
     <div class="cta">
-      <div class="cmd-row">
-        <code id="install-cmd">curl -fsSL https://charandeepkapoor.com/openwispr/install.sh | sh</code>
-        <button class="copy" data-copy="install-cmd">Copy</button>
-      </div>
       <a class="btn" href="https://github.com/SirCharan/openwispr/releases/latest/download/OpenWispr.dmg">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
-        Download the DMG
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
+        Try it free for 7 days
       </a>
-      <a class="btn" data-buy href="#pricing">
-        Buy OpenWispr · $15 once
-      </a>
-      <span class="req">MIT licensed · macOS 14+ · Apple Silicon · also as <a href="https://github.com/SirCharan/openwispr/releases/latest/download/OpenWispr.zip">.zip</a></span>
+      <div class="cmd">
+        <code id="install-cmd" tabindex="0" aria-label="Install command">curl -fsSL https://charandeepkapoor.com/openwispr/install.sh | sh</code>
+        <button class="copy" type="button" data-copy="install-cmd" aria-live="polite">Copy</button>
+      </div>
+      <p class="quiet">No card needed · $15 once if you keep it · MIT licensed · macOS 14+ · Apple Silicon · also as <a class="tap" href="https://github.com/SirCharan/openwispr/releases/latest/download/OpenWispr.zip">.zip</a></p>
+      <p class="ver-note">Today's download is v0.19.0. It has no licence check and no time limit. The 7-day trial starts with 0.20, the next release.</p>
     </div>
   </header>
 
-  <section>
-    <div class="kicker">The honest math</div>
-    <div class="stats">
-      <div class="stat speak">
-        <div class="counter">≈150</div>
-        <div class="unit">wpm · you speak</div>
+  <section class="tight proof">
+    <div>
+      <div class="stats">
+        <div class="stat speak">
+          <span class="counter">≈150</span>
+          <span class="unit">wpm · you speak</span>
+        </div>
+        <span class="stat-vs">vs</span>
+        <div class="stat">
+          <span class="counter">≈40</span>
+          <span class="unit">wpm · you type</span>
+        </div>
       </div>
-      <div class="stat-vs">vs</div>
-      <div class="stat">
-        <div class="counter">≈45</div>
-        <div class="unit">wpm · you type</div>
-      </div>
+      <p class="note">More than three times faster, before you count the backspacing.</p>
     </div>
-    <p class="stat-note">Roughly three times faster, before you count the backspacing.</p>
-  </section>
-
-  <section>
-    <div class="kicker">Works everywhere you type</div>
-    <h2>Any app. Any text field.</h2>
+    <div class="works">
+      <p class="label">Works in any text field</p>
     <div class="marquee" aria-label="Works in Slack, Notion, Chrome, Safari, Mail, WhatsApp, X, VS Code, Figma, Discord, Linear, Todoist, Obsidian, Arc, and any text field">
       <div class="marquee-track">
         <span class="logo" role="img" aria-label="Slack"><svg
@@ -626,98 +694,126 @@
         <span class="logo" role="img" aria-hidden="true" data-dup="Arc"><svg version="1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M236.5.6C233.8.8 225.4 1.9 218 3 147 13.5 83.2 54.1 42.8 114.5c-40.7 60.9-53 138.1-33.3 209.8C26.1 385.1 66 438.4 121 473.4c9.8 6.2 34.9 18.5 47.3 23 13.7 5.1 34.1 10.2 50.9 12.7 20.4 3.2 53.2 3.2 73.6 0 28.2-4.3 50.2-11.2 75.7-23.6 24.8-12.1 45.1-26.4 64.9-45.5 59.9-58.1 87.9-139.8 75.7-221.5C498.5 147 458 83.3 397.5 42.8c-29.9-20-66.2-34-103-39.8-12.7-2-45.9-3.4-58-2.4zM400.8 175c16.1 1.7 43.2 8.2 43.2 10.4 0 .9-12 38.8-12.4 39.3-.1.1-3.7-.9-7.9-2.2-20.3-6.2-46.9-7.7-67.5-3.6C293 231.3 245.1 283.7 238 348.1c-1.4 13-2.4 16.2-6.3 20.6-7.7 8.7-21.3 9.6-29.6 2-3.1-2.9-7.1-11.4-7.1-15.2 0-6.4-4.2-20.4-9-30-10.1-20.2-26.1-34.1-48-41.7-9-3-10.3-3.2-24-3.3-11.4 0-16.1.4-22 2-4.1 1.1-7.9 2-8.4 2s-3.7-8.8-7.2-19.5c-4.5-14-6-19.7-5.1-20.2 1.8-1.1 16-4.8 23-6 9.7-1.6 32-1.3 41.2.7 26.5 5.6 46.7 16.5 65.6 35.6l10.6 10.7 3.2-6.7c8.7-17.7 21.4-35.2 35.9-49.8 39.6-39.9 95.3-60.1 150-54.3z"/></svg></span>
       </div>
     </div>
-    <p class="logos-more">+ <b>anywhere</b> you can type</p>
-</section>
+    </div>
+  </section>
 
   <section>
-    <div class="kicker">What it does to your words</div>
     <h2>You ramble. It writes.</h2>
+    <p class="sub">Filler words come out and sentences get their capitals before the text pastes. That part is built in and needs no AI model.</p>
     <div class="ba">
       <div class="lc raw">
         <span class="tab"><svg width="14" height="11" viewBox="0 0 14 11" style="vertical-align:-1px;margin-right:5px" aria-hidden="true"><g fill="currentColor"><rect x="0" y="4" width="2" height="3" rx="1"/><rect x="3" y="2" width="2" height="7" rx="1"/><rect x="6" y="0" width="2" height="11" rx="1"/><rect x="9" y="3" width="2" height="5" rx="1"/><rect x="12" y="4" width="2" height="3" rx="1"/></g></svg>Spoken</span><br />
-        "um so uh i think we should um move the launch to thursday and uh tell the whole team about it i guess"
+        um so uh i think we should um move the launch to thursday and uh tell the whole team about it i guess
       </div>
-      <div class="ba-arrow">→</div>
+      <div class="ba-arrow" aria-hidden="true">→</div>
       <div class="lc master">
-        <span class="tab hot">Typed<span class="caret" style="margin-left:4px;vertical-align:-2px"></span></span><br />
-        "I think we should move the launch to Thursday and tell the whole team."
+        <span class="tab hot">Typed</span><br />
+        I think we should move the launch to Thursday and tell the whole team.<span class="caret" style="margin-left:3px"></span>
       </div>
     </div>
-    <p class="ba-note">Fillers stripped, sentences capitalized, <b>your vocabulary corrected</b>. All on-device, before it pastes.</p>
+    <p class="note">The tighter sentence shown here is the <b>optional AI cleanup</b>. It is off until you turn it on, and it runs on a local Ollama model. Your dictionary fixes names and jargon either way.</p>
+  </section>
+
+  <section>
+    <h2>The app behind the key.</h2>
+    <p class="sub">Every dictation is saved on your Mac and searchable. These are real windows from v0.19.0, filled with sample data.</p>
+    <figure class="shot">
+      <img src="https://charandeepkapoor.com/openwispr/shots/app-light-dictations.jpg" width="1600" height="1120" loading="lazy" decoding="async"
+        alt="The OpenWispr Dictations window: a sidebar, five totals across the top including day streak and average words per minute, a search field, and today's dictations listed with their times." />
+      <figcaption><b>Dictations.</b> Your history with search, and running totals for words, pace and streak.</figcaption>
+    </figure>
+    <div class="shots-2">
+      <figure class="shot">
+        <img src="https://charandeepkapoor.com/openwispr/shots/app-light-insights.jpg" width="1600" height="1120" loading="lazy" decoding="async"
+          alt="The OpenWispr Insights window: speaking pace, a bar chart of words per day over 14 days, meeting totals, the apps you dictate into, and a streak grid." />
+        <figcaption><b>Insights.</b> Pace, words per day, and the apps you dictate into.</figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="https://charandeepkapoor.com/openwispr/shots/app-dark-dictations.jpg" width="1600" height="1120" loading="lazy" decoding="async"
+          alt="The same OpenWispr Dictations window in the dark theme." />
+        <figcaption><b>Dark theme.</b> The same window after sunset.</figcaption>
+      </figure>
+    </div>
   </section>
 
   <section id="features">
     <div class="kicker">Features</div>
-    <h2>Ten things, done right.</h2>
-    <div class="tracklist" id="tracklist">
-      <ol class="tl-list">
-        <li class="tl-item active" data-i="0" data-title="100% on-device Whisper">
-          <span class="tl-no">01</span><span class="tl-name">On-device Whisper</span>
-          <p class="tl-body">Runs on the Apple Neural Engine via WhisperKit. Your voice never touches a server. Works fully offline, no account, no bill.</p>
-        </li>
-        <li class="tl-item" data-i="1" data-title="Live preview pill">
-          <span class="tl-no">02</span><span class="tl-name">Live preview pill</span>
-          <p class="tl-body">A floating pill shows your words as you speak, so you see the transcription before it lands. Release the key and it pastes at the cursor.</p>
-        </li>
-        <li class="tl-item" data-i="2" data-title="Learns your words">
-          <span class="tl-no">03</span><span class="tl-name">Learns your words</span>
-          <p class="tl-body">A custom dictionary plus corrections it remembers. Product names, teammates, jargon: teach it once and it types them right.</p>
-        </li>
-        <li class="tl-item" data-i="3" data-title="Snippets">
-          <span class="tl-no">04</span><span class="tl-name">Snippets</span>
-          <p class="tl-body">Say "add my email" and your address pastes itself. Same for your LinkedIn, your booking link, your sign-off. Phrases you set once, in the words you actually say them.</p>
-        </li>
-        <li class="tl-item" data-i="4" data-title="13 languages">
-          <span class="tl-no">05</span><span class="tl-name">13 languages</span>
-          <p class="tl-body">Auto-detected or pinned. Speak Hindi and get Roman script, or have it translated to English. Code-switch mid-sentence, it keeps up.</p>
-        </li>
-        <li class="tl-item" data-i="5" data-title="Stats &amp; history">
-          <span class="tl-no">06</span><span class="tl-name">Stats &amp; history</span>
-          <p class="tl-body">Every dictation saved and searchable. An Insights page shows your pace, words per day and the apps you dictate into. Light and dark themes, plus per-app disable and sound cues where you want quiet.</p>
-        </li>
-        <li class="tl-item" data-i="6" data-title="Meeting summaries">
-          <span class="tl-no">07</span><span class="tl-name">Meeting summaries</span>
-          <p class="tl-body">Saved next to the transcript and shown for past meetings. Runs on Ollama or Apple's on-device model; Hindi and other languages Apple can't read fall back to Ollama.</p>
-        </li>
-        <li class="tl-item" data-i="7" data-title="Meet speaker names">
-          <span class="tl-no">08</span><span class="tl-name">Meet speaker names</span>
-          <p class="tl-body">A bundled Chrome extension names speakers on Google Meet. An experimental on-device screen read finds the active speaker on Meet, Teams and Zoom.</p>
-        </li>
-        <li class="tl-item" data-i="8" data-title="Recovery &amp; hands-free">
-          <span class="tl-no">09</span><span class="tl-name">Recovery &amp; hands-free</span>
-          <p class="tl-body">Failed dictations are saved and can be retried. The pill warns if your mic is silent. Double-tap the trigger key to dictate hands-free until the next tap.</p>
-        </li>
-        <li class="tl-item" data-i="9" data-title="CLI &amp; URLs">
-          <span class="tl-no">10</span><span class="tl-name">CLI &amp; URLs</span>
-          <p class="tl-body">An <code>openwispr</code> command transcribes files and searches history and meetings. <code>openwispr://</code> links start dictation from Shortcuts and scripts. Sparkle keeps the app up to date.</p>
-        </li>
-      </ol>
-      <div class="tl-detail" aria-live="polite">
-        <span class="tl-counter" id="tlCounter">01</span>
-        <span class="tl-badge" id="tlBadge">Track 01</span>
-        <h3 id="tlTitle">100% on-device Whisper</h3>
-        <p id="tlBody">Runs on the Apple Neural Engine via WhisperKit. Your voice never touches a server. Works fully offline, no account, no bill.</p>
+    <h2 class="xl">Twelve things, done right.</h2>
+    <p class="sub">Tracks marked <span class="soon" style="margin-left:0">in 0.20</span> are built and arrive with the next release. Everything else is in today's download.</p>
+    <div class="jcard">
+      <div class="side">
+        <div class="side-h"><b>Side A</b><span>Dictation</span></div>
+        <ol class="tl-list">
+          <li class="tl-item">
+            <span class="tl-no">01</span><span class="tl-name">On-device Whisper</span>
+            <p class="tl-body">Speech is transcribed on your Mac through WhisperKit. No account. After the one-time model download it works offline.</p>
+          </li>
+          <li class="tl-item">
+            <span class="tl-no">02</span><span class="tl-name">Live preview</span>
+            <p class="tl-body">A floating pill shows your words while you speak. Release the key and the text pastes at the cursor.</p>
+          </li>
+          <li class="tl-item">
+            <span class="tl-no">03</span><span class="tl-name">Tidy by default</span>
+            <p class="tl-body">Fillers removed and sentences capitalised with no AI model. An AI cleanup and a rewrite style are there if you want them.</p>
+          </li>
+          <li class="tl-item">
+            <span class="tl-no">04</span><span class="tl-name">Learns your words</span>
+            <p class="tl-body">A custom dictionary for product names, teammates and jargon. Add a term once and it is typed right.</p>
+          </li>
+          <li class="tl-item">
+            <span class="tl-no">05</span><span class="tl-name">Snippets</span>
+            <p class="tl-body">Say "add my email" and your address pastes itself. Set a phrase once for your links and your sign-off.</p>
+          </li>
+          <li class="tl-item">
+            <span class="tl-no">06</span><span class="tl-name">13 languages</span>
+            <p class="tl-body">Auto-detected or pinned. Speak Hindi and get Roman script, or have your speech translated to English.</p>
+          </li>
+        </ol>
+      </div>
+      <div class="side">
+        <div class="side-h"><b>Side B</b><span>Around it</span></div>
+        <ol class="tl-list" start="7">
+          <li class="tl-item">
+            <span class="tl-no">07</span><span class="tl-name">History and Insights</span>
+            <p class="tl-body">Every dictation saved and searchable. Insights shows your pace, words per day and where you dictate.</p>
+          </li>
+          <li class="tl-item">
+            <span class="tl-no">08</span><span class="tl-name">Quiet where you want it</span>
+            <p class="tl-body">Turn dictation off per app, switch sound cues on or off, and pick the light or dark theme.</p>
+          </li>
+          <li class="tl-item">
+            <span class="tl-no">09</span><span class="tl-name">Hands-free and recovery <span class="soon">in 0.20</span></span>
+            <p class="tl-body">Double-tap the trigger to dictate until the next tap. The pill warns "Mic is silent". A failed dictation is kept so you can retry it.</p>
+          </li>
+          <li class="tl-item">
+            <span class="tl-no">10</span><span class="tl-name">Agent skill and CLI <span class="soon">in 0.20</span></span>
+            <p class="tl-body">An <code>openwispr</code> command with JSON output, and a skill that lets a coding agent read your history. <a class="tap" href="#developers">See Developers.</a></p>
+          </li>
+          <li class="tl-item">
+            <span class="tl-no">11</span><span class="tl-name">Updates in the app <span class="soon">in 0.20</span></span>
+            <p class="tl-body">New versions arrive inside the app through Sparkle. Check from the menu, or let it check by itself.</p>
+          </li>
+          <li class="tl-item">
+            <span class="tl-no">12</span><span class="tl-name">Ready at login <span class="soon">in 0.20</span></span>
+            <p class="tl-body">Launch at login is on by default, and the speech model loads faster after its first run.</p>
+          </li>
+        </ol>
       </div>
     </div>
   </section>
 
-
   <section id="snippets">
-    <div class="kicker">Snippets</div>
     <h2>Say it once. Never type it again.</h2>
     <div class="snip">
       <div>
-      <div class="field" role="img" aria-label="A spoken phrase expanding into a saved email address">
-        <div class="field-bar">
-          <span class="bar-left">
-            <span class="field-dots"><span></span><span></span><span></span></span>
+        <div class="field" role="img" aria-label="A spoken phrase expanding into a saved email address">
+          <div class="field-bar">
             <span class="field-status clean" id="snipStatus">✓ expanded</span>
-          </span>
-          <span class="lang-tag" id="snipTag">add my email</span>
+            <span class="lang-tag" id="snipTag">add my email</span>
+          </div>
+          <div class="field-body" id="snipWrap"><span id="snipType">Hey, you@example.com and I will follow up.</span><span class="caret"></span></div>
         </div>
-        <div class="field-body" id="snipWrap"><span id="snipType">Hey, you@example.com and I will follow up.</span><span class="caret"></span></div>
-      </div>
-      <p class="field-cap snip-cap">A phrase fires. A bare word never does — "send me an email tomorrow" stays exactly as you said it.</p>
+        <p class="field-cap">A phrase fires. A bare word never does: "send me an email tomorrow" stays exactly as you said it.</p>
       </div>
       <div>
         <div class="snip-trigger">You say → it types</div>
@@ -727,193 +823,232 @@
           <li class="snip-row"><span class="snip-say">add my calendar</span><span class="snip-get">cal.com/you/30min</span></li>
           <li class="snip-row"><span class="snip-say">add my signature</span><span class="snip-get">your sign-off, in full</span></li>
         </ul>
-        <p class="snip-note">Each snippet takes as many phrasings as you need, because "add my linkedin" also comes out "add my linked in". Set your own in the Snippets tab.</p>
+        <p class="note">Each snippet takes several phrasings, because "add my linkedin" also comes out "add my linked in". Set your own in the Snippets tab.</p>
       </div>
     </div>
   </section>
 
-  <section id="meetings">
-    <div class="kicker">Meetings</div>
-    <h2>The minutes write themselves.</h2>
-    <div class="meet">
+  <section id="meetings" class="meet">
+    <div class="meet-head">
       <div>
-        <p class="sub">OpenWispr captures your mic and the call's system audio, labels who said what, and saves the transcript automatically. No bot joins the call.</p>
-        <ul>
-          <li><b>Speaker names</b>, not just labels. Zoom names come through Accessibility, and Google Meet names come from a small Chrome extension. Other calls get Speaker A, B and so on, and you can rename them.</li>
-          <li><b>Per-meeting stats</b>: talk share, pace, longest monologue, questions and interruptions for each call.</li>
-          <li><b>Past meetings</b> in a list beside the transcript, so you can reopen any call.</li>
-          <li><b>Autosaves</b> every transcript as Markdown, locally.</li>
-          <li><b>Optional AI summary</b>: local via Ollama, or bring your own key. Skip it entirely and nothing ever leaves the Mac.</li>
+        <div class="kicker">Meetings</div>
+        <h2 class="xl">The minutes write themselves.</h2>
+        <p class="sub">OpenWispr records your mic and the call's audio on your Mac, labels who said what, and saves the transcript as Markdown in <code>~/Documents/OpenWispr</code>. No bot joins the call.</p>
+      </div>
+      <div class="ornaments" aria-hidden="true">
+        <div class="reel"></div>
+        <div class="vu">
+          <svg viewBox="0 0 140 84">
+            <path d="M18 72 A58 58 0 0 1 122 72" fill="none" stroke-width="2" style="stroke: var(--text)"/>
+            <path d="M101 31 A58 58 0 0 1 122 72" fill="none" stroke-width="4" style="stroke: var(--accent)"/>
+            <line class="needle" x1="70" y1="72" x2="70" y2="24" stroke-width="2" style="stroke: var(--accent)"/>
+            <circle cx="70" cy="72" r="4" style="fill: var(--text)"/>
+          </svg>
+        </div>
+        <div class="reel"></div>
+      </div>
+    </div>
+    <figure class="shot">
+      <img src="https://charandeepkapoor.com/openwispr/shots/app-light-meetings.jpg" width="1600" height="1120" loading="lazy" decoding="async"
+        alt="The OpenWispr Meetings window: a past meeting in the list, totals for duration, questions per hour, fillers per minute and interruptions, talk share for three speakers, and a timestamped transcript labelled by speaker." />
+      <figcaption>A sample meeting in v0.19.0. Talk share per speaker on top, the transcript below.</figcaption>
+    </figure>
+    <ul class="points">
+      <li class="pt"><b>Offers to record</b>It spots a Zoom, Google Meet or Teams call and asks "Start recording?". You can say yes once, or always for that app.</li>
+      <li class="pt"><b>Real speaker names</b>Zoom names are read through Accessibility. Google Meet names come from a small Chrome extension that ships with the app and is loaded unpacked. Other calls get Speaker A, B and so on.</li>
+      <li class="pt"><b>Per-meeting stats</b>Talk share, pace, turns and longest monologue for each speaker, plus questions and interruptions for the call.</li>
+      <li class="pt"><b>Summaries</b>Today a summary uses a local Ollama model or your own OpenAI or OpenRouter key. <span class="soon" style="margin-left:0">in 0.20</span> Macs with Apple Intelligence on macOS 26 summarise on-device with no setup.</li>
+      <li class="pt"><b>Stops by itself <span class="soon">in 0.20</span></b>On Google Meet, recording stops about 10 seconds after you leave. Any call stops after 10 minutes of silence.</li>
+      <li class="pt"><b>Warns on a silent call <span class="soon">in 0.20</span></b>If you are talking and nothing arrives from the other side, a banner says "No audio from the call is being captured".</li>
+    </ul>
+  </section>
+
+  <section id="developers">
+    <div class="dev">
+      <div>
+        <div class="kicker">Developers <span class="soon">in 0.20</span></div>
+        <h2>Your transcripts, on the command line.</h2>
+        <p class="sub">The app ships an <code>openwispr</code> command. It arrives with 0.20, the next release.</p>
+        <ul class="dev-list">
+          <li><b>JSON by default.</b> Every command prints one JSON envelope, so scripts and agents can read it.</li>
+          <li><b>Agent skill.</b> <code>openwispr skill install</code> copies a skill into <code>~/.claude/skills</code>, so a coding agent can read your dictation and meeting history through the CLI.</li>
+          <li><b>Links that ask first.</b> <code>openwispr://</code> links start and stop dictation and meetings. A start link from outside the CLI shows a confirmation with Cancel and Allow.</li>
         </ul>
-        <p class="autosave">Saved to <code>~/Documents/OpenWispr</code></p>
-        <div class="ornaments" aria-hidden="true">
-          <div class="reel"></div>
-          <div class="vu">
-            <svg viewBox="0 0 140 84">
-              <path d="M18 72 A58 58 0 0 1 122 72" fill="none" stroke="#241F1A" stroke-width="2"/>
-              <path d="M101 31 A58 58 0 0 1 122 72" fill="none" stroke="#E2543E" stroke-width="4"/>
-              <text x="16" y="66" font-size="9" fill="#6B5F4E" font-family="Space Mono, monospace">-20</text>
-              <text x="110" y="66" font-size="9" fill="#E2543E" font-family="Space Mono, monospace">+3</text>
-              <text x="64" y="18" font-size="9" fill="#6B5F4E" font-family="Space Mono, monospace">VU</text>
-              <line class="needle" x1="70" y1="72" x2="70" y2="24" stroke="#E2543E" stroke-width="2"/>
-              <circle cx="70" cy="72" r="4" fill="#241F1A"/>
-            </svg>
-          </div>
-          <div class="reel"></div>
-        </div>
       </div>
-      <div class="transcript" aria-label="Example meeting transcript">
-        <div class="t-head">
-          <span class="label">standup — tue 10:02</span>
-          <span class="t-rec"><span class="rec"></span>REC</span>
-        </div>
-        <div class="t-line you"><span class="who">You</span><p>I can take the migration if someone reviews the schema today.</p></div>
-        <div class="t-line"><span class="who">Priya</span><p>I'll review it after lunch. Do we ship Thursday or Friday?</p></div>
-        <div class="t-line you"><span class="who">You</span><p>Thursday. The launch email is already drafted.</p></div>
-        <div class="t-line"><span class="who">Arjun</span><p>Works for me. Let's lock it.</p></div>
-      </div>
+      <pre class="term" tabindex="0" aria-label="Example openwispr commands"><span class="c"># the command lives inside the app bundle</span>
+<span class="p">$</span> cd /Applications/OpenWispr.app/Contents/Helpers
+
+<span class="p">$</span> ./openwispr history search "launch"
+<span class="p">$</span> ./openwispr meetings list
+<span class="p">$</span> ./openwispr transcribe memo.m4a
+<span class="p">$</span> ./openwispr skill install
+
+<span class="c"># the same actions as links</span>
+<span class="p">$</span> open "openwispr://dictation/start"
+<span class="p">$</span> open "openwispr://meeting/stop"</pre>
     </div>
   </section>
 
-  <section>
-    <div class="kicker">Who it's for</div>
-    <h2>Three people, one key.</h2>
-    <div class="grid-3">
-      <div class="lc">
-        <span class="tab">The writer</span>
-        <p>Drafts emails and docs at speaking speed, then edits instead of typing from scratch.</p>
-      </div>
-      <div class="lc">
-        <span class="tab">The engineer</span>
-        <p>Dictates commit messages, PR reviews, and prompts into Cursor without breaking flow.</p>
-      </div>
-      <div class="lc">
-        <span class="tab hot">Meetings all day</span>
-        <p>Lets transcripts and summaries pile up in a folder while actually listening on the call.</p>
-      </div>
-    </div>
+  <section class="tight">
+    <h2 class="sm">Who uses it.</h2>
+    <ul class="who">
+      <li><b>The writer</b>Drafts emails and docs at speaking speed, then edits instead of typing from scratch.</li>
+      <li><b>The engineer</b>Dictates commit messages, review comments and prompts without leaving the editor.</li>
+      <li><b>Meetings all day</b>Listens on the call while the transcripts pile up in a folder.</li>
+    </ul>
   </section>
 
   <section id="pricing">
     <div class="kicker">Pricing</div>
-    <h2>$15. Once.</h2>
-    <div class="price-card">
-      <div class="amt">$15 <span class="req">one-time</span></div>
-      <ul>
-        <li>Works on up to 3 of your Macs</li>
-        <li>Lifetime updates</li>
-        <li>7-day free trial, no card needed</li>
-      </ul>
-      <p class="tier">Early-bird: <span data-tier>50% off the first 20 buyers with code EARLY20 ($7.50)</span><br />Then 25% off the next 50 with code EARLY50 ($11.25).</p>
-      <div class="cta">
-        <a class="btn" href="https://github.com/SirCharan/openwispr/releases/latest/download/OpenWispr.dmg">Download free trial</a>
-        <a class="btn" data-buy href="#pricing">Buy · $15</a>
+    <h2>Pay once. Keep it.</h2>
+    <div class="ticket">
+      <div class="t-main">
+        <p class="amt">$15 <span>once</span></p>
+        <p>One licence for life, on up to 3 of your Macs. No subscription.</p>
+        <div class="t-actions">
+          <a class="btn" href="https://github.com/SirCharan/openwispr/releases/latest/download/OpenWispr.dmg">Try it free for 7 days</a>
+          <a class="buy" data-buy hidden href="#pricing">Buy a licence · $15</a>
+        </div>
+        <p class="pending" data-buy-pending>Checkout opens with the 0.20 release. Today's download, v0.19.0, runs without a licence.</p>
+      </div>
+      <div class="t-stub">
+        <p class="label">Early-bird codes</p>
+        <ul class="codes">
+          <li><code>EARLY20</code><span>50% off, first 20 buyers</span><b>$7.50</b></li>
+          <li><code>EARLY50</code><span>25% off, next 50 buyers</span><b>$11.25</b></li>
+        </ul>
+        <ul class="incl">
+          <li>7-day trial, no card needed</li>
+          <li>Updates included</li>
+          <li><a class="tap" href="https://charandeepkapoor.com/openwispr/refund">7-day refund</a>, no questions</li>
+        </ul>
       </div>
     </div>
-    <p class="price-why">Why pay for open source? You get the signed build, automatic updates and support for the work. The source is MIT, and you can build it yourself.</p>
+    <p class="note price-why">Why pay for open source? The licence covers the ready-made build and its updates. The source is MIT, and a build you make from source needs no key.</p>
   </section>
 
-  <section id="compare">
-    <div class="kicker">Compare</div>
-    <h2>The honest table.</h2>
-    <p class="sub">Normal people don't want an API key or a monthly bill. OpenWispr cleans your words on your own Mac, for $15, once.</p>
-    <div class="tbl-wrap">
-    <div class="tbl-scroll">
-      <table>
-        <thead>
-          <tr>
-            <th></th>
-            <th class="us">OpenWispr</th>
-            <th>Wispr Flow</th>
-            <th>Muesli</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr><td>On-device</td><td class="us yes">✓</td><td class="no-x">✗ cloud</td><td class="yes">✓</td></tr>
-          <tr><td>Price</td><td class="us">$15 once (early-bird from $7.50)</td><td>$15/mo Pro, $12/mo billed annually</td><td>Free</td></tr>
-          <tr><td>Meetings</td><td class="us yes">✓</td><td class="no-x">✗</td><td class="yes">✓</td></tr>
-          <tr><td>AI cleanup</td><td class="us">On-device*, included</td><td>Cloud</td><td>Your own API key</td></tr>
-          <tr><td>Cleanup, zero setup</td><td class="us yes">✓</td><td class="no-x">✗ paid cloud</td><td class="no-x">✗ needs API key</td></tr>
-          <tr><td>Open source</td><td class="us">MIT</td><td class="no-x">✗</td><td>MIT</td></tr>
-          <tr><td>Works offline</td><td class="us yes">✓</td><td class="no-x">✗</td><td class="yes">✓</td></tr>
-        </tbody>
-      </table>
-    </div>
-    </div>
-    <p class="tbl-note">*Cleanup runs on-device, built-in on macOS 26 with Apple Intelligence; on older Macs bring an API key or run Ollama (both optional). Wispr Flow Pro is $15/mo billed monthly or $12/mo billed annually; its free tier caps at 2,000 words per week and processes audio in the cloud.</p>
+  <section id="compare" class="band">
+    <h2 class="xl">OpenWispr and Wispr Flow.</h2>
+    <p class="sub">Two things decide it: where your speech is processed, and how you pay.</p>
+    <table class="vs" role="table">
+      <thead role="rowgroup">
+        <tr role="row">
+          <td role="presentation"></td>
+          <th scope="col" role="columnheader" class="us">OpenWispr</th>
+          <th scope="col" role="columnheader">Wispr Flow</th>
+        </tr>
+      </thead>
+      <tbody role="rowgroup">
+        <tr role="row">
+          <th scope="row" role="rowheader">Processing</th>
+          <td role="cell" class="us" data-who="OpenWispr">On your Mac<small>Audio and text stay there.</small></td>
+          <td role="cell" data-who="Wispr Flow">In the cloud</td>
+        </tr>
+        <tr role="row">
+          <th scope="row" role="rowheader">Price</th>
+          <td role="cell" class="us" data-who="OpenWispr">$15 once<small>Up to 3 Macs. No subscription.</small></td>
+          <td role="cell" data-who="Wispr Flow">$15 per user per month<small>Billed monthly, or $12 per user per month billed annually.</small></td>
+        </tr>
+        <tr role="row">
+          <th scope="row" role="rowheader">Free to start</th>
+          <td role="cell" class="us" data-who="OpenWispr">7-day trial<small>Starts with 0.20. Today's v0.19.0 has no limit.</small></td>
+          <td role="cell" data-who="Wispr Flow">Free tier<small>With a weekly word limit.</small></td>
+        </tr>
+      </tbody>
+    </table>
+    <ul class="points">
+      <li class="pt"><b>Cleanup, stated plainly</b>Filler removal and capitals are built in and need no AI. The deeper AI cleanup is optional and runs on a local Ollama model. An AI rewrite can use Ollama or your own API key.</li>
+      <li class="pt"><b>Works offline</b>After the one-time model download, OpenWispr dictates and transcribes with no network.</li>
+      <li class="pt"><b>Open source</b>OpenWispr's source is MIT on GitHub. You can read it or build it yourself.</li>
+    </ul>
   </section>
 
-  <section>
+  <section id="install">
     <div class="kicker">Install</div>
     <h2>Running in three steps.</h2>
-    <div class="steps">
-      <div class="step">
+    <div class="cmd cmd-wide">
+      <code id="install-cmd-2" tabindex="0" aria-label="Install command">curl -fsSL https://charandeepkapoor.com/openwispr/install.sh | sh</code>
+      <button class="copy" type="button" data-copy="install-cmd-2" aria-live="polite">Copy</button>
+    </div>
+    <ol class="steps">
+      <li class="step">
         <span class="n">01</span>
-        <h3>Paste one line</h3>
-        <p>Installs to /Applications and launches. No Gatekeeper dance — the script strips quarantine for you.</p>
-        <div class="cmd-row">
-          <code id="install-cmd-2">curl -fsSL https://charandeepkapoor.com/openwispr/install.sh | sh</code>
-          <button class="copy" data-copy="install-cmd-2">Copy</button>
-        </div>
-      </div>
-      <div class="step">
+        <h3>Paste the line in Terminal</h3>
+        <p>It downloads the latest build, installs it to /Applications, removes the quarantine flag and opens the app.</p>
+      </li>
+      <li class="step">
         <span class="n">02</span>
-        <h3>Walk the short setup</h3>
-        <p>A seven-step wizard: mic + live level meter, Accessibility, speech model (~1.5&nbsp;GB once), press-test your hotkey, then a practice dictation.</p>
-      </div>
-      <div class="step">
+        <h3>Walk the setup wizard</h3>
+        <p>Microphone, Accessibility, a one-time speech model download of about 1.5&nbsp;GB, then a test of your trigger key.</p>
+      </li>
+      <li class="step">
         <span class="n">03</span>
-        <h3>Hold the key. Speak.</h3>
-        <p>Release — clean text lands at your cursor. OpenWispr lives in the menu bar, not the Dock. Rebind the trigger anytime in Settings.</p>
-      </div>
-    </div>
-    <div class="alt-note">
-      <b>Prefer the DMG?</b> <a href="https://github.com/SirCharan/openwispr/releases/latest/download/OpenWispr.dmg">Download it</a>, drag to Applications. On macOS 15+ Gatekeeper may block the first launch: open <b>System Settings → Privacy &amp; Security</b> and click <b>Open Anyway</b>. Once.
-    </div>
+        <h3>Hold the key and speak</h3>
+        <p>Release, and the text lands at your cursor. OpenWispr lives in the menu bar. There is no Dock icon.</p>
+      </li>
+    </ol>
+    <p class="alt-note">
+      <b>Prefer the DMG?</b> <a class="tap" href="https://github.com/SirCharan/openwispr/releases/latest/download/OpenWispr.dmg">Download it</a> and drag the app to Applications. macOS will block the first launch because the build is not notarized yet. Open <b>System Settings → Privacy &amp; Security</b> and click <b>Open Anyway</b>, once.
+    </p>
   </section>
 
   <section id="faq" class="faq">
-    <div class="kicker">FAQ</div>
-    <h2>Fair questions.</h2>
-    <details>
-      <summary>I clicked the app and nothing happened?<span class="chev">›</span></summary>
-      <div class="a">OpenWispr lives in your menu bar (microphone icon, top right) — there is no Dock icon. Clicking the app in Applications opens its home window; the menu-bar icon’s “Open OpenWispr” does the same.</div>
-    </details>
-    <details>
-      <summary>Why does macOS warn me when I first open it?<span class="chev">›</span></summary>
-      <div class="a">Releases are signed and notarized from the first Developer ID build. Until then macOS may ask you to confirm once: <b>System Settings → Privacy &amp; Security → Open Anyway</b>, or use the install one-liner. The source is MIT on GitHub, so you can read it or build it yourself.</div>
-    </details>
-    <details>
-      <summary>How big is the download?<span class="chev">›</span></summary>
-      <div class="a">The app itself is a few megabytes. On first setup the wizard downloads the Whisper model, roughly <b>1.5&nbsp;GB</b>, once. After that everything runs locally with no further downloads.</div>
-    </details>
-    <details>
-      <summary>What does first-run setup look like?<span class="chev">›</span></summary>
-      <div class="a">A short wizard: microphone with a live level meter, Accessibility for paste and the <kbd>fn</kbd> key, the speech model, a press-test of your trigger, and an optional practice dictation. Meeting capture is optional and can wait.</div>
-    </details>
-    <details>
-      <summary>Does any audio or text leave my Mac?<span class="chev">›</span></summary>
-      <div class="a"><b>No.</b> Transcription runs on-device via WhisperKit. There’s no account, no telemetry, no server. The only network calls are the one-time model download and, if you opt in, your own AI endpoint (local Ollama or a key you bring).</div>
-    </details>
-    <details>
-      <summary>Do I need Ollama?<span class="chev">›</span></summary>
-      <div class="a">No. Ollama is <b>optional</b>, only for AI meeting summaries. Dictation, filler removal, dictionary, snippets, and transcripts all work without it.</div>
-    </details>
-    <details>
-      <summary>What permissions does it need, and why?<span class="chev">›</span></summary>
-      <div class="a"><b>Microphone</b> to hear you. <b>Accessibility</b> to paste text at your cursor. For meeting transcription, <b>screen &amp; system audio recording</b> so it can capture the other side of the call. Nothing else, and each is requested only when the feature needs it.</div>
-    </details>
+    <div class="faq-head">
+      <h2>Fair questions.</h2>
+      <p class="note">Something else? <a class="tap" href="https://charandeepkapoor.com/openwispr/contact">Get in touch.</a></p>
+    </div>
+    <div class="faq-list">
+      <details>
+        <summary>What does it cost?<span class="chev" aria-hidden="true">›</span></summary>
+        <div class="a"><b>$15, once.</b> The licence is for life and works on up to 3 of your Macs. There is no subscription.</div>
+      </details>
+      <details>
+        <summary>How does the trial work, and what happens when it ends?<span class="chev" aria-hidden="true">›</span></summary>
+        <div class="a">The trial arrives with 0.20. It runs for 7 days from first launch and needs no card. When it ends, OpenWispr will not start a new dictation or meeting until you enter a licence key. The app still opens, and everything you already captured stays readable. Today's download, v0.19.0, has no licence check at all.</div>
+      </details>
+      <details>
+        <summary>Are there early-bird codes?<span class="chev" aria-hidden="true">›</span></summary>
+        <div class="a">Yes. <b>EARLY20</b> takes 50% off for the first 20 buyers, so you pay $7.50. After that, <b>EARLY50</b> takes 25% off for the next 50 buyers, so you pay $11.25.</div>
+      </details>
+      <details>
+        <summary>Can I get a refund?<span class="chev" aria-hidden="true">›</span></summary>
+        <div class="a">Yes, within 7 days, no questions asked. The <a class="tap" href="https://charandeepkapoor.com/openwispr/refund">refund page</a> has the details.</div>
+      </details>
+      <details>
+        <summary>Does any audio or text leave my Mac?<span class="chev" aria-hidden="true">›</span></summary>
+        <div class="a">Your audio, transcripts and history stay on the Mac. There is no account and no analytics in the app. What does use the network: the one-time speech model download and, from 0.20, the update check and the licence check, which sends your key and the Mac's name to the payment provider. Text goes to an AI provider only if you add your own API key. The <a class="tap" href="https://charandeepkapoor.com/openwispr/privacy">privacy page</a> lists all of it.</div>
+      </details>
+      <details>
+        <summary>Is the app signed?<span class="chev" aria-hidden="true">›</span></summary>
+        <div class="a">It is not notarized yet. If you install from the DMG, macOS blocks the first launch and you confirm once under <b>System Settings → Privacy &amp; Security → Open Anyway</b>. The install script removes the quarantine flag, so you do not see that prompt. Signed and notarized builds come with the Developer ID release.</div>
+      </details>
+      <details>
+        <summary>Does it work offline?<span class="chev" aria-hidden="true">›</span></summary>
+        <div class="a">Yes. After the one-time model download of about 1.5&nbsp;GB, dictation and meeting transcripts need no network. From 0.20 the licence is re-checked every 7 days, with a 21-day grace period if you are offline.</div>
+      </details>
+      <details>
+        <summary>Which Macs does it run on?<span class="chev" aria-hidden="true">›</span></summary>
+        <div class="a">Apple Silicon Macs on macOS 14 or later. Intel Macs are not supported.</div>
+      </details>
+      <details>
+        <summary>Is it really open source? Then why pay?<span class="chev" aria-hidden="true">›</span></summary>
+        <div class="a">Yes. The source is MIT on GitHub, and a build you make from source needs no key. The licence covers the ready-made build and its updates.</div>
+      </details>
+      <details>
+        <summary>How is it different from Wispr Flow?<span class="chev" aria-hidden="true">›</span></summary>
+        <div class="a">OpenWispr processes your speech on your Mac and costs $15 once. Wispr Flow processes in the cloud and costs $15 per user per month billed monthly, or $12 billed annually, with a free tier that has a weekly word limit.</div>
+      </details>
+    </div>
   </section>
 
   <section class="closing">
-    <div class="kicker">Ready when you are</div>
-    <h2>Your voice. Your Mac. <em>Nothing else.</em></h2>
+    <h2 class="xl">Your voice. Your Mac. <em>Nothing else.</em></h2>
     <div class="cta">
       <a class="btn" href="https://github.com/SirCharan/openwispr/releases/latest/download/OpenWispr.dmg">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
-        Download the DMG
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
+        Try it free for 7 days
       </a>
-      <span class="req">7-day trial · $15 lifetime · 3 Macs · MIT source · macOS 14+ · Apple Silicon</span>
+      <p class="quiet">$15 once if you keep it · up to 3 Macs · MIT source · macOS 14+ · Apple Silicon <a class="buy tap" data-buy hidden href="#pricing" style="min-height:0;margin-left:6px">Buy a licence</a></p>
     </div>
   </section>
 
@@ -927,21 +1062,22 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/gsap.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.13.0/ScrollTrigger.min.js" defer></script>
 <script>
-  // copy buttons
+  // copy buttons: copy the exact command text, then confirm on the button itself
   document.querySelectorAll('.copy').forEach(function (btn) {
     btn.addEventListener('click', function () {
       var code = document.getElementById(btn.dataset.copy);
       navigator.clipboard.writeText(code.textContent).then(function () {
         btn.textContent = 'Copied';
-        setTimeout(function () { btn.textContent = 'Copy'; }, 1500);
+        btn.classList.add('done');
+        setTimeout(function () { btn.textContent = 'Copy'; btn.classList.remove('done'); }, 1600);
       });
     });
   });
 
   var REDUCE = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // hero scene: speaker "talks" → field types the RAW spoken words, then visibly TIDIES them into the
-  // clean line (caps, punctuation, spelling), cycling English, Hindi (Devanagari), a hard name, Hinglish.
+  // hero scene: speaker "talks", the field types the RAW spoken words, then visibly TIDIES them into the
+  // clean line (fillers out, capitals and punctuation in), cycling English, Hindi (Devanagari), a name, Hinglish.
   // Field ships the clean example 1 in HTML, so it reads fully with JS off.
   (function () {
     var body = document.getElementById('fieldType');
@@ -949,7 +1085,7 @@
     var tag = document.getElementById('langTag');
     var status = document.getElementById('fieldStatus');
     var ex = [
-      { raw: 'um i think we should ship the update on thursdey', clean: 'I think we should ship the update on Thursday.', lang: 'EN' },
+      { raw: 'um i think we should uh ship the update on thursday', clean: 'I think we should ship the update on Thursday.', lang: 'EN' },
       { raw: 'नमस्ते कल टीम मीटिंग है', clean: 'नमस्ते, कल टीम मीटिंग है।', lang: 'हिन्दी' },
       { raw: 'meeting with priya nair about aadhaar', clean: 'Meeting with Priya Nair about Aadhaar.', lang: 'Name' },
       { raw: 'kal launch karte hain sab ready hai', clean: 'kal launch karte hain, sab ready hai.', lang: 'Hinglish' }
@@ -971,7 +1107,7 @@
           setTimeout(function () {
             setStatus('tidying…', false);
             setTimeout(function () {
-              body.textContent = e.clean;                 // the fix: grammar + spelling tidied
+              body.textContent = e.clean;
               wrap.classList.remove('flash'); void wrap.offsetWidth; wrap.classList.add('flash');
               setStatus('✓ cleaned', true);
               setTimeout(function () { p = (p + 1) % ex.length; run(); }, 1900);
@@ -1028,51 +1164,19 @@
     run();
   })();
 
-  // feature tracklist: click 01–10 → detail swaps; auto-advances ~4s, click/hover wins.
-  // Fallback (no JS): every .tl-body stays visible inline, so all six features read as a list.
-  (function () {
-    var tl = document.getElementById('tracklist');
-    if (!tl) return;
-    var items = Array.prototype.slice.call(tl.querySelectorAll('.tl-item'));
-    var title = document.getElementById('tlTitle');
-    var body = document.getElementById('tlBody');
-    var badge = document.getElementById('tlBadge');
-    var counter = document.getElementById('tlCounter');
-    if (!items.length || !title || !body) return;
-    tl.classList.add('js');
-    var cur = 0, timer = null;
-    function show(i) {
-      cur = i;
-      items.forEach(function (el, k) { el.classList.toggle('active', k === i); });
-      var it = items[i];
-      var n = it.querySelector('.tl-no').textContent;
-      title.textContent = it.getAttribute('data-title') || it.querySelector('.tl-name').textContent;
-      body.textContent = it.querySelector('.tl-body').textContent;
-      badge.textContent = 'Track ' + n;
-      counter.textContent = n;
-    }
-    function stop() { if (timer) { clearInterval(timer); timer = null; } }
-    function start() { if (REDUCE) return; stop(); timer = setInterval(function () { show((cur + 1) % items.length); }, 4000); }
-    items.forEach(function (el, i) {
-      el.addEventListener('click', function () { show(i); stop(); start(); });
-      el.addEventListener('mouseenter', stop);
-      el.addEventListener('mouseleave', start);
-    });
-    show(0); start();
-  })();
-
   // GSAP-driven layer: scroll reveals + stat count-up. Enhances already-visible content only.
   // Deferred GSAP is ready by DOMContentLoaded.
   window.addEventListener('DOMContentLoaded', function () {
     if (REDUCE || !window.gsap || !window.ScrollTrigger) return;
     gsap.registerPlugin(ScrollTrigger);
 
-    // 1. section reveal — gsap.from so the natural (visible) state is the fallback
+    // 1. section reveal: gsap.from so the natural (visible) state is the fallback
     gsap.utils.toArray('section').forEach(function (sec) {
-      var items = sec.querySelectorAll('.lc, .stat, .chip, .step, .transcript, .meet ul li, .faq details, h2, .kicker, .sub, .ba-arrow');
+      var items = sec.querySelectorAll('.lc, .stat, .shot, .tl-item, .pt, .step, .ticket, .vs, .term, .who li, .faq details, h2, .kicker, .sub, .ba-arrow');
       gsap.from(items.length ? items : [sec], {
-        y: 26, opacity: 0, duration: .6, ease: 'power2.out', stagger: .05,
+        y: 22, opacity: 0, duration: .55, ease: 'power2.out', stagger: .04,
         immediateRender: false, // never pre-hide: opacity:0 is applied only when the trigger fires
+        clearProps: 'transform,opacity',
         scrollTrigger: { trigger: sec, start: 'top 82%', once: true }
       });
     });
@@ -1093,9 +1197,13 @@
   });
 </script>
 <script>
-  // ponytail: single place for the Dodo checkout link; ck replaces DODO_PRODUCT_ID once.
+  // Single place for the Dodo checkout link; ck replaces DODO_PRODUCT_ID once.
+  // While it is still the placeholder, every Buy control stays hidden and the neutral line shows instead.
   const BUY_URL = 'https://checkout.dodopayments.com/buy/DODO_PRODUCT_ID?redirect_url=https://charandeepkapoor.com/openwispr/thanks';
-  document.querySelectorAll('[data-buy]').forEach(a => a.href = BUY_URL);
+  const BUY_ID = (BUY_URL.match(/\/buy\/([^?]+)/) || [])[1] || '';
+  const BUY_READY = /^pdt_[A-Za-z0-9]{6,}$/.test(BUY_ID);
+  document.querySelectorAll('[data-buy]').forEach(a => { a.hidden = !BUY_READY; if (BUY_READY) a.href = BUY_URL; });
+  document.querySelectorAll('[data-buy-pending]').forEach(el => { el.hidden = BUY_READY; });
 </script>
 </body>
 </html>
