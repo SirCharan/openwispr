@@ -3,6 +3,8 @@
 Notable changes to OpenWispr (formerly Whispr), newest first.
 
 ## 0.20.0
+- Meetings: real speaker names from the Meet extension (0.2.0) applied live per line, system audio that retries for the whole call and after screen wake, a "No audio from the call" banner, auto-stop 10 s after you leave the call, honest stats (active speaking time, 2 s turn gap, interruptions per hour) and a summary with Topics, Decisions and Action items (owner, due date, timestamp).
+- Security: `openwispr://` links that start dictation or a meeting or add to the dictionary now ask first unless they come from the `openwispr` command; dictionary values with control characters are refused. The Meet listener answers only `https://meet.google.com` and refuses bodies over 64 KB with 413.
 - Canonical site is charandeepkapoor.com/openwispr.
 - Move to Applications offer when launched from a disk image or Downloads (strips quarantine, relaunches), and a What's New sheet on the first launch of each version; the first Developer ID build also notes the one-time Microphone, Accessibility and Screen Recording re-grant.
 - Agent skill: `openwispr skill install` copies the bundled `openwispr-agent` skill into `~/.claude/skills/` so Claude can read your history and meetings through the CLI.

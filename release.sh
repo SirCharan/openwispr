@@ -42,7 +42,10 @@ SCRATCH="$(mktemp -d)"; trap 'rm -rf "$SCRATCH"' EXIT
 cp build/OpenWispr.zip "$SCRATCH/"; cp "$NOTES" "$SCRATCH/OpenWispr.md"
 GEN=.build/artifacts/sparkle/Sparkle/bin/generate_appcast
 "$GEN" --download-url-prefix "$PFX/" --embed-release-notes "$SCRATCH"
-python3 Tools/merge_appcast_item.py --existing web/appcast.xml --generated "$SCRATCH/appcast.xml" \
+# A dry run merges into a scratch copy so the real feed never holds an unreleased build.
+FEED=web/appcast.xml
+if [ "$DRY" = "--dry-run" ]; then FEED="$SCRATCH/feed.xml"; [ ! -f web/appcast.xml ] || cp web/appcast.xml "$FEED"; fi
+python3 Tools/merge_appcast_item.py --existing "$FEED" --generated "$SCRATCH/appcast.xml" \
   --build "$BUILD" --url "$PFX/OpenWispr.zip"
 
 SHA="$(shasum -a 256 build/OpenWispr.zip | cut -d' ' -f1)"
