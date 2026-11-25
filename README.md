@@ -135,7 +135,7 @@ State changes go through the running app via URLs, which also work from Shortcut
 
 ## Pricing and trial
 
-The first launch after onboarding starts a 7-day trial with everything on. When it ends, dictation and meetings pause (history, transcripts and summaries stay usable) until you add a license. Then $49 once for a lifetime license on up to 3 Macs, sold through Dodo Payments. The source stays MIT: anyone can build it, and a local `./build_app.sh` build is marked `OWSourceBuild` and skips the license gate; only the signed release build (`release.sh`) enforces it. After purchase, `web/thanks.html` shows the key and an "Activate in OpenWispr" link. To set up checkout, replace `DODO_PRODUCT_ID` in the `BUY_URL` constant at the bottom of `web/index.html`.
+The first launch after onboarding starts a 7-day trial with everything on. When it ends, dictation and meetings pause (history, transcripts and summaries stay usable) until you add a license. Then $15 once for a lifetime license on up to 3 Macs, sold through Dodo Payments. The source stays MIT: anyone can build it, and a local `./build_app.sh` build is marked `OWSourceBuild` and skips the license gate; only the signed release build (`release.sh`) enforces it. After purchase, `web/thanks.html` shows the key and an "Activate in OpenWispr" link. To set up checkout, replace `DODO_PRODUCT_ID` in the `BUY_URL` constant at the bottom of `web/index.html`.
 
 ## Releasing
 

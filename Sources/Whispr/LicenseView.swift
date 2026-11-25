@@ -115,7 +115,7 @@ struct BuyCard: View {
     var body: some View {
         PaperCard {
             VStack(alignment: .leading, spacing: Brand.s8) {
-                Text("OpenWispr · $49 once").font(Brand.heading).foregroundStyle(Brand.text)
+                Text("OpenWispr · $15 once").font(Brand.heading).foregroundStyle(Brand.text)
                 Text("Lifetime updates, up to 3 Macs. The source stays MIT on GitHub; the signed build needs a license.")
                     .font(Brand.body).foregroundStyle(Brand.muted).fixedSize(horizontal: false, vertical: true)
                 PaperButton(title: "Buy a license", role: .primary) { NSWorkspace.shared.open(LicenseManager.buyURL) }
@@ -133,7 +133,7 @@ struct TrialBanner: View {
                     .foregroundStyle(license.state.isOK ? Brand.muted : Brand.warn)
                 Text(license.state.headline).font(Brand.body).foregroundStyle(Brand.text).lineLimit(2)
                 Spacer(minLength: 8)
-                PaperButton(title: "Buy $49", role: .primary) { NSWorkspace.shared.open(LicenseManager.buyURL) }
+                PaperButton(title: "Buy $15", role: .primary) { NSWorkspace.shared.open(LicenseManager.buyURL) }
                 PaperButton(title: "Enter key") { LicenseManager.openPane() }
             }
             .padding(.horizontal, Brand.s16).padding(.vertical, Brand.s8)
