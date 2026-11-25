@@ -133,19 +133,24 @@ final class MeetRosterServer {
             var buf = buf
             if let data { buf.append(data) }
             switch Self.parse(buf) {
-            case .need where err == nil && !done && buf.count < 80_000: self.read(c, buf)
+            case .need where err == nil && !done && buf.count <= Self.maxHead + Self.maxBody: self.read(c, buf)
             case .request(let method, let path, let body, let origin):
                 self.reply(c, method: method, path: path, body: body, origin: origin)
+            case .tooLarge:
+                Log.app.info("meet-ext: rejected oversized body")
+                self.send(c, "HTTP/1.1 413 Content Too Large\r\n")
             default: self.send(c, "HTTP/1.1 400 Bad Request\r\n")
             }
         }
     }
 
-    enum Parsed { case need, bad, request(String, String, Data, String?) }
+    enum Parsed { case need, bad, tooLarge, request(String, String, Data, String?) }
+    /// Roster posts are a few KB; anything past these caps is refused before the body is read.
+    nonisolated static let maxHead = 16_384, maxBody = 65_536
 
-    /// Pure. Minimal HTTP/1.1: request line, headers to CRLFCRLF, Content-Length body (≤64 KB).
+    /// Pure. Minimal HTTP/1.1: request line, headers to CRLFCRLF, Content-Length body (≤64 KB, else 413).
     nonisolated static func parse(_ buf: Data) -> Parsed {
-        guard let end = buf.range(of: Data("\r\n\r\n".utf8)) else { return buf.count > 16_384 ? .bad : .need }
+        guard let end = buf.range(of: Data("\r\n\r\n".utf8)) else { return buf.count > maxHead ? .bad : .need }
         let head = String(decoding: buf[..<end.lowerBound], as: UTF8.self)
         let lines = head.components(separatedBy: "\r\n")
         let parts = (lines.first ?? "").split(separator: " ")
@@ -157,7 +162,8 @@ final class MeetRosterServer {
             if kv.count == 2, kv[0].lowercased() == "content-length" { len = Int(kv[1]) ?? -1 }
             if kv.count == 2, kv[0].lowercased() == "origin" { origin = kv[1] }
         }
-        guard len >= 0, len <= 65_536 else { return .bad }
+        guard len >= 0 else { return .bad }
+        guard len <= maxBody else { return .tooLarge }
         let body = buf[end.upperBound...]
         if body.count < len { return .need }
         return .request(String(parts[0]), String(parts[1]), Data(body.prefix(len)), origin)
@@ -297,7 +303,16 @@ final class MeetRosterServer {
         }
         try? await Task.sleep(for: .milliseconds(100))
         precondition(!s.timeline.roster.contains("Evil"), "refused origin reached the timeline")
-        if case .bad = parse(Data("POST /meet HTTP/1.1\r\nContent-Length: 70000\r\n\r\n".utf8)) {} else { preconditionFailure("oversize body") }
+        if case .tooLarge = parse(Data("POST /meet HTTP/1.1\r\nContent-Length: 70000\r\n\r\n".utf8)) {} else { preconditionFailure("oversize body") }
+        if case .bad = parse(Data("POST /meet HTTP/1.1\r\nContent-Length: -1\r\n\r\n".utf8)) {} else { preconditionFailure("negative length") }
+        // Live: an over-cap body from the allowed Origin is refused with 413 and never reaches the timeline.
+        var big = req; big.httpMethod = "POST"; big.setValue(allowedOrigin, forHTTPHeaderField: "Origin")
+        big.httpBody = Data(#"{"v":1,"event":"roster","meeting":"x","participants":[{"name":"Big","speaking":true}],"pad":""#.utf8)
+            + Data(repeating: 0x61, count: maxBody) + Data(#""}"#.utf8)
+        let (_, br) = try! await URLSession.shared.data(for: big)
+        precondition((br as? HTTPURLResponse)?.statusCode == 413, "oversize body not 413")
+        try? await Task.sleep(for: .milliseconds(100))
+        precondition(!s.timeline.roster.contains("Big"), "oversize body reached the timeline")
         s.stop()
         // Payload with and without `self`; the flag names the local user.
         s.handle(Data(#"{"v":1,"event":"roster","meeting":"x","participants":[{"name":"Me","speaking":false,"self":true},{"name":"A","speaking":true}]}"#.utf8))
