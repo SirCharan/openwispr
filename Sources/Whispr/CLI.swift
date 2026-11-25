@@ -37,7 +37,7 @@ enum CLI {
 
     /// Entry point for `--cli …`; `transcribe` is handled by the caller (it needs the model).
     static func main(_ args: [String]) -> Int32 {
-        let (code, json) = run(args, opener: open, appRunning: isAppRunning)
+        let (code, json) = run(args, opener: open, appRunning: isAppRunning, token: URLRouter.sharedToken())
         print(json)
         return code
     }
@@ -58,7 +58,13 @@ enum CLI {
 
     private static let iso = ISO8601DateFormatter()
 
-    static func run(_ args: [String], opener: (URL) -> Void, appRunning: () -> Bool) -> (code: Int32, json: String) {
+    /// `token` (the shared URL secret) marks the app-bound URLs as ours so the app does not ask the user.
+    static func run(_ args: [String], opener: (URL) -> Void, appRunning: () -> Bool, token: String? = nil) -> (code: Int32, json: String) {
+        func signed(_ c: URLComponents) -> URL {
+            var c = c
+            if let token { c.queryItems = (c.queryItems ?? []) + [URLQueryItem(name: "t", value: token)] }
+            return c.url!
+        }
         let cmd = args.prefix(2).joined(separator: " ")
         func ok(_ data: Any?) -> (Int32, String) { (0, envelope(cmd, data: data)) }
         func fail(_ msg: String) -> (Int32, String) { (1, envelope(cmd, error: msg)) }
@@ -120,14 +126,14 @@ enum CLI {
             if appRunning() {
                 var c = URLComponents(string: "openwispr://dictionary/add")!
                 c.queryItems = [URLQueryItem(name: "term", value: term)] + (replace.map { [URLQueryItem(name: "replace", value: $0)] } ?? [])
-                opener(c.url!)
+                opener(signed(c))
             } else {
                 addToDictionary(term: term, replace: replace)
             }
             return ok(["added": term, "replace": replace ?? NSNull(), "viaApp": appRunning()])
         case "dictation", "meeting":
             guard let sub = args.dropFirst().first, sub == "start" || sub == "stop" else { return fail("usage: \(args[0]) start|stop") }
-            opener(URL(string: "openwispr://\(args[0])/\(sub)")!)
+            opener(signed(URLComponents(string: "openwispr://\(args[0])/\(sub)")!))
             return ok(["requested": sub])
         default:
             return fail("unknown command; run `openwispr spec`")
@@ -153,8 +159,9 @@ enum CLI {
         let stamp = "2026-11-03T08-13-04"
         try? "Duration: 1:05 · You · Speaker A\n\n[0:28] **You**: hi\n".write(to: MeetingArchive.fileURL(stamp: stamp), atomically: true, encoding: .utf8)
 
+        let tok = String(repeating: "0f", count: 32)
         func call(_ s: String, running: Bool = true) -> [String: Any] {
-            let (code, json) = run(s.split(separator: " ").map(String.init), opener: { opened.append($0.absoluteString) }, appRunning: { running })
+            let (code, json) = run(s.split(separator: " ").map(String.init), opener: { opened.append($0.absoluteString) }, appRunning: { running }, token: tok)
             let o = (try? JSONSerialization.jsonObject(with: Data(json.utf8))) as? [String: Any] ?? [:]
             precondition(["ok", "command", "data", "meta", "error"].allSatisfy { o[$0] != nil }, "CLI envelope shape failed: \(s)")
             precondition((o["meta"] as? [String: Any])?["version"] is String, "CLI meta.version missing: \(s)")
@@ -171,12 +178,16 @@ enum CLI {
         precondition((call("meetings list")["data"] as? [Any])?.count == 1, "CLI meetings list failed")
         precondition(((call("meetings get \(stamp)")["data"] as? [String: Any])?["lines"] as? [Any])?.count == 1, "CLI meetings get failed")
         precondition(call("dictionary add Kubernetes --replace k8s")["ok"] as? Bool == true
-                     && opened.last == "openwispr://dictionary/add?term=Kubernetes&replace=k8s", "CLI dictionary add failed: \(opened)")
-        precondition(call("dictation start")["ok"] as? Bool == true && opened.last == "openwispr://dictation/start", "CLI dictation start failed")
-        precondition(call("dictation stop")["ok"] as? Bool == true && opened.last == "openwispr://dictation/stop", "CLI dictation stop failed")
-        precondition(call("meeting start")["ok"] as? Bool == true && opened.last == "openwispr://meeting/start", "CLI meeting start failed")
-        precondition(call("meeting stop")["ok"] as? Bool == true && opened.last == "openwispr://meeting/stop", "CLI meeting stop failed")
+                     && opened.last == "openwispr://dictionary/add?term=Kubernetes&replace=k8s&t=\(tok)", "CLI dictionary add failed: \(opened)")
+        precondition(call("dictation start")["ok"] as? Bool == true && opened.last == "openwispr://dictation/start?t=\(tok)", "CLI dictation start failed")
+        precondition(call("dictation stop")["ok"] as? Bool == true && opened.last == "openwispr://dictation/stop?t=\(tok)", "CLI dictation stop failed")
+        precondition(call("meeting start")["ok"] as? Bool == true && opened.last == "openwispr://meeting/start?t=\(tok)", "CLI meeting start failed")
+        precondition(call("meeting stop")["ok"] as? Bool == true && opened.last == "openwispr://meeting/stop?t=\(tok)", "CLI meeting stop failed")
         precondition(call("bogus")["ok"] as? Bool == false, "CLI unknown command failed")
+        // The secret rides as `t`; an `&` in a term cannot smuggle a second query item.
+        _ = call("dictionary add a&replace=evil")
+        precondition(URLRouter.parse(opened.last!) == .dictionaryAdd(term: "a&replace=evil", replace: nil)
+                     && URLRouter.token(in: opened.last!) == tok, "CLI query injection failed: \(opened.last!)")
         print("CLI.selfTest PASS (\(commands.count) commands)")
     }
 }

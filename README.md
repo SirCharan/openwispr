@@ -131,7 +131,7 @@ openwispr dictionary add Kubernetes --replace k8s
 openwispr dictation start|stop      openwispr meeting start|stop
 ```
 
-State changes go through the running app via URLs, which also work from Shortcuts ("Open URL") and scripts: `openwispr://dictation/start|stop`, `openwispr://meeting/start|stop`, `openwispr://open/Meetings`, `openwispr://dictionary/add?term=X&replace=Y`.
+State changes go through the running app via URLs, which also work from Shortcuts ("Open URL") and scripts: `openwispr://dictation/start|stop`, `openwispr://meeting/start|stop`, `openwispr://open/Meetings`, `openwispr://dictionary/add?term=X&replace=Y`. A start or dictionary link from Shortcuts, a script or a web page asks you first; the `openwispr` command does not, because it signs its links with a secret only local processes can read.
 
 ## Pricing and trial
 
