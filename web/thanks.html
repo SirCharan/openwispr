@@ -73,7 +73,7 @@
   </ol>
 </div>
 <script>
-  const q = new URLSearchParams(location.search), key = (q.get('license_key') || '').trim();
+  const q = new URLSearchParams(location.search), key = (q.get('license_key') || '').split(',')[0].trim();
   const show = (id) => document.getElementById(id).classList.remove('hide');
   if (key) {
     document.getElementById('key').textContent = key;

@@ -74,7 +74,7 @@ final class LicenseManager: ObservableObject {
     }
 
     func activate(key: String) async {
-        let k = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        let k = LicenseClient.firstKey(key)
         guard !k.isEmpty else { return }
         busy = true; error = nil
         defer { busy = false; refresh() }

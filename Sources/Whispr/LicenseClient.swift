@@ -30,6 +30,11 @@ enum LicenseClient {
         return (data, error(forStatus: http.statusCode))
     }
 
+    /// Dodo's redirect and email can carry several keys joined by commas; the app uses the first.
+    static func firstKey(_ s: String) -> String {
+        (s.split(separator: ",").first.map(String.init) ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     /// Returns the instance id (`lki_…`).
     static func activate(key: String) async -> Result<String, LicenseError> {
         let (data, err) = await post("licenses/activate", ["license_key": key, "name": Host.current().localizedName ?? "Mac"])
@@ -70,6 +75,8 @@ enum LicenseClient {
     }
 
     static func selfTest() {
+        Fixtures.expectEqual(firstKey(" a-1 ,b-2"), "a-1", "first of joined keys")
+        Fixtures.expectEqual(firstKey("a-1\n"), "a-1", "single key trimmed")
         Fixtures.expectEqual(error(forStatus: 200), nil, "status 200")
         Fixtures.expectEqual(error(forStatus: 403), .revoked, "status 403")
         Fixtures.expectEqual(error(forStatus: 404), .invalid, "status 404")
