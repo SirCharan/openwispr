@@ -4,6 +4,17 @@
         <title>OpenWispr</title>
         <!-- Items are added by generate_appcast or the release script -->
         <item>
+            <title>0.20.1</title>
+            <pubDate>Thu, 26 Nov 2026 12:40:03 +0530</pubDate>
+            <sparkle:version>2001</sparkle:version>
+            <sparkle:shortVersionString>0.20.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[- The license is one Mac per key, not three. The text in the app, on the site and in the terms said three; it now says one. To move a key, choose Deactivate this Mac in the License pane, then activate on the other Mac.
+]]></description>
+            <enclosure url="https://github.com/SirCharan/openwispr/releases/download/v0.20.1/OpenWispr.zip" length="6001482" type="application/octet-stream" sparkle:edSignature="j5knQ6QK5a37cPhqhSM8IqDe3f1YE57Ubuo+rVuFFVLwixZwkJKk8m6+UE/xRWlAKyGEUpy5vnJsqmqouYZoCg=="/>
+        </item>
+        <item>
             <title>0.20.0</title>
             <pubDate>Thu, 26 Nov 2026 12:30:07 +0530</pubDate>
             <sparkle:version>2000</sparkle:version>
