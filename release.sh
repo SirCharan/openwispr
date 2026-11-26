@@ -62,5 +62,5 @@ gh release create "v$VER" build/OpenWispr.zip build/OpenWispr.dmg --notes-file "
 for a in zip dmg; do curl -fsIL -o /dev/null "$PFX/OpenWispr.$a" || { echo "ERROR: $a not downloadable; appcast not pushed"; exit 1; }; done
 git add web/appcast.xml && git commit -m "appcast: $VER"
 git push origin master
-(cd web && vercel --prod --yes)
+(cd web && vercel --prod --yes) || echo "vercel CLI deploy skipped; the master push auto-deploys web/. Check /appcast.xml."
 echo "Update the tap: copy packaging/openwispr.rb to SirCharan/homebrew-openwispr Casks/openwispr.rb and push."
