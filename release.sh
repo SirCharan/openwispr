@@ -53,9 +53,14 @@ sed -i '' -e "s/^  version \".*\"/  version \"$VER\"/" -e "s/^  sha256 \".*\"/  
 
 if [ "$DRY" = "--dry-run" ]; then echo "dry run done: zip, dmg, appcast item, cask sha $SHA"; exit 0; fi
 
+# Assets go live before the feed: release commit without the appcast, GitHub release, then the appcast commit.
 git add -A && git reset -q build target .build .grind.log 2>/dev/null || true
+git reset -q -- web/appcast.xml
 git commit -m "chore: release $VER"
 git push origin master
-gh release create "v$VER" build/OpenWispr.zip build/OpenWispr.dmg --notes-file "$NOTES"
+gh release create "v$VER" build/OpenWispr.zip build/OpenWispr.dmg --notes-file "$NOTES" --target "$(git rev-parse HEAD)"
+for a in zip dmg; do curl -fsIL -o /dev/null "$PFX/OpenWispr.$a" || { echo "ERROR: $a not downloadable; appcast not pushed"; exit 1; }; done
+git add web/appcast.xml && git commit -m "appcast: $VER"
+git push origin master
 (cd web && vercel --prod --yes)
 echo "Update the tap: copy packaging/openwispr.rb to SirCharan/homebrew-openwispr Casks/openwispr.rb and push."

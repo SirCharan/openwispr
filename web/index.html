@@ -338,7 +338,7 @@
   /* ---------- tablet ---------- */
   @media (max-width: 900px) {
     .nav-link.wide { display: none; }
-    .proof { grid-template-columns: 1fr; gap: var(--s6); }
+    .proof { grid-template-columns: minmax(0, 1fr); gap: var(--s6); }
     .jcard { column-gap: var(--s6); }
     .points { grid-template-columns: repeat(2, 1fr); }
     .dev { grid-template-columns: 1fr; gap: var(--s6); }
@@ -433,7 +433,7 @@
 <div class="wrap">
 
   <header class="hero">
-    <p class="hero-meta"><b>v0.19.0</b> · on-device · pay once<span class="hm-wide"> · MIT source</span></p>
+    <p class="hero-meta"><b>v0.20.0</b> · on-device · pay once<span class="hm-wide"> · MIT source</span></p>
     <h1>Talk.<br /><em>It types.</em></h1>
     <p class="lede">Hold a key, speak, and the text lands at your cursor. <b>Dictation and meeting transcripts that run on your Mac.</b></p>
 
@@ -469,7 +469,6 @@
         <button class="copy" type="button" data-copy="install-cmd" aria-live="polite">Copy</button>
       </div>
       <p class="quiet">No card needed · $15 once if you keep it · MIT licensed · macOS 14+ · Apple Silicon · also as <a class="tap" href="https://github.com/SirCharan/openwispr/releases/latest/download/OpenWispr.zip">.zip</a></p>
-      <p class="ver-note">Today's download is v0.19.0. It has no licence check and no time limit. The 7-day trial starts with 0.20, the next release.</p>
     </div>
   </header>
 
@@ -716,7 +715,7 @@
 
   <section>
     <h2>The app behind the key.</h2>
-    <p class="sub">Every dictation is saved on your Mac and searchable. These are real windows from v0.19.0, filled with sample data.</p>
+    <p class="sub">Every dictation is saved on your Mac and searchable. These are real windows from OpenWispr, filled with sample data.</p>
     <figure class="shot">
       <img src="https://charandeepkapoor.com/openwispr/shots/app-light-dictations.jpg" width="1600" height="1120" loading="lazy" decoding="async"
         alt="The OpenWispr Dictations window: a sidebar, five totals across the top including day streak and average words per minute, a search field, and today's dictations listed with their times." />
@@ -739,7 +738,6 @@
   <section id="features">
     <div class="kicker">Features</div>
     <h2 class="xl">Twelve things, done right.</h2>
-    <p class="sub">Tracks marked <span class="soon" style="margin-left:0">in 0.20</span> are built and arrive with the next release. Everything else is in today's download.</p>
     <div class="jcard">
       <div class="side">
         <div class="side-h"><b>Side A</b><span>Dictation</span></div>
@@ -782,19 +780,19 @@
             <p class="tl-body">Turn dictation off per app, switch sound cues on or off, and pick the light or dark theme.</p>
           </li>
           <li class="tl-item">
-            <span class="tl-no">09</span><span class="tl-name">Hands-free and recovery <span class="soon">in 0.20</span></span>
+            <span class="tl-no">09</span><span class="tl-name">Hands-free and recovery</span>
             <p class="tl-body">Double-tap the trigger to dictate until the next tap. The pill warns "Mic is silent". A failed dictation is kept so you can retry it.</p>
           </li>
           <li class="tl-item">
-            <span class="tl-no">10</span><span class="tl-name">Agent skill and CLI <span class="soon">in 0.20</span></span>
+            <span class="tl-no">10</span><span class="tl-name">Agent skill and CLI</span>
             <p class="tl-body">An <code>openwispr</code> command with JSON output, and a skill that lets a coding agent read your history. <a class="tap" href="#developers">See Developers.</a></p>
           </li>
           <li class="tl-item">
-            <span class="tl-no">11</span><span class="tl-name">Updates in the app <span class="soon">in 0.20</span></span>
+            <span class="tl-no">11</span><span class="tl-name">Updates in the app</span>
             <p class="tl-body">New versions arrive inside the app through Sparkle. Check from the menu, or let it check by itself.</p>
           </li>
           <li class="tl-item">
-            <span class="tl-no">12</span><span class="tl-name">Ready at login <span class="soon">in 0.20</span></span>
+            <span class="tl-no">12</span><span class="tl-name">Ready at login</span>
             <p class="tl-body">Launch at login is on by default, and the speech model loads faster after its first run.</p>
           </li>
         </ol>
@@ -851,24 +849,24 @@
     <figure class="shot">
       <img src="https://charandeepkapoor.com/openwispr/shots/app-light-meetings.jpg" width="1600" height="1120" loading="lazy" decoding="async"
         alt="The OpenWispr Meetings window: a past meeting in the list, totals for duration, questions per hour, fillers per minute and interruptions, talk share for three speakers, and a timestamped transcript labelled by speaker." />
-      <figcaption>A sample meeting in v0.19.0. Talk share per speaker on top, the transcript below.</figcaption>
+      <figcaption>A sample meeting. Talk share per speaker on top, the transcript below.</figcaption>
     </figure>
     <ul class="points">
       <li class="pt"><b>Offers to record</b>It spots a Zoom, Google Meet or Teams call and asks "Start recording?". You can say yes once, or always for that app.</li>
       <li class="pt"><b>Real speaker names</b>Zoom names are read through Accessibility. Google Meet names come from a small Chrome extension that ships with the app and is loaded unpacked. Other calls get Speaker A, B and so on.</li>
       <li class="pt"><b>Per-meeting stats</b>Talk share, pace, turns and longest monologue for each speaker, plus questions and interruptions for the call.</li>
-      <li class="pt"><b>Summaries</b>Today a summary uses a local Ollama model or your own OpenAI or OpenRouter key. <span class="soon" style="margin-left:0">in 0.20</span> Macs with Apple Intelligence on macOS 26 summarise on-device with no setup.</li>
-      <li class="pt"><b>Stops by itself <span class="soon">in 0.20</span></b>On Google Meet, recording stops about 10 seconds after you leave. Any call stops after 10 minutes of silence.</li>
-      <li class="pt"><b>Warns on a silent call <span class="soon">in 0.20</span></b>If you are talking and nothing arrives from the other side, a banner says "No audio from the call is being captured".</li>
+      <li class="pt"><b>Summaries</b>A summary uses a local Ollama model or your own OpenAI or OpenRouter key. Macs with Apple Intelligence on macOS 26 summarise on-device with no setup.</li>
+      <li class="pt"><b>Stops by itself</b>On Google Meet, recording stops about 10 seconds after you leave. Any call stops after 10 minutes of silence.</li>
+      <li class="pt"><b>Warns on a silent call</b>If you are talking and nothing arrives from the other side, a banner says "No audio from the call is being captured".</li>
     </ul>
   </section>
 
   <section id="developers">
     <div class="dev">
       <div>
-        <div class="kicker">Developers <span class="soon">in 0.20</span></div>
+        <div class="kicker">Developers</div>
         <h2>Your transcripts, on the command line.</h2>
-        <p class="sub">The app ships an <code>openwispr</code> command. It arrives with 0.20, the next release.</p>
+        <p class="sub">The app ships an <code>openwispr</code> command.</p>
         <ul class="dev-list">
           <li><b>JSON by default.</b> Every command prints one JSON envelope, so scripts and agents can read it.</li>
           <li><b>Agent skill.</b> <code>openwispr skill install</code> copies a skill into <code>~/.claude/skills</code>, so a coding agent can read your dictation and meeting history through the CLI.</li>
@@ -909,7 +907,7 @@
           <a class="btn" href="https://github.com/SirCharan/openwispr/releases/latest/download/OpenWispr.dmg">Try it free for 7 days</a>
           <a class="buy" data-buy hidden href="#pricing">Buy a licence · $15</a>
         </div>
-        <p class="pending" data-buy-pending>Checkout opens with the 0.20 release. Today's download, v0.19.0, runs without a licence.</p>
+        <p class="pending">Tax, if any, is shown at checkout.</p>
       </div>
       <div class="t-stub">
         <p class="label">Early-bird codes</p>
@@ -951,7 +949,7 @@
         </tr>
         <tr role="row">
           <th scope="row" role="rowheader">Free to start</th>
-          <td role="cell" class="us" data-who="OpenWispr">7-day trial<small>Starts with 0.20. Today's v0.19.0 has no limit.</small></td>
+          <td role="cell" class="us" data-who="OpenWispr">7-day trial<small>Free for 7 days from first launch. No card.</small></td>
           <td role="cell" data-who="Wispr Flow">Free tier<small>With a weekly word limit.</small></td>
         </tr>
       </tbody>
@@ -1004,7 +1002,7 @@
       </details>
       <details>
         <summary>How does the trial work, and what happens when it ends?<span class="chev" aria-hidden="true">›</span></summary>
-        <div class="a">The trial arrives with 0.20. It runs for 7 days from first launch and needs no card. When it ends, OpenWispr will not start a new dictation or meeting until you enter a licence key. The app still opens, and everything you already captured stays readable. Today's download, v0.19.0, has no licence check at all.</div>
+        <div class="a">The trial runs for 7 days from first launch and needs no card. When it ends, OpenWispr will not start a new dictation or meeting until you enter a licence key. The app still opens, and everything you already captured stays readable.</div>
       </details>
       <details>
         <summary>Are there early-bird codes?<span class="chev" aria-hidden="true">›</span></summary>
@@ -1016,7 +1014,7 @@
       </details>
       <details>
         <summary>Does any audio or text leave my Mac?<span class="chev" aria-hidden="true">›</span></summary>
-        <div class="a">Your audio, transcripts and history stay on the Mac. There is no account and no analytics in the app. What does use the network: the one-time speech model download and, from 0.20, the update check and the licence check, which sends your key and the Mac's name to the payment provider. Text goes to an AI provider only if you add your own API key. The <a class="tap" href="https://charandeepkapoor.com/openwispr/privacy">privacy page</a> lists all of it.</div>
+        <div class="a">Your audio, transcripts and history stay on the Mac. There is no account and no analytics in the app. What does use the network: the one-time speech model download, the update check and the licence check, which sends your key and the Mac's name to the payment provider. Text goes to an AI provider only if you add your own API key. The <a class="tap" href="https://charandeepkapoor.com/openwispr/privacy">privacy page</a> lists all of it.</div>
       </details>
       <details>
         <summary>Is the app signed?<span class="chev" aria-hidden="true">›</span></summary>
@@ -1024,7 +1022,7 @@
       </details>
       <details>
         <summary>Does it work offline?<span class="chev" aria-hidden="true">›</span></summary>
-        <div class="a">Yes. After the one-time model download of about 1.5&nbsp;GB, dictation and meeting transcripts need no network. From 0.20 the licence is re-checked every 7 days, with a 21-day grace period if you are offline.</div>
+        <div class="a">Yes. After the one-time model download of about 1.5&nbsp;GB, dictation and meeting transcripts need no network. The licence is re-checked every 7 days, with a 21-day grace period if you are offline.</div>
       </details>
       <details>
         <summary>Which Macs does it run on?<span class="chev" aria-hidden="true">›</span></summary>
@@ -1048,7 +1046,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
         Try it free for 7 days
       </a>
-      <p class="quiet">$15 once if you keep it · up to 3 Macs · MIT source · macOS 14+ · Apple Silicon <a class="buy tap" data-buy hidden href="#pricing" style="min-height:0;margin-left:6px">Buy a licence</a></p>
+      <p class="quiet">$15 once if you keep it, tax shown at checkout · up to 3 Macs · MIT source · macOS 14+ · Apple Silicon <a class="buy tap" data-buy hidden href="#pricing" style="min-height:0;margin-left:6px">Buy a licence</a></p>
     </div>
   </section>
 
@@ -1197,9 +1195,9 @@
   });
 </script>
 <script>
-  // Single place for the Dodo checkout link; ck replaces DODO_PRODUCT_ID once.
+  // Single place for the Dodo checkout link (live product).
   // While it is still the placeholder, every Buy control stays hidden and the neutral line shows instead.
-  const BUY_URL = 'https://checkout.dodopayments.com/buy/DODO_PRODUCT_ID?redirect_url=https://charandeepkapoor.com/openwispr/thanks';
+  const BUY_URL = 'https://checkout.dodopayments.com/buy/pdt_0Nsldx2KTXzQwxInGav79?quantity=1&redirect_url=https://charandeepkapoor.com/openwispr/thanks';
   const BUY_ID = (BUY_URL.match(/\/buy\/([^?]+)/) || [])[1] || '';
   const BUY_READY = /^pdt_[A-Za-z0-9]{6,}$/.test(BUY_ID);
   document.querySelectorAll('[data-buy]').forEach(a => { a.hidden = !BUY_READY; if (BUY_READY) a.href = BUY_URL; });

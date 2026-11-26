@@ -3,6 +3,7 @@
 Notable changes to OpenWispr (formerly Whispr), newest first.
 
 ## 0.20.0
+- Paid launch: OpenWispr is $15 once (tax shown at checkout), for up to 3 Macs, with a 7-day free trial that needs no card. Early-bird codes: EARLY20 (50% off, first 20 buyers) and EARLY50 (25% off, next 50). If you already run 0.19, your 7-day trial starts when this update installs. This build is self-signed, not notarized.
 - Meetings: real speaker names from the Meet extension (0.2.0) applied live per line, system audio that retries for the whole call and after screen wake, a "No audio from the call" banner, auto-stop 10 s after you leave the call, honest stats (active speaking time, 2 s turn gap, interruptions per hour) and a summary with Topics, Decisions and Action items (owner, due date, timestamp).
 - Security: `openwispr://` links that start dictation or a meeting or add to the dictionary now ask first unless they come from the `openwispr` command; dictionary values with control characters are refused. The Meet listener answers only `https://meet.google.com` and refuses bodies over 64 KB with 413.
 - Canonical site is charandeepkapoor.com/openwispr.
