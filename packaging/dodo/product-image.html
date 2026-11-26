@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8" />
+<title>OpenWispr product image</title>
+<!-- Render: python3 render.py (see README comment in render.py). Tokens copied from web/index.html. -->
+<link href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #F4EFE6; --text: #241F1A; --muted: #6B5F4E; --accent: #E2543E; --mascot: #F2B701;
+    --serif: "Young Serif", Georgia, serif;
+    --mono: "Space Mono", ui-monospace, Menlo, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { width: 100%; height: 100%; background: var(--bg); }
+  /* u = 1% of the shorter side, so the square and 16:9 canvases share one composition */
+  body { --u: min(1vw, 1vh); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .pac { width: calc(var(--u) * 27); height: auto; display: block; transform: scaleX(-1); }
+  /* mouth held open at the chomp animation's end pose (web/index.html chompTop/chompBottom) */
+  .jaw { transform-box: view-box; transform-origin: 60px 60px; }
+  .jaw.top { transform: rotate(-30deg); } .jaw.bottom { transform: rotate(30deg); }
+  h1 { font-family: var(--serif); font-weight: 400; font-size: calc(var(--u) * 12.5); line-height: 1; letter-spacing: -.01em;
+    color: var(--text); margin-top: calc(var(--u) * 4); }
+  h1 b { font-weight: 400; color: var(--accent); }
+  p { font-family: var(--mono); font-size: calc(var(--u) * 3.6); letter-spacing: .02em; color: var(--muted); margin-top: calc(var(--u) * 3.5); }
+</style></head>
+<body>
+  <svg class="pac" viewBox="0 0 120 120" style="--text:#241F1A">
+    <circle cx="60" cy="60" r="47" style="fill: var(--text)"/>
+    <path class="jaw top" d="M14 60 A46 46 0 0 0 106 60 L60 60 Z" style="fill: var(--mascot)"/>
+    <path class="jaw bottom" d="M14 60 A46 46 0 0 1 106 60 L60 60 Z" style="fill: var(--mascot)"/>
+    <circle class="eye" cx="60" cy="34" r="5.5" style="fill: var(--text)"/>
+  </svg>
+  <h1>Open<b>Wispr</b></h1>
+  <p>Talk. It types.</p>
+</body></html>
