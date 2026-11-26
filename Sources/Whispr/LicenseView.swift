@@ -116,7 +116,7 @@ struct BuyCard: View {
         PaperCard {
             VStack(alignment: .leading, spacing: Brand.s8) {
                 Text("OpenWispr · $15 once").font(Brand.heading).foregroundStyle(Brand.text)
-                Text("Lifetime updates, up to 3 Macs. The source stays MIT on GitHub; the signed build needs a license.")
+                Text("Lifetime updates, one Mac. The source stays MIT on GitHub; the signed build needs a license.")
                     .font(Brand.body).foregroundStyle(Brand.muted).fixedSize(horizontal: false, vertical: true)
                 PaperButton(title: "Buy a license", role: .primary) { NSWorkspace.shared.open(LicenseManager.buyURL) }
             }
@@ -209,7 +209,7 @@ struct LicensePane: View {
                 if license.state == .active || { if case .grace = license.state { true } else { false } }() {
                     PaperCard {
                         VStack(alignment: .leading, spacing: Brand.s8) {
-                            Text("This Mac is activated. Deactivate it to free a seat for another Mac.")
+                            Text("This Mac is activated. Deactivate it here to use the key on another Mac.")
                                 .font(Brand.body).foregroundStyle(Brand.muted)
                             PaperButton(title: license.busy ? "Deactivating…" : "Deactivate this Mac", role: .destructive) {
                                 Task { await license.deactivate() }

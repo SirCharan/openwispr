@@ -228,7 +228,7 @@ struct OnboardingView: View {
         stepShell(
             icon: "key.fill",
             title: "Try it free for 7 days",
-            body: "Then it's $15 once for up to 3 Macs. Everything you capture stays yours either way.",
+            body: "Then it's $15 once for one Mac. Everything you capture stays yours either way.",
             primary: ("Start 7-day trial", { license.startTrial(); model.step = .done }),
             secondary: showKeyEntry ? nil : ("I have a key", { showKeyEntry = true })
         ) {

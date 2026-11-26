@@ -1,6 +1,6 @@
 cask "openwispr" do
-  version "0.20.0"
-  sha256 "e69229656edb18969fa703bb29c38bc8eac9bd65983e5edd710a14543f22647a"
+  version "0.20.1"
+  sha256 "f8215e055e2d17cf3dfcc80a39c8deccc60be569e38024b0f019ab9e1b9fec72"
 
   url "https://github.com/SirCharan/openwispr/releases/download/v#{version}/OpenWispr.zip"
   name "OpenWispr"

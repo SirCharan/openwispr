@@ -2,8 +2,11 @@
 
 Notable changes to OpenWispr (formerly Whispr), newest first.
 
+## 0.20.1
+- The license is one Mac per key, not three. The text in the app, on the site and in the terms said three; it now says one. To move a key, choose Deactivate this Mac in the License pane, then activate on the other Mac.
+
 ## 0.20.0
-- Paid launch: OpenWispr is $15 once (tax shown at checkout), for up to 3 Macs, with a 7-day free trial that needs no card. Early-bird codes: EARLY20 (50% off, first 20 buyers) and EARLY50 (25% off, next 50). If you already run 0.19, your 7-day trial starts when this update installs. This build is self-signed, not notarized.
+- Paid launch: OpenWispr is $15 once (tax shown at checkout), for one Mac, with a 7-day free trial that needs no card. Early-bird codes: EARLY20 (50% off, first 20 buyers) and EARLY50 (25% off, next 50). If you already run 0.19, your 7-day trial starts when this update installs. This build is self-signed, not notarized.
 - Meetings: real speaker names from the Meet extension (0.2.0) applied live per line, system audio that retries for the whole call and after screen wake, a "No audio from the call" banner, auto-stop 10 s after you leave the call, honest stats (active speaking time, 2 s turn gap, interruptions per hour) and a summary with Topics, Decisions and Action items (owner, due date, timestamp).
 - Security: `openwispr://` links that start dictation or a meeting or add to the dictionary now ask first unless they come from the `openwispr` command; dictionary values with control characters are refused. The Meet listener answers only `https://meet.google.com` and refuses bodies over 64 KB with 413.
 - Canonical site is charandeepkapoor.com/openwispr.
@@ -12,7 +15,7 @@ Notable changes to OpenWispr (formerly Whispr), newest first.
 - Release builds can be signed with a Developer ID (hardened runtime) and notarized by `release.sh`; self-signed builds are marked NOT NOTARIZED.
 - Faster model load: prewarm runs only the first time a model loads on an OS build, so a warm turbo load drops from 1.9 s to 1.0 s. New `--load-test` reports load time, compute units and whether the ANE compile ran; a rebuild or a moved app does not recompile (the cache is keyed by OS build).
 - Launch at login is now on by default and re-registered at every launch unless you turn it off; a one-time hint points to System Settings → Login Items if macOS needs approval.
-- Landing page: pricing section ($15 once, 3 Macs, early-bird ladder), 0.20 features, honest signing note.
+- Landing page: pricing section ($15 once, one Mac, early-bird ladder), 0.20 features, honest signing note.
 - Thanks page after purchase (shows the license key, download, and one-click activate) and a Buy button on the landing page.
 - License core: 7-day trial, Dodo Payments activation with a 7-day re-check and 21-day offline grace, stored in the Keychain.
 - License pane, trial banner and onboarding step; dictation and meetings stop when the trial ends (everything already captured stays usable). `openwispr://license/activate?key=…` opens the pane with the key prefilled.

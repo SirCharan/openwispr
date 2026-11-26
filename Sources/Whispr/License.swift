@@ -49,7 +49,7 @@ enum LicenseError: Error, Equatable {
         switch self {
         case .invalid: return "That key isn't recognised. Check the email from Dodo Payments."
         case .revoked: return "This key has been disabled (refund or chargeback)."
-        case .activationLimit: return "This key is already active on 3 Macs. Deactivate one from its License pane."
+        case .activationLimit: return "This key is already active on another Mac. Open the License pane on that Mac and choose Deactivate this Mac, then activate it here."
         case .network: return "Can't reach the license server. Keep using OpenWispr; we'll retry."
         }
     }
