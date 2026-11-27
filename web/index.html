@@ -1184,6 +1184,12 @@
   const BUY_ID = (BUY_URL.match(/\/buy\/([^?]+)/) || [])[1] || '';
   const BUY_READY = /^pdt_[A-Za-z0-9]{6,}$/.test(BUY_ID);
   document.querySelectorAll('[data-buy]').forEach(a => { a.hidden = !BUY_READY; if (BUY_READY) a.href = BUY_URL; });
+  // Source tag: utm_source + utm_campaign from this page's URL, passed to checkout as metadata_src. Nothing is stored.
+  try {
+    const q = new URLSearchParams(location.search);
+    const tag = [q.get('utm_source'), q.get('utm_campaign')].filter(Boolean).join('-').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 40);
+    if (BUY_READY && tag) document.querySelectorAll('[data-buy]').forEach(a => { a.href = BUY_URL + '&metadata_src=' + tag; });
+  } catch (e) {}
   document.querySelectorAll('[data-buy-pending]').forEach(el => { el.hidden = BUY_READY; });
 </script>
 </body>
