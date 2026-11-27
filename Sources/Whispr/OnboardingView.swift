@@ -43,7 +43,7 @@ struct OnboardingView: View {
                     onContinue: { model.step = .practice }
                 )
                 case .practice: PracticeStep(model: model, hotkeyMode: hotkeyMode)
-                case .license: licenseStep
+                case .license: if license.sourceBuild { done } else { licenseStep }
                 case .done: done
                 }
             }

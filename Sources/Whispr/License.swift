@@ -144,6 +144,16 @@ extension License {
         isSourceBuild(info) || allows(action, in: state)
     }
 
+    /// Menu-bar license line. A source build never asks for a key, whatever stale state (e.g. 0.20 `trialExpired`) is stored.
+    static func menuTitle(_ state: LicenseState, sourceBuild: Bool) -> String {
+        if sourceBuild { return "Source build" }
+        switch state {
+        case .active, .grace: return "Licensed"
+        case .unlicensed: return "Enter license key…"
+        default: return "License needs attention…"
+        }
+    }
+
     // MARK: - Persistence (Keychain is the source of truth; UserDefaults mirrors it)
 
     private static let service = "org.openwispr.license"
@@ -242,6 +252,11 @@ extension License {
         Fixtures.expectEqual(allows(.dictate, in: .unlicensed, info: ["OWSourceBuild": false]), false, "OWSourceBuild=false blocks")
         Fixtures.expectEqual(allows(.dictate, in: .unlicensed, info: ["OWSourceBuild": "true"]), false, "non-bool marker blocks")
         Fixtures.expectEqual(allows(.meet, in: .active, info: nil), true, "absent marker allows active license")
+        // ck's Mac: source build with a stale 0.20 "trialExpired" mirror in defaults must stay usable and never ask for a key.
+        let stale = LicenseState(tag: "trialExpired") ?? .invalid
+        Fixtures.expectEqual(allows(.dictate, in: stale, info: ["OWSourceBuild": true]), true, "source build ignores stale trialExpired")
+        Fixtures.expectEqual(menuTitle(stale, sourceBuild: true), "Source build", "source build menu never asks for a key")
+        Fixtures.expectEqual(menuTitle(stale, sourceBuild: false), "Enter license key…", "release build asks for a key")
         LicenseClient.selfTest()
         print("License.selfTest ok (\(f.cases.count) cases)")
     }

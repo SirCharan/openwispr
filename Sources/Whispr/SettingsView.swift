@@ -49,9 +49,13 @@ struct SettingsView: View {
             PSection("Updates") {
                 let v = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
                 Text("OpenWispr \(v)").font(Brand.caption).foregroundStyle(Brand.muted)
-                Toggle("Check for updates automatically", isOn: $autoUpdate)
-                    .onChange(of: autoUpdate) { _, on in Updater.shared.updater.automaticallyChecksForUpdates = on }
-                Button("Check for Updates…") { Updater.shared.checkForUpdates() }
+                if Updater.disabled {
+                    Text("Source build: update by rebuilding from source.").font(Brand.caption).foregroundStyle(Brand.muted)
+                } else {
+                    Toggle("Check for updates automatically", isOn: $autoUpdate)
+                        .onChange(of: autoUpdate) { _, on in Updater.shared.updater.automaticallyChecksForUpdates = on }
+                    Button("Check for Updates…") { Updater.shared.checkForUpdates() }
+                }
             }
             PSection("Behavior") {
                 Toggle("Auto-paste at cursor (off = copy to clipboard only)", isOn: $autoPaste)

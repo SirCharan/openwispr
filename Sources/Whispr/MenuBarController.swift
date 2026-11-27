@@ -60,6 +60,7 @@ final class MenuBarController: NSObject {
         menu.addItem(settings)
         let update = NSMenuItem(title: "Check for Updates…", action: #selector(checkUpdates), keyEquivalent: "")
         update.target = self
+        update.isHidden = Updater.disabled
         menu.addItem(update)
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit OpenWispr", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
@@ -76,11 +77,7 @@ final class MenuBarController: NSObject {
     func refreshLicense() {
         let l = LicenseManager.shared
         l.refresh()
-        switch l.state {
-        case .active, .grace: licenseMenuItem.title = "Licensed"
-        case .unlicensed: licenseMenuItem.title = "Enter license key…"
-        default: licenseMenuItem.title = "License needs attention…"
-        }
+        licenseMenuItem.title = License.menuTitle(l.state, sourceBuild: l.sourceBuild)
     }
 
     @objc private func openSettings() { onSettings() }

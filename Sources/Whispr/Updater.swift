@@ -2,12 +2,14 @@ import AppKit
 import Sparkle
 
 /// Sparkle auto-update. The feed and EdDSA public key live in Info.plist.
+/// Source builds never update: the feed serves the release build, which would then demand a key.
 @MainActor
 final class Updater {
     static let shared = Updater()
-    private let controller = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
+    static let disabled = License.isSourceBuild(Bundle.main.infoDictionary)
+    private let controller = SPUStandardUpdaterController(startingUpdater: !disabled, updaterDelegate: nil, userDriverDelegate: nil)
     var updater: SPUUpdater { controller.updater }
-    func checkForUpdates() { controller.checkForUpdates(nil) }
+    func checkForUpdates() { if !Self.disabled { controller.checkForUpdates(nil) } }
 }
 
 /// Headless probe for `--update-test <feedURL>`: asks Sparkle whether the feed has a newer build.

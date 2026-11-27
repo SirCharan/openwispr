@@ -204,7 +204,9 @@ struct LicensePane: View {
                     }
                 }
                 }
-                if license.state == .active || { if case .grace = license.state { true } else { false } }() {
+                if license.sourceBuild {
+                    EmptyView()
+                } else if license.state == .active || { if case .grace = license.state { true } else { false } }() {
                     PaperCard {
                         VStack(alignment: .leading, spacing: Brand.s8) {
                             Text("This Mac is activated. Deactivate it here to use the key on another Mac.")
