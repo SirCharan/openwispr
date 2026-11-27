@@ -433,7 +433,7 @@
 <div class="wrap">
 
   <header class="hero">
-    <p class="hero-meta"><b>v0.20.0</b> · on-device · pay once<span class="hm-wide"> · MIT source</span></p>
+    <p class="hero-meta"><b>v0.21.0</b> · on-device · pay once<span class="hm-wide"> · MIT source</span></p>
     <h1>Talk.<br /><em>It types.</em></h1>
     <p class="lede">Hold a key, speak, and the text lands at your cursor. <b>Dictation and meeting transcripts that run on your Mac.</b></p>
 
@@ -460,15 +460,8 @@
     </div>
 
     <div class="cta">
-      <a class="btn" href="https://github.com/SirCharan/openwispr/releases/latest/download/OpenWispr.dmg">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
-        Try it free for 7 days
-      </a>
-      <div class="cmd">
-        <code id="install-cmd" tabindex="0" aria-label="Install command">curl -fsSL https://charandeepkapoor.com/openwispr/install.sh | sh</code>
-        <button class="copy" type="button" data-copy="install-cmd" aria-live="polite">Copy</button>
-      </div>
-      <p class="quiet">No card needed · $15 once if you keep it · MIT licensed · macOS 14+ · Apple Silicon · also as <a class="tap" href="https://github.com/SirCharan/openwispr/releases/latest/download/OpenWispr.zip">.zip</a></p>
+      <a class="btn" data-buy href="https://checkout.dodopayments.com/buy/pdt_0Nsldx2KTXzQwxInGav79?quantity=1&amp;redirect_url=https://charandeepkapoor.com/openwispr/thanks">Buy OpenWispr, $15 once</a>
+      <p class="quiet"><b>7-day money-back, no questions</b> · one Mac · MIT source · macOS 14+ · Apple Silicon</p>
     </div>
   </header>
 
@@ -904,10 +897,9 @@
         <p class="amt">$15 <span>once</span></p>
         <p>One licence for life, for one Mac. No subscription.</p>
         <div class="t-actions">
-          <a class="btn" href="https://github.com/SirCharan/openwispr/releases/latest/download/OpenWispr.dmg">Try it free for 7 days</a>
-          <a class="buy" data-buy hidden href="#pricing">Buy a licence · $15</a>
+          <a class="btn" data-buy href="https://checkout.dodopayments.com/buy/pdt_0Nsldx2KTXzQwxInGav79?quantity=1&amp;redirect_url=https://charandeepkapoor.com/openwispr/thanks">Buy OpenWispr, $15 once</a>
         </div>
-        <p class="pending">Tax, if any, is shown at checkout.</p>
+        <p class="pending"><b>7-day money-back, no questions.</b> Tax, if any, is shown at checkout.</p>
       </div>
       <div class="t-stub">
         <p class="label">Early-bird codes</p>
@@ -916,7 +908,7 @@
           <li><code>EARLY50</code><span>25% off, next 50 buyers</span><b>$11.25</b></li>
         </ul>
         <ul class="incl">
-          <li>7-day trial, no card needed</li>
+          <li>Key and download right after you pay</li>
           <li>Updates included</li>
           <li><a class="tap" href="https://charandeepkapoor.com/openwispr/refund">7-day refund</a>, no questions</li>
         </ul>
@@ -949,7 +941,7 @@
         </tr>
         <tr role="row">
           <th scope="row" role="rowheader">Free to start</th>
-          <td role="cell" class="us" data-who="OpenWispr">7-day trial<small>Free for 7 days from first launch. No card.</small></td>
+          <td role="cell" class="us" data-who="OpenWispr">No free tier<small>7-day money-back, no questions.</small></td>
           <td role="cell" data-who="Wispr Flow">Free tier<small>With a weekly word limit.</small></td>
         </tr>
       </tbody>
@@ -962,32 +954,26 @@
   </section>
 
   <section id="install">
-    <div class="kicker">Install</div>
+    <div class="kicker">After you buy</div>
     <h2>Running in three steps.</h2>
-    <div class="cmd cmd-wide">
-      <code id="install-cmd-2" tabindex="0" aria-label="Install command">curl -fsSL https://charandeepkapoor.com/openwispr/install.sh | sh</code>
-      <button class="copy" type="button" data-copy="install-cmd-2" aria-live="polite">Copy</button>
-    </div>
     <ol class="steps">
       <li class="step">
         <span class="n">01</span>
-        <h3>Paste the line in Terminal</h3>
-        <p>It downloads the latest build, installs it to /Applications, removes the quarantine flag and opens the app.</p>
+        <h3>Pay, get your key and download</h3>
+        <p>Your licence key and the download link show up right after checkout and in your receipt email. Open the DMG and drag OpenWispr to Applications.</p>
       </li>
       <li class="step">
         <span class="n">02</span>
-        <h3>Walk the setup wizard</h3>
-        <p>Microphone, Accessibility, a one-time speech model download of about 1.5&nbsp;GB, then a test of your trigger key.</p>
+        <h3>Open the app</h3>
+        <p>It is not notarized yet, so macOS asks once. Open <b>System Settings → Privacy &amp; Security</b> and click <b>Open Anyway</b>.</p>
       </li>
       <li class="step">
         <span class="n">03</span>
-        <h3>Hold the key and speak</h3>
-        <p>Release, and the text lands at your cursor. OpenWispr lives in the menu bar. There is no Dock icon.</p>
+        <h3>Paste the key</h3>
+        <p>Paste it in the License screen. The setup wizard then asks for Microphone and Accessibility and downloads the speech model once, about 1.5&nbsp;GB.</p>
       </li>
     </ol>
-    <p class="alt-note">
-      <b>Prefer the DMG?</b> <a class="tap" href="https://github.com/SirCharan/openwispr/releases/latest/download/OpenWispr.dmg">Download it</a> and drag the app to Applications. macOS will block the first launch because the build is not notarized yet. Open <b>System Settings → Privacy &amp; Security</b> and click <b>Open Anyway</b>, once.
-    </p>
+    <p class="alt-note">Then hold the key and speak. Release, and the text lands at your cursor. OpenWispr lives in the menu bar. There is no Dock icon.</p>
   </section>
 
   <section id="faq" class="faq">
@@ -1001,8 +987,8 @@
         <div class="a"><b>$15, once.</b> The licence is for life and works on one Mac. To move it to another Mac, deactivate it on the old one first. There is no subscription.</div>
       </details>
       <details>
-        <summary>How does the trial work, and what happens when it ends?<span class="chev" aria-hidden="true">›</span></summary>
-        <div class="a">The trial runs for 7 days from first launch and needs no card. When it ends, OpenWispr will not start a new dictation or meeting until you enter a licence key. The app still opens, and everything you already captured stays readable.</div>
+        <summary>Can I try it before I pay?<span class="chev" aria-hidden="true">›</span></summary>
+        <div class="a">No. You pay first, and you have 7 days to ask for your money back, no questions. The app needs a licence key before it dictates or records a meeting. If you run an older version, the 0.21 update asks for a key too. Everything you already captured stays readable.</div>
       </details>
       <details>
         <summary>Are there early-bird codes?<span class="chev" aria-hidden="true">›</span></summary>
@@ -1010,7 +996,7 @@
       </details>
       <details>
         <summary>Can I get a refund?<span class="chev" aria-hidden="true">›</span></summary>
-        <div class="a">Yes, within 7 days, no questions asked. The <a class="tap" href="https://charandeepkapoor.com/openwispr/refund">refund page</a> has the details.</div>
+        <div class="a">Yes. Within 7 days of buying, email and you get a full refund, no questions asked. That is your safety net if it is not for you. The <a class="tap" href="https://charandeepkapoor.com/openwispr/refund">refund page</a> has the details.</div>
       </details>
       <details>
         <summary>Does any audio or text leave my Mac?<span class="chev" aria-hidden="true">›</span></summary>
@@ -1018,7 +1004,7 @@
       </details>
       <details>
         <summary>Is the app signed?<span class="chev" aria-hidden="true">›</span></summary>
-        <div class="a">It is not notarized yet. If you install from the DMG, macOS blocks the first launch and you confirm once under <b>System Settings → Privacy &amp; Security → Open Anyway</b>. The install script removes the quarantine flag, so you do not see that prompt. Signed and notarized builds come with the Developer ID release.</div>
+        <div class="a">It is not notarized yet. macOS blocks the first launch, and you confirm once under <b>System Settings → Privacy &amp; Security → Open Anyway</b>. Signed and notarized builds come with the Developer ID release.</div>
       </details>
       <details>
         <summary>Does it work offline?<span class="chev" aria-hidden="true">›</span></summary>
@@ -1030,7 +1016,7 @@
       </details>
       <details>
         <summary>Is it really open source? Then why pay?<span class="chev" aria-hidden="true">›</span></summary>
-        <div class="a">Yes. The source is MIT on GitHub, and a build you make from source needs no key. The licence covers the ready-made build and its updates.</div>
+        <div class="a">Yes. The source is MIT on GitHub, and a build you make from source needs no key. What you pay for is the ready-made build, its updates and the download that comes with your key.</div>
       </details>
       <details>
         <summary>How is it different from Wispr Flow?<span class="chev" aria-hidden="true">›</span></summary>
@@ -1042,11 +1028,8 @@
   <section class="closing">
     <h2 class="xl">Your voice. Your Mac. <em>Nothing else.</em></h2>
     <div class="cta">
-      <a class="btn" href="https://github.com/SirCharan/openwispr/releases/latest/download/OpenWispr.dmg">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
-        Try it free for 7 days
-      </a>
-      <p class="quiet">$15 once if you keep it, tax shown at checkout · one Mac · MIT source · macOS 14+ · Apple Silicon <a class="buy tap" data-buy hidden href="#pricing" style="min-height:0;margin-left:6px">Buy a licence</a></p>
+      <a class="btn" data-buy href="https://checkout.dodopayments.com/buy/pdt_0Nsldx2KTXzQwxInGav79?quantity=1&amp;redirect_url=https://charandeepkapoor.com/openwispr/thanks">Buy OpenWispr, $15 once</a>
+      <p class="quiet"><b>7-day money-back, no questions</b> · tax shown at checkout · one Mac · MIT source · macOS 14+ · Apple Silicon</p>
     </div>
   </section>
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Thanks — OpenWispr</title>
+<title>Thanks · OpenWispr</title>
 <meta name="robots" content="noindex" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -62,15 +62,17 @@
   </div>
   <p id="no-key" class="hide">We couldn't find a license key in this link. Check the email from Dodo Payments; the key is in there.</p>
   <div class="actions">
-    <a class="btn" href="https://github.com/SirCharan/openwispr/releases/latest/download/OpenWispr.dmg">Download OpenWispr.dmg</a>
+    <a class="btn" href="https://whispr-dist-wine.vercel.app/de99d6700e244f86b79a4cd2a8976e0462e2110b/OpenWispr.dmg" rel="nofollow noreferrer">Download OpenWispr.dmg</a>
     <a class="btn ghost hide" id="activate" href="#">Activate in OpenWispr</a>
   </div>
+  <p>The download link is also in your Dodo Payments receipt email, so you can come back to it later.</p>
   <p class="label" style="margin-bottom:10px">Install in 3 steps</p>
   <ol>
     <li>Open the DMG and drag OpenWispr to Applications.</li>
-    <li>Launch it and follow setup. On the license step choose "I have a key" and paste it.</li>
-    <li>Or click "Activate in OpenWispr" above; the app opens with the key filled in.</li>
+    <li>Open the app. It is not notarized yet, so macOS asks once: open System Settings, Privacy &amp; Security, and click Open Anyway.</li>
+    <li>Paste the key in the License screen, then follow the setup wizard. Or click "Activate in OpenWispr" above and the key is filled in for you.</li>
   </ol>
+  <p>Not for you? Ask for a refund within 7 days, no questions. See the <a href="https://charandeepkapoor.com/openwispr/refund">refund policy</a>.</p>
 </div>
 <script>
   const q = new URLSearchParams(location.search), key = (q.get('license_key') || '').split(',')[0].trim();
