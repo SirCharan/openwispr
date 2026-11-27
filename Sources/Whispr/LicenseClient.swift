@@ -57,7 +57,7 @@ enum LicenseClient {
     /// `--license-test <key> [--test]`: activate → validate → deactivate. Exit 0 only on a full round trip.
     static func runRoundTrip(key: String) async -> Int32 {
         print("host: \(base.absoluteString)")
-        var stored = LicenseStored(license: nil, trialStartedAt: Date())
+        var stored = LicenseStored(license: nil)
         switch await activate(key: key) {
         case .failure(let e): print("activate: FAIL \(e)"); return 1
         case .success(let id):

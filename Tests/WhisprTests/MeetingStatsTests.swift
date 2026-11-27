@@ -102,12 +102,12 @@ final class MeetingCaptureHealthTests: XCTestCase {
 }
 
 final class LicenseGateTests: XCTestCase {
-    func testSourceBuildMarkerAllowsExpiredTrial() {
-        XCTAssertTrue(License.allows(.meet, in: .trialExpired, info: ["OWSourceBuild": true]))
+    func testSourceBuildMarkerAllowsUnlicensed() {
+        XCTAssertTrue(License.allows(.meet, in: .unlicensed, info: ["OWSourceBuild": true]))
     }
     func testMissingOrFalseMarkerEnforces() {
-        XCTAssertFalse(License.allows(.dictate, in: .trialExpired, info: nil))
-        XCTAssertFalse(License.allows(.dictate, in: .trialExpired, info: ["OWSourceBuild": false]))
+        XCTAssertFalse(License.allows(.dictate, in: .unlicensed, info: nil))
+        XCTAssertFalse(License.allows(.dictate, in: .unlicensed, info: ["OWSourceBuild": false]))
         XCTAssertTrue(License.allows(.dictate, in: .active, info: nil))
     }
 }

@@ -60,15 +60,14 @@ enum Snapshot {
             }
 
             let lic = LicenseManager.shared
-            for (name, ls, pane) in [("license-trial", "trial:5", true), ("license-active", "active", true),
-                                      ("license-expired", "trialExpired", true), ("license-revoked", "revoked", true),
-                                      ("trial-banner", "trial:2", false)] {
+            for (name, ls, pane) in [("license-unlicensed", "unlicensed", true), ("license-active", "active", true),
+                                      ("license-revoked", "revoked", true), ("license-banner", "unlicensed", false)] {
                 lic.setPreview(ls)
                 state.pane = pane ? .license : .dictations
                 write(HomeView(state: state, meetingController: meetings, importModel: importModel), size: NSSize(width: 960, height: 672),
                       appearance: appearance, to: out.appendingPathComponent("\(tag)-\(name).png"))
             }
-            lic.setPreview("trial:7")
+            lic.setPreview("unlicensed")
             onboarding.step = .license
             write(OnboardingView(model: onboarding), size: NSSize(width: 520, height: 560), appearance: appearance,
                   to: out.appendingPathComponent("\(tag)-onboarding-license.png"))

@@ -13,13 +13,13 @@ struct License: Codable, Equatable {
 }
 
 enum LicenseState: Equatable {
-    case trial(daysLeft: Int), trialExpired, active, grace(daysLeft: Int), lapsed, revoked, invalid
+    /// `unlicensed`: no key on this Mac. There is no trial; a key is needed before dictation or a meeting.
+    case unlicensed, active, grace(daysLeft: Int), lapsed, revoked, invalid
 
     var tag: String {
         switch self {
-        case .trial(let d): return "trial:\(d)"
         case .grace(let d): return "grace:\(d)"
-        case .trialExpired: return "trialExpired"
+        case .unlicensed: return "unlicensed"
         case .active: return "active"
         case .lapsed: return "lapsed"
         case .revoked: return "revoked"
@@ -30,9 +30,9 @@ enum LicenseState: Equatable {
     init?(tag: String) {
         let p = tag.split(separator: ":")
         switch (p.first.map(String.init), p.count > 1 ? Int(p[1]) : nil) {
-        case ("trial", let d?): self = .trial(daysLeft: d)
         case ("grace", let d?): self = .grace(daysLeft: d)
-        case ("trialExpired", _): self = .trialExpired
+        // "trial:N" / "trialExpired" are mirrors written by 0.20.x; the trial is gone, so both read as unlicensed.
+        case ("unlicensed", _), ("trial", _), ("trialExpired", _): self = .unlicensed
         case ("active", _): self = .active
         case ("lapsed", _): self = .lapsed
         case ("revoked", _): self = .revoked
@@ -67,7 +67,6 @@ enum LicenseAction { case dictate, meet }
 
 struct LicenseStored: Equatable {
     var license: License?
-    var trialStartedAt: Date?
 }
 
 struct LicenseOutcome: Equatable {
@@ -79,7 +78,6 @@ struct LicenseOutcome: Equatable {
 }
 
 extension License {
-    static let trialDays = 7
     static let validateEveryDays = 7.0
     static let graceDays = 21.0
     private static let day = 86_400.0
@@ -92,9 +90,7 @@ extension License {
             guard l.offline, age > validateEveryDays else { return .active }
             return age <= graceDays ? .grace(daysLeft: Int(graceDays - age.rounded(.down))) : .lapsed
         }
-        guard let start = stored.trialStartedAt else { return .trial(daysLeft: trialDays) }
-        let left = trialDays - Int((now.timeIntervalSince(start) / day).rounded(.down))
-        return left > 0 ? .trial(daysLeft: left) : .trialExpired
+        return .unlicensed
     }
 
     static func validateDue(now: Date, stored: LicenseStored) -> Bool {
@@ -109,8 +105,7 @@ extension License {
         var forced: LicenseState?
         var error: LicenseError?
         switch event {
-        case .launch:
-            if s.license == nil, s.trialStartedAt == nil { s.trialStartedAt = now }
+        case .launch: break
         case .activated(let key, let id):
             s.license = License(key: key, instanceId: id, activatedAt: now, lastValidatedAt: now)
         case .validated(let valid):
@@ -136,8 +131,8 @@ extension License {
 
     static func allows(_ action: LicenseAction, in state: LicenseState) -> Bool {
         switch state {
-        case .trial, .active, .grace: return true
-        case .trialExpired, .lapsed, .revoked, .invalid: return false
+        case .active, .grace: return true
+        case .unlicensed, .lapsed, .revoked, .invalid: return false
         }
     }
 
@@ -158,9 +153,8 @@ extension License {
         dec.dateDecodingStrategy = .iso8601
         let lic = Keychain.get(service: service, account: "license")
             .flatMap { try? dec.decode(License.self, from: Data($0.utf8)) }
-        let trial = Keychain.get(service: service, account: "trial")
-            .flatMap { ISO8601DateFormatter().date(from: $0) }
-        return LicenseStored(license: lic, trialStartedAt: trial)
+        // A 0.20.x trial date may still sit under account "trial"; it is ignored, so a trialing install is blocked.
+        return LicenseStored(license: lic)
     }
 
     static func save(_ s: LicenseStored, now: Date = Date()) {
@@ -168,12 +162,9 @@ extension License {
         enc.dateEncodingStrategy = .iso8601
         let json = s.license.flatMap { try? enc.encode($0) }.flatMap { String(data: $0, encoding: .utf8) } ?? ""
         Keychain.set(json, service: service, account: "license")
-        Keychain.set(s.trialStartedAt.map { ISO8601DateFormatter().string(from: $0) } ?? "",
-                     service: service, account: "trial")
         let d = UserDefaults.standard
         d.set(state(now: now, stored: s).tag, forKey: "license.state")
         d.set(s.license?.lastValidatedAt.timeIntervalSince1970, forKey: "license.lastValidatedAt")
-        d.set(s.trialStartedAt?.timeIntervalSince1970, forKey: "license.trialStartedAt")
     }
 
     /// Apply an event to the persisted license and save the result.
@@ -189,7 +180,6 @@ extension License {
     private struct Fixture: Decodable {
         struct Case: Decodable {
             let name: String
-            let trialStartedDaysAgo: Double?
             let validatedDaysAgo: Double?
             let event: String
             let expect: String
@@ -209,7 +199,7 @@ extension License {
             let lic = c.validatedDaysAgo.map {
                 License(key: "K", instanceId: "lki_1", activatedAt: ago(40), lastValidatedAt: ago($0))
             }
-            let stored = LicenseStored(license: lic, trialStartedAt: c.trialStartedDaysAgo.map(ago))
+            let stored = LicenseStored(license: lic)
             let ev: LicenseEvent
             switch c.event {
             case "launch": ev = .launch
@@ -233,11 +223,24 @@ extension License {
             Fixtures.expectEqual(allows(.dictate, in: st), g.dictate, "gate dictate \(g.state)")
             Fixtures.expectEqual(allows(.meet, in: st), g.meet, "gate meet \(g.state)")
         }
-        let expired = LicenseState.trialExpired
-        Fixtures.expectEqual(allows(.meet, in: expired, info: ["OWSourceBuild": true]), true, "source build allows expired trial")
-        Fixtures.expectEqual(allows(.dictate, in: expired, info: ["OWSourceBuild": false]), false, "OWSourceBuild=false blocks expired trial")
-        Fixtures.expectEqual(allows(.dictate, in: expired, info: nil), false, "absent marker blocks expired trial")
-        Fixtures.expectEqual(allows(.dictate, in: expired, info: ["OWSourceBuild": "true"]), false, "non-bool marker blocks")
+        // No key means blocked; a valid key means allowed; a 0.20.x trialing install is blocked.
+        let none = state(now: now, stored: LicenseStored(license: nil))
+        Fixtures.expectEqual(none, .unlicensed, "no key is unlicensed")
+        Fixtures.expectEqual(allows(.dictate, in: none, info: nil), false, "no key blocks dictation")
+        Fixtures.expectEqual(allows(.meet, in: none, info: nil), false, "no key blocks meetings")
+        let keyed = decide(now: now, stored: LicenseStored(license: nil), event: .activated(key: "K", instanceId: "lki_1")).state
+        Fixtures.expectEqual(allows(.dictate, in: keyed, info: nil), true, "valid key allows dictation")
+        Fixtures.expectEqual(allows(.meet, in: keyed, info: nil), true, "valid key allows meetings")
+        for legacy in ["trial:5", "trial:7", "trialExpired"] {
+            let st = LicenseState(tag: legacy)
+            Fixtures.expectEqual(st, .unlicensed, "legacy \(legacy) reads as unlicensed")
+            Fixtures.expectEqual(st.map { allows(.dictate, in: $0, info: nil) }, false, "legacy \(legacy) blocks dictation")
+        }
+        Fixtures.expectEqual(decide(now: now, stored: LicenseStored(license: nil), event: .launch).state, .unlicensed,
+                             "launch without a key does not start a trial")
+        Fixtures.expectEqual(allows(.meet, in: .unlicensed, info: ["OWSourceBuild": true]), true, "source build needs no key")
+        Fixtures.expectEqual(allows(.dictate, in: .unlicensed, info: ["OWSourceBuild": false]), false, "OWSourceBuild=false blocks")
+        Fixtures.expectEqual(allows(.dictate, in: .unlicensed, info: ["OWSourceBuild": "true"]), false, "non-bool marker blocks")
         Fixtures.expectEqual(allows(.meet, in: .active, info: nil), true, "absent marker allows active license")
         LicenseClient.selfTest()
         print("License.selfTest ok (\(f.cases.count) cases)")

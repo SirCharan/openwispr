@@ -220,21 +220,18 @@ struct OnboardingView: View {
         }
     }
 
-    @State private var showKeyEntry = false
     @State private var onboardingKey = ""
     @ObservedObject private var license = LicenseManager.shared
 
     private var licenseStep: some View {
         stepShell(
             icon: "key.fill",
-            title: "Try it free for 7 days",
-            body: "Then it's $15 once for one Mac. Everything you capture stays yours either way.",
-            primary: ("Start 7-day trial", { license.startTrial(); model.step = .done }),
-            secondary: showKeyEntry ? nil : ("I have a key", { showKeyEntry = true })
+            title: "Paste your license key",
+            body: "OpenWispr needs a key before it can dictate. It's $15 once for one Mac, with a 7-day money-back guarantee. The key is in your Dodo Payments email.",
+            primary: ("Buy OpenWispr, $15", { NSWorkspace.shared.open(LicenseManager.buyURL) }),
+            secondary: ("Later", { model.step = .done })
         ) {
-            if showKeyEntry {
-                LicenseKeyField(license: license, key: $onboardingKey).frame(maxWidth: 380)
-            }
+            LicenseKeyField(license: license, key: $onboardingKey).frame(maxWidth: 380)
         }
         .onChange(of: license.state) { _, s in if s == .active { model.step = .done } }
     }

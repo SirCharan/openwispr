@@ -72,14 +72,14 @@ final class MenuBarController: NSObject {
 
     @objc private func openLicense() { LicenseManager.openPane() }
 
-    /// "Trial: N days left" / "Licensed" / a prompt when it lapsed. Called whenever the menu is about to be used.
+    /// "Licensed" / "Enter license key". Called whenever the menu is about to be used.
     func refreshLicense() {
         let l = LicenseManager.shared
         l.refresh()
         switch l.state {
-        case .trial(let d): licenseMenuItem.title = "Trial: \(d) day\(d == 1 ? "" : "s") left"
         case .active, .grace: licenseMenuItem.title = "Licensed"
-        default: licenseMenuItem.title = "Trial ended — buy a license"
+        case .unlicensed: licenseMenuItem.title = "Enter license key…"
+        default: licenseMenuItem.title = "License needs attention…"
         }
     }
 

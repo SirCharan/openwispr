@@ -12,16 +12,16 @@ final class LicenseManager: ObservableObject {
     static let shared = LicenseManager()
     static let buyURL = URL(string: "https://charandeepkapoor.com/openwispr#pricing")!
 
-    @Published private(set) var state: LicenseState = .trial(daysLeft: License.trialDays)
+    @Published private(set) var state: LicenseState = .unlicensed
     @Published var busy = false
     @Published var error: String?
     private var preview: LicenseState?
-    /// Local source build (Info.plist `OWSourceBuild`): gate allows everything and nothing is written to trial/license storage.
+    /// Local source build (Info.plist `OWSourceBuild`): gate allows everything and nothing is written to license storage.
     let sourceBuild = License.isSourceBuild(Bundle.main.infoDictionary)
 
     var daysLeftText: String? {
         switch state {
-        case .trial(let d), .grace(let d): "\(d) day\(d == 1 ? "" : "s") left"
+        case .grace(let d): "\(d) day\(d == 1 ? "" : "s") left"
         default: nil
         }
     }
@@ -42,7 +42,7 @@ final class LicenseManager: ObservableObject {
     /// Returns true when allowed; otherwise tells the user and opens the License pane.
     func gate(_ action: LicenseAction) -> Bool {
         if allows(action) { return true }
-        let msg = state == .trialExpired ? "Trial ended — buy to keep dictating" : "License needs attention to keep dictating"
+        let msg = state == .unlicensed ? "OpenWispr needs a license key to dictate" : "License needs attention to keep dictating"
         CorrectionToast.shared.ask(msg, actions: [("Open License", { Self.openPane() })])
         Self.openPane()
         return false
@@ -52,14 +52,13 @@ final class LicenseManager: ObservableObject {
         NotificationCenter.default.post(name: .whisprOpenLicense, object: nil, userInfo: key.map { ["key": $0] })
     }
 
-    /// First launch after onboarding starts the trial clock (idempotent), then validates if due.
+    /// Every launch after onboarding: validate if due; with no usable key, open the License pane at once.
     func launch() {
         if !sourceBuild { License.apply(.launch) }
         refresh()
         validateIfDue()
+        if !allows(.dictate) { Self.openPane() }
     }
-
-    func startTrial() { if !sourceBuild { License.apply(.launch) }; refresh() }
 
     func validateIfDue() {
         let stored = License.load()
@@ -99,8 +98,7 @@ final class LicenseManager: ObservableObject {
 extension LicenseState {
     var headline: String {
         switch self {
-        case .trial(let d): "Free trial · \(d) day\(d == 1 ? "" : "s") left"
-        case .trialExpired: "Trial ended"
+        case .unlicensed: "Add your license key to start dictating"
         case .active: "Licensed"
         case .grace: "Licensed · confirm online soon"
         case .lapsed: "Connect to the internet once to confirm your license."
@@ -108,7 +106,7 @@ extension LicenseState {
         case .invalid: "That key isn't recognised. Check the email from Dodo Payments."
         }
     }
-    var isOK: Bool { if case .active = self { true } else if case .trial = self { true } else if case .grace = self { true } else { false } }
+    var isOK: Bool { if case .active = self { true } else if case .grace = self { true } else { false } }
 }
 
 struct BuyCard: View {
@@ -116,7 +114,7 @@ struct BuyCard: View {
         PaperCard {
             VStack(alignment: .leading, spacing: Brand.s8) {
                 Text("OpenWispr · $15 once").font(Brand.heading).foregroundStyle(Brand.text)
-                Text("Lifetime updates, one Mac. The source stays MIT on GitHub; the signed build needs a license.")
+                Text("Lifetime updates, one Mac. 7-day money-back, no questions. The source stays MIT on GitHub; this ready-made build needs a license key.")
                     .font(Brand.body).foregroundStyle(Brand.muted).fixedSize(horizontal: false, vertical: true)
                 PaperButton(title: "Buy a license", role: .primary) { NSWorkspace.shared.open(LicenseManager.buyURL) }
             }
@@ -124,7 +122,7 @@ struct BuyCard: View {
     }
 }
 
-struct TrialBanner: View {
+struct LicenseBanner: View {
     @ObservedObject var license: LicenseManager
     var body: some View {
         if !(license.state == .active) && !license.sourceBuild {

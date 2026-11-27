@@ -2,6 +2,13 @@
 
 Notable changes to OpenWispr (formerly Whispr), newest first.
 
+## 0.21.0
+- The free trial is gone. OpenWispr now needs a license key before it can dictate or record a meeting. This applies to new installs and to updated ones, including Macs that were on a trial.
+- Everything you already captured stays readable without a key: dictation history, meeting transcripts and summaries.
+- A license is $15 once for one Mac, with a 7-day money-back guarantee, no questions. Buy at https://charandeepkapoor.com/openwispr#pricing and paste the key in the License screen.
+- Downloads now come with your purchase instead of GitHub. The source stays MIT, and a build you make from source needs no key.
+- This build is self-signed, not notarized.
+
 ## 0.20.1
 - The license is one Mac per key, not three. The text in the app, on the site and in the terms said three; it now says one. To move a key, choose Deactivate this Mac in the License pane, then activate on the other Mac.
 
