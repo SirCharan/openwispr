@@ -4,6 +4,21 @@
         <title>OpenWispr</title>
         <!-- Items are added by generate_appcast or the release script -->
         <item>
+            <title>0.21.0</title>
+            <pubDate>Fri, 27 Nov 2026 13:22:49 +0530</pubDate>
+            <sparkle:version>2100</sparkle:version>
+            <sparkle:shortVersionString>0.21.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
+            <description sparkle:format="markdown"><![CDATA[- The free trial is gone. OpenWispr now needs a license key before it can dictate or record a meeting. This applies to new installs and to updated ones, including Macs that were on a trial.
+- Everything you already captured stays readable without a key: dictation history, meeting transcripts and summaries.
+- A license is $15 once for one Mac, with a 7-day money-back guarantee, no questions. Buy at https://charandeepkapoor.com/openwispr#pricing and paste the key in the License screen.
+- Downloads now come with your purchase instead of GitHub. The source stays MIT, and a build you make from source needs no key.
+- This build is self-signed, not notarized.
+]]></description>
+            <enclosure url="https://whispr-dist-wine.vercel.app/de99d6700e244f86b79a4cd2a8976e0462e2110b/OpenWispr-0.21.0.zip" length="5999174" type="application/octet-stream" sparkle:edSignature="CcoQc2T/Om0HWbz6LwEmNcauETzPmfCzpllsHypmOwbbrpJUaZ2e0JJgjJ9gcXyqDS7hfgNQjv9UO6rIVys1BQ=="/>
+        </item>
+        <item>
             <title>0.20.1</title>
             <pubDate>Thu, 26 Nov 2026 12:40:03 +0530</pubDate>
             <sparkle:version>2001</sparkle:version>
