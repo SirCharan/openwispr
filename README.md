@@ -61,22 +61,15 @@ The row turns green once Meet sends its first roster. Without the extension, Mee
 
 ## Install
 
-**Fastest — one line in Terminal (no security prompt):**
+**Ready-made build:** $15 once for one Mac, with a 7-day money-back guarantee. Buy at [charandeepkapoor.com/openwispr](https://charandeepkapoor.com/openwispr#pricing). You get a license key and the download.
 
-```bash
-curl -fsSL https://charandeepkapoor.com/openwispr/install.sh | sh
-```
+1. Open the DMG and drag `OpenWispr.app` to `/Applications`.
+2. First launch: the build is not notarized, so macOS shows **"OpenWispr" Not Opened**. Click **Done**, open **System Settings → Privacy & Security**, scroll to "OpenWispr was blocked", click **Open Anyway**.
+3. Paste your key in the License screen. A setup wizard runs and downloads the speech model (about 1.5 GB, once).
 
-**Or manually:**
+OpenWispr lives in the menu bar (mic icon), not the Dock.
 
-1. Download `OpenWispr.dmg` from the [latest release](https://github.com/SirCharan/openwispr/releases/latest).
-2. Open the DMG and drag `OpenWispr.app` to `/Applications`.
-3. First launch: macOS shows **"OpenWispr" Not Opened** (the build is not notarized). Click **Done**, open **System Settings → Privacy & Security**, scroll to "OpenWispr was blocked", click **Open Anyway**. Terminal alternative: `xattr -dr com.apple.quarantine /Applications/OpenWispr.app`.
-4. OpenWispr lives in the menu bar (mic icon), not the Dock. Clicking the app in Applications opens its home window. A setup wizard runs on first launch.
-
-**Not notarized, by choice.** Notarization needs a paid Apple Developer ID, which this project doesn't have — so the DMG is not Apple-signed. `install.sh` clears the quarantine flag for you.
-
-**Homebrew:** `brew install --cask SirCharan/openwispr/openwispr` (cask template in `packaging/openwispr.rb`).
+**From source (free, no key):** the code is MIT. `./build_app.sh` makes a build marked `OWSourceBuild` that skips the license gate.
 
 ## Permissions
 
@@ -133,13 +126,13 @@ openwispr dictation start|stop      openwispr meeting start|stop
 
 State changes go through the running app via URLs, which also work from Shortcuts ("Open URL") and scripts: `openwispr://dictation/start|stop`, `openwispr://meeting/start|stop`, `openwispr://open/Meetings`, `openwispr://dictionary/add?term=X&replace=Y`. A start or dictionary link from Shortcuts, a script or a web page asks you first; the `openwispr` command does not, because it signs its links with a secret only local processes can read.
 
-## Pricing and trial
+## Pricing
 
-The first launch after onboarding starts a 7-day trial with everything on. When it ends, dictation and meetings pause (history, transcripts and summaries stay usable) until you add a license. Then $15 once for a lifetime license for one Mac, sold through Dodo Payments. The source stays MIT: anyone can build it, and a local `./build_app.sh` build is marked `OWSourceBuild` and skips the license gate; only the signed release build (`release.sh`) enforces it. After purchase, `web/thanks.html` shows the key and an "Activate in OpenWispr" link. To set up checkout, replace `DODO_PRODUCT_ID` in the `BUY_URL` constant at the bottom of `web/index.html`.
+There is no trial. The release build needs a license key before it dictates or records a meeting; history, transcripts and summaries stay readable without one. $15 once for a lifetime license for one Mac, sold through Dodo Payments, with a 7-day refund. The source stays MIT: a local `./build_app.sh` build is marked `OWSourceBuild` and skips the license gate; only the release build (`release.sh`) enforces it. After purchase, `web/thanks.html` shows the key and an "Activate in OpenWispr" link.
 
 ## Releasing
 
-`./release.sh X.Y.Z --dry-run` bumps the version, builds, zips, makes the DMG, adds the Sparkle appcast item to `web/appcast.xml` and writes the zip sha256 into `packaging/openwispr.rb`. Without `--dry-run` it also commits, pushes, creates the GitHub release, deploys `web/` to Vercel, and prints the tap update step.
+`./release.sh X.Y.Z --dry-run` bumps the version, builds, zips, makes the DMG and adds the Sparkle appcast item to a scratch copy of `web/appcast.xml`. Without `--dry-run` it copies the DMG and zip to the private download host (a separate Vercel project outside this repo, configured by `$OPENWISPR_DIST`), checks both URLs, commits, pushes, creates a notes-only GitHub release, then publishes the appcast item. Builds are not attached to GitHub releases.
 
 Signing: `build_app.sh` uses `$SIGN_ID`, else the first `Developer ID Application` identity, else `Whispr Dev`. A Developer ID build is signed with the hardened runtime and `Resources/OpenWispr.entitlements`, and `release.sh` then notarizes and staples the app and the DMG. Store the notary credentials once: `xcrun notarytool store-credentials openwispr --apple-id <id> --team-id <TEAMID> --password <app-specific-password>`. Self-signed builds print `NOT NOTARIZED`.
 

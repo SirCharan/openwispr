@@ -18,49 +18,5 @@
 ]]></description>
             <enclosure url="https://whispr-dist-wine.vercel.app/de99d6700e244f86b79a4cd2a8976e0462e2110b/OpenWispr-0.21.0.zip" length="5999174" type="application/octet-stream" sparkle:edSignature="CcoQc2T/Om0HWbz6LwEmNcauETzPmfCzpllsHypmOwbbrpJUaZ2e0JJgjJ9gcXyqDS7hfgNQjv9UO6rIVys1BQ=="/>
         </item>
-        <item>
-            <title>0.20.1</title>
-            <pubDate>Thu, 26 Nov 2026 12:40:03 +0530</pubDate>
-            <sparkle:version>2001</sparkle:version>
-            <sparkle:shortVersionString>0.20.1</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[- The license is one Mac per key, not three. The text in the app, on the site and in the terms said three; it now says one. To move a key, choose Deactivate this Mac in the License pane, then activate on the other Mac.
-]]></description>
-            <enclosure url="https://github.com/SirCharan/openwispr/releases/download/v0.20.1/OpenWispr.zip" length="6001482" type="application/octet-stream" sparkle:edSignature="j5knQ6QK5a37cPhqhSM8IqDe3f1YE57Ubuo+rVuFFVLwixZwkJKk8m6+UE/xRWlAKyGEUpy5vnJsqmqouYZoCg=="/>
-        </item>
-        <item>
-            <title>0.20.0</title>
-            <pubDate>Thu, 26 Nov 2026 12:30:07 +0530</pubDate>
-            <sparkle:version>2000</sparkle:version>
-            <sparkle:shortVersionString>0.20.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <sparkle:hardwareRequirements>arm64</sparkle:hardwareRequirements>
-            <description sparkle:format="markdown"><![CDATA[- Paid launch: OpenWispr is $15 once (tax shown at checkout), for up to 3 Macs, with a 7-day free trial that needs no card. Early-bird codes: EARLY20 (50% off, first 20 buyers) and EARLY50 (25% off, next 50). If you already run 0.19, your 7-day trial starts when this update installs. This build is self-signed, not notarized.
-- Meetings: real speaker names from the Meet extension (0.2.0) applied live per line, system audio that retries for the whole call and after screen wake, a "No audio from the call" banner, auto-stop 10 s after you leave the call, honest stats (active speaking time, 2 s turn gap, interruptions per hour) and a summary with Topics, Decisions and Action items (owner, due date, timestamp).
-- Security: `openwispr://` links that start dictation or a meeting or add to the dictionary now ask first unless they come from the `openwispr` command; dictionary values with control characters are refused. The Meet listener answers only `https://meet.google.com` and refuses bodies over 64 KB with 413.
-- Canonical site is charandeepkapoor.com/openwispr.
-- Move to Applications offer when launched from a disk image or Downloads (strips quarantine, relaunches), and a What's New sheet on the first launch of each version; the first Developer ID build also notes the one-time Microphone, Accessibility and Screen Recording re-grant.
-- Agent skill: `openwispr skill install` copies the bundled `openwispr-agent` skill into `~/.claude/skills/` so Claude can read your history and meetings through the CLI.
-- Release builds can be signed with a Developer ID (hardened runtime) and notarized by `release.sh`; self-signed builds are marked NOT NOTARIZED.
-- Faster model load: prewarm runs only the first time a model loads on an OS build, so a warm turbo load drops from 1.9 s to 1.0 s. New `--load-test` reports load time, compute units and whether the ANE compile ran; a rebuild or a moved app does not recompile (the cache is keyed by OS build).
-- Launch at login is now on by default and re-registered at every launch unless you turn it off; a one-time hint points to System Settings → Login Items if macOS needs approval.
-- Landing page: pricing section ($15 once, 3 Macs, early-bird ladder), 0.20 features, honest signing note.
-- Thanks page after purchase (shows the license key, download, and one-click activate) and a Buy button on the landing page.
-- License core: 7-day trial, Dodo Payments activation with a 7-day re-check and 21-day offline grace, stored in the Keychain.
-- License pane, trial banner and onboarding step; dictation and meetings stop when the trial ends (everything already captured stays usable). `openwispr://license/activate?key=…` opens the pane with the key prefilled.
-- Sparkle auto-update: "Check for Updates…" in the menu, an automatic-check toggle in Settings, signed update feed at openwispr.vercel.app/appcast.xml.
-- Fix: meeting summaries on Hindi (and other languages Apple's on-device model can't read) now skip Apple, fall back to Ollama or a keyed provider, and otherwise explain exactly what to install. The Ollama hint now suggests `qwen3:8b`.
-- Google Meet names: the Meetings pane now shows whether the Chrome extension is connected, with a Set up button and the three load-unpacked steps; a hint appears 20 s into a Meet recording if no names arrive.
-- Experimental: speaker names from the screen. During a Meet, Teams or Zoom recording OpenWispr captures the meeting window once a second, finds the highlighted active-speaker tile and reads its name label on-device. Extension and Zoom names still win. On by default, toggle in Meetings. Not yet tried on a live call.
-- Meeting summaries are now saved next to the transcript (`meeting-<stamp>.summary.md`), shown for past meetings, and past meetings can be summarised or re-summarised. `--summarize-file <f> --save` does it headlessly. Ollama with no model pulled is no longer picked as the summary provider.
-- Double-tap the trigger key to dictate hands-free until the next tap (Settings toggle, on by default); fn key-repeat events are ignored.
-- Mic health: three seconds into a dictation the pill warns "Mic is silent" if no audio is arriving, and warns if the input device disappears. Failed or empty-after-speech dictations are saved (audio, 20 entries / 7 days) and can be retried or deleted from a new Failed section in the Dictations pane or the menu.
-- Command line and URL scheme: `openwispr` (inside the app bundle) transcribes files, lists and searches history and meetings, adds dictionary terms and starts or stops dictation and meetings, with JSON output; `openwispr spec` lists everything. `openwispr://dictation/start|stop`, `meeting/start|stop` and `open/<pane>` work from Shortcuts, scripts and the browser.
-- Release tooling: `release.sh` builds the zip, DMG and Sparkle appcast item, and `packaging/openwispr.rb` is the Homebrew cask template.
-
-]]></description>
-            <enclosure url="https://github.com/SirCharan/openwispr/releases/download/v0.20.0/OpenWispr.zip" length="6001348" type="application/octet-stream" sparkle:edSignature="QpWABu05Sr51qC15Cqj4nICCbF95iicOAmmV6cJ9Z7I9vp5he5GmJBTI34f4hivo/1KgNxXDVP8yybbL81LQBA=="/>
-        </item>
     </channel>
 </rss>
